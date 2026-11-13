@@ -16,7 +16,7 @@ Here, the rule has a place before it is written.
 - **Handshakes.** The files meet at typed seams. A render can only send the events its statechart has. A parent can only pass the props the child's `props.ts` declares. A write names, by reference, the reads it makes stale. An implementer who breaks a handshake hears about it from the type check, not from a reviewer.
 - **Deterministic checks.** A Vite plugin wires the folders. A TypeScript language-service plugin types everything the framework injects, so nobody writes those types and nobody gets them wrong. Convention checks name the mistakes that would otherwise fail silently: a second component in a file, JSX outside a render, a layer file in the wrong case. They run in the editor, in the build and in `npm run typecheck`.
 - **Tests at the seams.** An acceptance criterion becomes a test of a pure function: a guard, an action, a `props.ts`, a service against a fake client. No rendering, no mocks of modules, no network.
-- **Review of the rule.** Because wiring is the framework's job, the diff of a behaviour change is the flow and a rule. The last commit of this repository shows one (see [Review](#review)).
+- **Review of the rule.** Because wiring is the framework's job, the diff of a behaviour change is the flow and a rule. Commit [`8dbdf91`](https://github.com/fernandocamargo/framework-demo/commit/8dbdf91) shows one (see [Review](#review)).
 
 What this does not do: it does not decide what to build, and it does not judge whether a flow is the right one. Strategy and judgement stay with people. The framework moves the mechanical part (wiring, tracking, cache invalidation, typing, conventions) into checks, so that attention goes to the part that needs it.
 
@@ -220,13 +220,13 @@ For editor support, use the workspace's TypeScript ("TypeScript: Select TypeScri
 
 ## Review
 
-The last commit of this repository is a behaviour change, made the way the framework intends:
+Commit [`8dbdf91`](https://github.com/fernandocamargo/framework-demo/commit/8dbdf91) is a behaviour change, made the way the framework intends:
 
 > `feat(bulk-price): ask again before a price change above 50%`
 
 Its diff is a guard and a described state in `state.ts`, the question's text in `render.tsx`, and a test. Nothing else moved, because nothing else knows. A reviewer reads the rule, the place it applies, and the proof.
 
-Compare `git show HEAD --stat` with what the same change costs in a component that holds its flow in hooks.
+Compare `git show 8dbdf91 --stat` with what the same change costs in a component that holds its flow in hooks.
 
 ## Beyond TypeScript
 
