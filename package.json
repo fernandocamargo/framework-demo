@@ -12,7 +12,8 @@
     "typecheck": "npm run types && tsc -p tsconfig.node.json && node framework/typescript/check.cjs -p .",
     "test": "node --test framework/shared/folders.test.cjs framework/typescript/transform.test.cjs && vitest run",
     "e2e": "playwright test",
-    "check": "npm run typecheck && npm run test && npm run build"
+    "check": "npm run typecheck && npm run test && npm run build",
+    "perf": "vite build --config perf/vite.config.ts --logLevel warn && node perf/cycles.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "5.105.0",
