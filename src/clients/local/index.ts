@@ -6,7 +6,7 @@
 // is newer, somebody else saved meanwhile (another tab, or the network lab's button), and the
 // save is refused as a conflict.
 import type { Product } from '@/services/products/types'
-import { memoryStorage, sleep, type KeyValue } from '../storage'
+import { prefixed, sleep, type KeyValue } from '../storage'
 
 export type Overlay = {
   /** Changed fields by product id, with the version the change made. */
@@ -78,4 +78,5 @@ export function createStore({ storage, latency = 0 }: { storage: KeyValue; laten
   }
 }
 
-export default ({ env }) => (env.world === 'memory' ? createStore({ storage: memoryStorage() }) : createStore({ storage: window.localStorage, latency: 120 }))
+// Both worlds keep the changes in localStorage, apart, so every tab of a world sees the same catalogue.
+export default ({ env }) => (env.world === 'memory' ? createStore({ storage: prefixed(window.localStorage, 'memory:') }) : createStore({ storage: window.localStorage, latency: 120 }))

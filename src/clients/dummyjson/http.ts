@@ -99,12 +99,23 @@ export function createHttp({ baseUrl, wire, storage, backoff = 400, random = Mat
   const lifetime = () => ({ expiresInMins: settings.tokenMinutes, expiresAt: now() + settings.tokenMinutes * 60_000 })
   const shown = (session: Stored): Session => ({ user: session.user, expiresAt: session.expiresAt })
 
-  /** One refresh at a time: every request that meets a 401 while it runs waits for the same one. */
+  /**
+   * One refresh at a time: every request that meets a 401 while it runs waits for the same one.
+   * Across tabs too, since they share the session: the refresh runs under a Web Lock, and a tab
+   * that gets the lock after another refreshed finds the new tokens in the storage and uses them,
+   * instead of spending the refresh token again (a server that rotates them would refuse it).
+   */
   let refreshing: Promise<Session> | undefined
-  const refresh = () =>
-    (refreshing ??= (async () => {
+  const exclusively = <T>(work: () => Promise<T>): Promise<T> =>
+    typeof navigator !== 'undefined' && navigator.locks ? navigator.locks.request(`${KEY}:refresh`, work) : work()
+  const refresh = (refused?: string) =>
+    (refreshing ??= exclusively(async () => {
       const session = stored()
       if (!session) throw new SessionError('Sign in to continue.')
+      if (refused !== undefined && session.accessToken !== refused) {
+        log('refresh', 'Another tab refreshed the access token: using it')
+        return shown(session)
+      }
       const { expiresInMins, expiresAt } = lifetime()
       try {
         const tokens = await request<Tokens>('POST', '/auth/refresh', { body: { refreshToken: session.refreshToken, expiresInMins }, safe: true })
@@ -121,7 +132,7 @@ export function createHttp({ baseUrl, wire, storage, backoff = 400, random = Mat
         }
         throw error
       }
-    })().finally(() => {
+    }).finally(() => {
       refreshing = undefined
     }))
 
@@ -175,6 +186,8 @@ export function createHttp({ baseUrl, wire, storage, backoff = 400, random = Mat
     for (let attempt = 0; ; attempt += 1) {
       options.signal?.throwIfAborted()
       let error: unknown
+      // The access token this attempt sends: a refresh after a 401 knows which one was refused.
+      const sentToken = options.auth ? stored()?.accessToken : undefined
       try {
         const response = await send(method, path, options)
         if (response.ok) {
@@ -191,7 +204,7 @@ export function createHttp({ baseUrl, wire, storage, backoff = 400, random = Mat
         refreshed = true
         attempt -= 1
         log('refresh', `${method} ${path} → 401: refreshing the access token`)
-        await refresh()
+        await refresh(sentToken)
         continue
       }
       if (attempt >= RETRIES || !mayRetry(error, method, options.safe)) {
@@ -222,7 +235,7 @@ export function createHttp({ baseUrl, wire, storage, backoff = 400, random = Mat
         keep(session)
         return shown(session)
       },
-      refresh,
+      refresh: () => refresh(),
       signOut: () => keep(null),
     },
 

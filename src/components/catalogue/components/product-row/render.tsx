@@ -1,7 +1,7 @@
-import { Link } from 'react-aria-components'
+import { Button, Group, Link } from 'react-aria-components'
 import RemoveLink from '@/components/product/remove-link'
 
-export default ({ className, title, thumbnail, origin, price, rated, rating, stock, change, viewHref, canEdit, editHref, editLabel, removeHref }) => (
+export default ({ className, title, thumbnail, origin, price, rated, rating, stock, change, viewHref, canEdit, editHref, editLabel, removeHref, stepper }) => (
   <li className={className}>
     {thumbnail ? <img src={thumbnail} alt="" width="56" height="56" loading="lazy" /> : <span className="no-picture" aria-hidden="true" />}
     <div className="name">
@@ -13,9 +13,21 @@ export default ({ className, title, thumbnail, origin, price, rated, rating, sto
       )}
       <p>{origin}</p>
     </div>
-    <span className="badge" data-tone={stock.tone}>
-      {stock.label}
-    </span>
+    <div className="stock">
+      <span className="badge" data-tone={stock.tone}>
+        {stock.label}
+      </span>
+      {stepper && (
+        <Group aria-label={stepper.label} data-sending={stepper.sending || undefined}>
+          <Button data-variant="icon" aria-label={stepper.less.label} isDisabled={stepper.less.disabled} onPress={stepper.less.press}>
+            −
+          </Button>
+          <Button data-variant="icon" aria-label={stepper.more.label} onPress={stepper.more.press}>
+            +
+          </Button>
+        </Group>
+      )}
+    </div>
     <span className="rating">
       {rating && (
         <>

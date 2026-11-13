@@ -6,8 +6,10 @@ import type { Listed } from '@/services/products/types'
 
 export type Props = { product: Listed; filters: Filters }
 
-export default ({ product, filters, i18n, intl, acl }) => {
+export default ({ product, filters, i18n, intl, acl, async: { setStock } }) => {
   const level = stockLevel(product.stock)
+  // Counting stock needs the grant to update products, and someone signed in to send it.
+  const counts = acl.allowed && acl.role !== 'guest'
   return {
     title: product.title,
     thumbnail: product.thumbnail,
@@ -22,5 +24,13 @@ export default ({ product, filters, i18n, intl, acl }) => {
     editHref: href(filters, { edit: product.id }),
     editLabel: i18n.actions.edit({ title: product.title }),
     removeHref: href(filters, { remove: product.id }),
+    stepper: counts
+      ? {
+          label: i18n.count.label({ title: product.title }),
+          less: { label: i18n.count.less, disabled: product.stock === 0, press: () => setStock(product.id, product.stock - 1) },
+          more: { label: i18n.count.more, press: () => setStock(product.id, product.stock + 1) },
+          sending: setStock.pending,
+        }
+      : null,
   }
 }

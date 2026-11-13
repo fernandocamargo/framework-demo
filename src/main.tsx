@@ -76,7 +76,7 @@ function Shell() {
   const locale = useLocale()
   return (
     <I18nProvider locale={locale}>
-      <Root env={env} entity={entity} route={route} navigation={navigation} client={client} locale={locale} user={whoIsSignedIn} acl={permissions}>
+      <Root env={env} entity={entity} route={route} navigation={navigation} client={client} locale={locale} user={whoIsSignedIn} acl={permissions} sync={`stockroom:${world}`}>
         <App navigating={navigating} />
       </Root>
       <ToastRegion queue={toasts} aria-label="Failures">

@@ -4,4 +4,5 @@ export default {
   change: { created: 'New', edited: 'Edited' },
   rated: 'Rated',
   actions: { edit: 'Edit {title}' },
+  count: { label: 'Stock of {title}', less: 'One less in stock', more: 'One more in stock' },
 }

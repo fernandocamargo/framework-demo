@@ -372,3 +372,73 @@ test('keys follow what may be done and where the flow is; `?` lists them, transl
   await act(page, () => page.keyboard.press('?'))
   expect(await dialog(page, 'Atalhos de teclado').innerText()).toContain('Buscar no catálogo')
 })
+
+test('a count shows at once, before the server answers; one the server refuses is taken back', async ({ page }) => {
+  await open(page, '#/products?signin=1')
+  await signIn(page)
+  const lamp = rows(page).filter({ hasText: 'Arc Floor Lamp' })
+  const more = lamp.getByRole('button', { name: 'One more in stock' })
+  expect(await lamp.innerText()).toContain('58 in stock')
+  await act(page, () => more.click())
+  expect(await lamp.innerText()).toContain('59 in stock')
+
+  // Every request now waits a second and is refused, retries included.
+  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click())
+  const lab = page.getByRole('complementary', { name: 'Network lab' })
+  await act(page, async () => {
+    // Four steps of 250 ms.
+    await lab.getByRole('slider', { name: 'Latency' }).focus()
+    for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowRight')
+  })
+  await act(page, () => choose(lab.getByRole('radio', { name: '500' })))
+  await more.click()
+  // While the write is on its way, the page is not idle: this is the one look before `idle()`.
+  await expect(lamp).toContainText('60 in stock', { timeout: 900 })
+  await idle(page)
+  expect(await lamp.innerText()).toContain('59 in stock')
+  expect(await page.getByRole('region', { name: /Failures/ }).innerText()).toContain('service · products.setStock')
+})
+
+test('the tabs share the session and the catalogue: a sign-in, a count and a sign-out in one reach the other', async ({ context }) => {
+  const one = await context.newPage()
+  const other = await context.newPage()
+  for (const page of [one, other]) page.on('pageerror', (error) => { throw error })
+  await open(one)
+  await open(other)
+  // What another tab says arrives in its own time: a test waits for the message, then for idle.
+  const listen = (page: Page) =>
+    page.evaluate(() => {
+      const heard = new Promise<void>((resolve) => {
+        const channel = new BroadcastChannel('stockroom:memory')
+        channel.onmessage = () => {
+          channel.close()
+          resolve()
+        }
+      })
+      ;(window as unknown as { heard: Promise<void> }).heard = heard
+    })
+  const heard = async (page: Page) => {
+    await page.evaluate(() => (window as unknown as { heard: Promise<void> }).heard)
+    await idle(page)
+  }
+
+  await listen(other)
+  await act(one, () => one.getByRole('button', { name: 'Sign in' }).click())
+  await signIn(one)
+  await heard(other)
+  expect(await other.getByRole('banner').innerText()).toContain('Emily Johnson')
+  // What the person may do followed too: the counts are offered.
+  const lamp = (page: Page) => rows(page).filter({ hasText: 'Arc Floor Lamp' })
+  expect(await lamp(other).getByRole('button', { name: 'One more in stock' }).count()).toBe(1)
+
+  await listen(other)
+  await act(one, () => lamp(one).getByRole('button', { name: 'One more in stock' }).click())
+  await heard(other)
+  expect(await lamp(other).innerText()).toContain('59 in stock')
+
+  await listen(one)
+  await act(other, () => other.getByRole('button', { name: 'Sign out' }).click())
+  await heard(one)
+  expect(await one.getByRole('banner').innerText()).not.toContain('Emily Johnson')
+  expect(await lamp(one).getByRole('button', { name: 'One more in stock' }).count()).toBe(0)
+})

@@ -80,6 +80,18 @@ export const create =
     return local.create({ ...changes, rating: 0, thumbnail: '', images: [], reviews: [] })
   }
 
+/**
+ * Sets a product's stock, whatever its version: a count taken in the stockroom, not an edit of
+ * what somebody else saved. Each press of a row's buttons sends one, with the count the row shows.
+ */
+export const setStock =
+  ({ clients: { api, local } }) =>
+  async ({ id, stock }: { id: number; stock: number }): Promise<{ id: number; version: number }> => {
+    if (isLocal(id)) await api.get('/auth/me', { auth: true })
+    else await api.put(`/auth/products/${id}`, { stock }, { auth: true })
+    return { id, version: await local.edit(id, { stock }) }
+  }
+
 export const remove =
   ({ clients: { api, local } }) =>
   async (id: number): Promise<void> => {

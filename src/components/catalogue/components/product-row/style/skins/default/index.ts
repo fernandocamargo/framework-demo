@@ -3,7 +3,7 @@ import { css } from 'framework'
 export default css`
   & {
     display: grid;
-    grid-template-columns: 3.5rem minmax(0, 1fr) 8.5rem 3.5rem 6rem auto;
+    grid-template-columns: 3.5rem minmax(0, 1fr) 11rem 3.5rem 6rem auto;
     align-items: center;
     gap: 0.9rem;
     padding: 0.6rem 0.9rem;
@@ -43,6 +43,23 @@ export default css`
   .badge {
     justify-self: start;
   }
+  .stock {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .stock .react-aria-Group {
+    display: inline-flex;
+  }
+  /* The count shows at once; the buttons say a write is on its way. */
+  .stock .react-aria-Group[data-sending] .react-aria-Button {
+    color: var(--accent);
+  }
+  .stock .react-aria-Button {
+    inline-size: 1.6rem;
+    block-size: 1.6rem;
+    font-weight: 600;
+  }
   .rating {
     display: inline-flex;
     align-items: center;
@@ -79,7 +96,7 @@ export default css`
     .price {
       grid-area: price;
     }
-    & > .badge {
+    .stock {
       grid-area: stock;
     }
     .rating {

@@ -146,8 +146,8 @@ Clients are injected, never imported by components or by each other's callers. T
 
 | Client | What it is |
 |---|---|
-| [`dummyjson`](src/clients/dummyjson) | `fetch` with the access token, one shared token refresh on a 401, retries with backoff for 5xx and 429, `AbortSignal` honoured, and the network lab's faults. |
-| [`memory`](src/clients/memory) | The same client code on another wire: a function that answers DummyJSON's endpoints from fixtures. |
+| [`dummyjson`](src/clients/dummyjson) | `fetch` with the access token, one shared token refresh on a 401 (one across tabs too, under a Web Lock), retries with backoff for 5xx and 429, `AbortSignal` honoured, and the network lab's faults. The session is the browser's: every tab shares it. |
+| [`memory`](src/clients/memory) | The same client code on another wire: a function that answers DummyJSON's endpoints from fixtures. Its session and local changes are kept apart from the real world's, under `memory:` in localStorage, so its tabs share them as the real world's do. |
 | [`api`](src/clients/api) | What services use. One line chooses between the two above. |
 | [`local`](src/clients/local) | A browser store for what DummyJSON does not keep. It echoes writes and persists nothing, so edits, creations and deletions are kept here as an overlay, with a version per product. |
 | [`tracker`](src/clients/tracker) | A destination for the framework's pipelines: interactions and failures, for the network lab to show. |

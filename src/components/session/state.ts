@@ -1,6 +1,7 @@
 // The session's flow. The API client holds the tokens; this chart is what the person sees of
 // them: signed out, signing in, signed in (with the time left on the access token), refreshing
-// it shortly before it expires, and expired when the refresh is refused.
+// it shortly before it expires, and expired when the refresh is refused. The tabs share the
+// session: the chart reads `user`, so it is told when someone signs in or out in another tab.
 //
 // The access token is short-lived on purpose (one minute by default, set in the network lab),
 // so a refresh can be watched. While signed in, the chart looks at the clock once a second.
@@ -32,6 +33,9 @@ export const context = () => ({
 export const hasSession = ({ event }) => Boolean(event.output)
 export const aboutToExpire = ({ context }) => context.now >= context.notBefore && context.expiresAt - context.now <= REFRESH_AHEAD
 export const sessionOver = ({ event }) => event.error instanceof Error && event.error.name === 'SessionError'
+/** Who is signed in, as the framework reads it: it follows a sign-in or a sign-out in another tab. */
+export const someoneSignedIn = ({ user }) => user !== null
+export const nobodySignedIn = ({ user }) => user === null
 
 // ---- Changes ---------------------------------------------------------------------------------
 
@@ -58,6 +62,8 @@ export const closeEverything = ({ navigation }) => navigation.go(CLOSED)
 export const credentials = ({ form }) => form.payload()
 
 const asking = { signIn: 'signingIn', fillDemo: { actions: fillDemo }, cancel: { actions: closeEverything } }
+/** Someone signed in in another tab: the session they share is read again. */
+const signedInElsewhere = { user: { guard: someoneSignedIn, target: 'restoring' } }
 
 export default ({ services }) => ({
   restoring: {
@@ -69,7 +75,7 @@ export default ({ services }) => ({
     },
   },
   signedOut: {
-    on: asking,
+    on: { ...asking, ...signedInElsewhere },
   },
   signingIn: {
     invoke: {
@@ -88,7 +94,10 @@ export default ({ services }) => ({
         { target: 'signedIn', reenter: true },
       ],
     },
-    on: { signOut: 'signingOut' },
+    on: {
+      signOut: 'signingOut',
+      user: { guard: nobodySignedIn, target: 'signedOut', actions: forget, description: 'Signed out in another tab.' },
+    },
   },
   refreshing: {
     invoke: {
@@ -107,6 +116,6 @@ export default ({ services }) => ({
     description: 'The session is over. Signing out tells everyone who read it.',
     entry: forget,
     invoke: { src: services.auth.signOut },
-    on: asking,
+    on: { ...asking, ...signedInElsewhere },
   },
 })

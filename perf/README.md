@@ -72,3 +72,10 @@ The first count with shortcuts was 258 (79). Two things the slice made visible, 
 
 The recorder now says, for a component that rendered again on its own, which of its hooks hold something new and which contexts it read changed (`DETAIL=1`). What is left is mostly the catalogue and the network lab, whose default reads read the route, rendering again at every change of address and finding the same query.
 
+## After optimistic writes and the tabs' channel
+
+Each row has a count with a button on either side, offered to someone signed in who may change products; a count, a save and a deletion show at once. Chromium, one run, the same 26 steps: 0 misses, 385 render calls, framework components rendered again 226 times (28 changing nothing), render time 171.2 ms (39.9 ms changing nothing).
+
+- The 24 more re-renders are the 12 rows of the list gaining their buttons at the sign-in and losing them at the sign-out: each changes the page.
+- A save renders the row it changed once, when it is sent. The optimistic change bumps the product's version as the server will, so the server's answer finds nothing new and renders nothing; before it did, the row rendered again for the version alone.
+

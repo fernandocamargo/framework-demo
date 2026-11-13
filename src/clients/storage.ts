@@ -11,6 +11,15 @@ export function memoryStorage(): KeyValue {
   }
 }
 
+/** One storage under a prefix: two worlds in one browser keep apart what they keep. */
+export function prefixed(storage: KeyValue, prefix: string): KeyValue {
+  return {
+    getItem: (key) => storage.getItem(prefix + key),
+    setItem: (key, value) => storage.setItem(prefix + key, value),
+    removeItem: (key) => storage.removeItem(prefix + key),
+  }
+}
+
 /** Waits, unless the signal aborts first: then it rejects with the signal's reason. */
 export const sleep = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
