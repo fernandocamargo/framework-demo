@@ -6,6 +6,7 @@
 import type { ReactNode } from 'react'
 import type { I18n, Intl } from './i18n-types'
 import type { Allowed, Entity, Env, Flags, Navigation, Route, User } from './index'
+import type { Keyboard } from './shortcuts'
 
 /** The page's URL, read when an operation runs. */
 export type Url = {
@@ -234,6 +235,8 @@ export type StateProps<Module, Payloads = object> = Shown<
   { [Name in StateNames<StatesOf<Module>>]: boolean } & {
     context: ContextOf<Module>
     send: (event: EventOf<EventNames<StatesOf<Module>>, Payloads>) => void
+    /** Whether the chart takes this event in the state it is in, its guards included. */
+    can: (event: EventOf<EventNames<StatesOf<Module>>, Payloads>) => boolean
   }
 >
 
@@ -254,7 +257,25 @@ export type RenderProps<Folder extends Layers = Layers> = ('passed' extends keyo
   ('state' extends keyof Folder ? { state: StateProps<Folder['state'], Folder['events']> } : unknown) &
   ('form' extends keyof Folder ? { form: FormProps<Folder['form']> } : unknown) &
   Language<'i18n' extends keyof Folder ? Folder['i18n'] : undefined> &
-  Access & { route: Route; flags: Flags }
+  Access & { route: Route; flags: Flags; keyboard: Keyboard }
+
+/**
+ * One key of a `shortcuts.ts`: what it says, and what it does. `send` takes the chart's events, so
+ * a folder with no `state.ts` has only `focus` and `run`.
+ */
+export type Shortcut<Events extends string = never> = {
+  /** What the key does, in the locale on screen: the list of keys shows it. */
+  label: string
+  /** Whether the key may be used now; true when left out. */
+  when?: boolean
+} & (
+  | { send: Events | { type: Events }; focus?: never; run?: never }
+  | { focus: string; send?: never; run?: never }
+  | { run: () => unknown; send?: never; focus?: never }
+)
+
+/** What a `shortcuts.ts` returns: keys (`mod+s`, `/`, `n`, `shift+?`) and what each does. */
+export type Shortcuts<StateModule = undefined> = Record<string, Shortcut<[StateModule] extends [undefined] ? never : EventNames<StatesOf<StateModule>>>>
 
 /**
  * What a render receives when its folder has a `props.ts`: what that file's default export returns,

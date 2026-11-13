@@ -11,7 +11,9 @@
  * `className` (the component's path), and `async`, `state` and `form` when the folder has them.
  *
  * A component also gets, when one of its files reads it: the locale (`i18n`, `intl`, `locale`),
- * the person signed in (`user`), what it may do (`acl`), the flags and the route. A folder's
+ * the person signed in (`user`), what it may do (`acl`), the flags, the route, and the keys on
+ * screen (`keyboard`). A folder's `shortcuts.ts` declares the keys the component answers
+ * (shortcuts.ts). A folder's
  * `acl.ts` says, as a boolean, whether what the component offers may be done; the component and
  * everything below it get that as `acl.allowed`, until a folder below says otherwise.
  */
@@ -26,6 +28,7 @@ import { useFormLayer, type FormModule } from './form'
 import { activeLocale, intlFor, LocaleContext, loadMessages, showing, SOURCE_LOCALE } from './i18n'
 import type { Allowed } from './index'
 import { useStateLayer, type StateModule } from './machine'
+import { shortcutsOf, useKeyboard, useShortcuts, type Entry, type ShortcutSites } from './shortcuts'
 import { report, toError, type Scope } from './pipeline'
 import { RouteContext, useFramework } from './root'
 import { activeSkin, loadSkin, type SkinModule } from './style'
@@ -43,6 +46,10 @@ type ViewModule = {
   form: FormModule | undefined
   /** `acl.ts`: whether what the component offers may be done. */
   acl?: { default?: unknown } | undefined
+  /** `shortcuts.ts`: the keys the component answers while it is on screen. */
+  shortcuts?: { default?: unknown } | undefined
+  /** Where each key is declared in `shortcuts.ts`, from the plugin, for the interactions it runs. */
+  shortcutSites?: ShortcutSites
   /** The components the render shows, from the plugin: their loads start when this view has loaded. */
   children?: readonly { preload?: () => void }[]
 }
@@ -60,7 +67,7 @@ export type Spec = {
   translations?: Record<string, () => Promise<{ default: Record<string, string> }>>
   /**
    * The sources the folder's files read (`intl`, `locale`, `i18n`, `user`, `acl`, `flags`,
-   * `route`), from what their functions destructure: in the view's files (`props.ts`, the render),
+   * `route`, `keyboard`), from what their functions destructure: in the view's files (`props.ts`, the render),
    * in `acl.ts` (every name it destructures), in `async.ts`, in `state.ts`, and in the chart's
    * declaration alone. Only what the view reads makes the component render again when it
    * changes; what `async.ts` reads keys its default read; what the declaration reads, declares the
@@ -71,6 +78,7 @@ export type Spec = {
 
 /** What the nearest `acl.ts` above decided. With none, everything is allowed. */
 export const AclContext = createContext<boolean>(true)
+AclContext.displayName = 'Acl'
 
 const NO_SNAPSHOT = Object.freeze({})
 /** Each snapshot with each decision on it, one object per pair, so it keeps its identity. */
@@ -89,6 +97,7 @@ function allowedOn(snapshot: unknown, allowed: boolean): Allowed {
 const ofSnapshot = (keys: ReadonlySet<string>) => new Set([...keys].filter((key) => key !== 'allowed'))
 
 const ScopeContext = createContext<Scope | null>(null)
+ScopeContext.displayName = 'Scope'
 
 /** The path first, then any class the parent passes. */
 const classes = (path: string, className: unknown) => (typeof className === 'string' && className ? `${path} ${className}` : path)
@@ -123,6 +132,8 @@ export function component(spec: Spec) {
   const readsAcl = anywhere('acl')
   const keyedByAcl = inAsync.has('acl')
   const viewReadsRoute = inView.has('route') || inAcl.has('route')
+  // The keys on screen, for a component that lists them.
+  const readsKeyboard = inView.has('keyboard')
   // An acl.ts that reads only `acl` (the snapshot, and what is inherited) is a rule of the folder,
   // the same for every instance: it is decided where the snapshot is read, and an instance renders
   // again only when its decision changes, not every time the snapshot does (a sign-in re-decides
@@ -199,6 +210,7 @@ export function component(spec: Spec) {
     const latest = useCallback(() => (aclRead ? data.client.getQueryData(aclRead.queryKey) : NO_SNAPSHOT), [aclRead, data])
     const snapshot = readsAcl ? latest() : undefined
     const route = viewReadsRoute ? use(RouteContext) : undefined
+    const keyboard = readsKeyboard ? useKeyboard() : undefined
     // What the chart's guards and the operations read when they run: the latest decision, set by
     // each render.
     const judged = useRef<boolean>(inherited)
@@ -259,8 +271,8 @@ export function component(spec: Spec) {
     const hasRead = query !== null
     const async = useMemo(() => module.async && { ...operations, ...(hasRead ? { default: initial } : {}) }, [module.async, operations, hasRead, initial])
     const access = useMemo(
-      () => ({ given: defined({ user, route }), user, inherited, decided: followed?.decided, snapshot, view }),
-      [user, route, inherited, followed, snapshot, view],
+      () => ({ given: defined({ user, route, keyboard }), user, inherited, decided: followed?.decided, snapshot, view }),
+      [user, route, keyboard, inherited, followed, snapshot, view],
     )
     return { module, scope, injection, sources, withForm, form, async, language, access, judged }
   }
@@ -308,13 +320,19 @@ export function component(spec: Spec) {
   function show(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, decided?: boolean) {
     const { module, scope, form, async, language, access, judged } = layers
     const last = useRef<{ inputs: unknown[]; props: Props; shaped: Props; allowed: boolean; element: ReactNode } | null>(null)
+    // The keys this instance answers, registered after each commit while it is mounted.
+    const keys = useRef<Entry[] | undefined>(undefined)
+    useShortcuts(spec.path, scope, keys)
     const inputs = [module, scope, async, state, form, language, access, decided]
     if (last.current && sameEach(last.current.inputs, inputs) && sameProps(last.current.props, props)) return last.current.element
     const className = classes(spec.path, props.className)
     const given = givenOf(props, layers, state, className)
     const allowed = decided ?? decisionOf(module, given, access)
     judged.current = allowed
-    const output = shape(module, readsAcl ? { ...given, acl: access.view(allowedOn(access.snapshot, allowed)) } : given, className)
+    const shaping = readsAcl ? { ...given, acl: access.view(allowedOn(access.snapshot, allowed)) } : given
+    // shortcuts.ts gets what props.ts gets. Its keys follow the state even when the render is skipped.
+    if (module.shortcuts) keys.current = shortcutsOf(spec.path, module.shortcuts, shaping, state as never, scope, module.shortcutSites)
+    const output = shape(module, shaping, className)
     // The framework's own comparison reads every key; it records none.
     const shaped = untracked(() => shareByIdentity(last.current?.shaped, output)) as Props
     if (last.current && shaped === last.current.shaped && allowed === last.current.allowed) {
@@ -339,6 +357,9 @@ export function component(spec: Spec) {
     }
   }
 
+  /** The route being rendered. `use` may be called behind a condition, during a render. */
+  const readRendering = () => use(RouteContext)
+
   // A folder with a state.ts and one without render through different components, so neither
   // calls a hook behind a condition. The view's module, once loaded, decides which.
   function StatefulView(props: Props) {
@@ -356,10 +377,9 @@ export function component(spec: Spec) {
       flags: sources.flags,
       ...language,
     })
-    // The route being rendered, for the chart's first reads (machine.ts). So a component with a
-    // state.ts renders its layers again when the route changes; its render is still skipped
-    // when what it shows is the same.
-    const state = useStateLayer(spec.path, module.state as StateModule, layers.injection, declared, layers.withForm, use(RouteContext))
+    // The route being rendered, for the chart's first reads (machine.ts), read only until the
+    // component's first commit: after it, a change of route does not render the component again.
+    const state = useStateLayer(spec.path, module.state as StateModule, layers.injection, declared, layers.withForm, readRendering)
     return show(props, layers, state, early)
   }
   function StatelessView(props: Props) {

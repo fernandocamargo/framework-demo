@@ -46,6 +46,7 @@ A folder under `components/` with a `render` file and no `index` is a component.
 | `placeholder.tsx` | Shows while the view loads and reads. Adds a `Suspense`. |
 | `error.tsx` | Shows when the view fails. Adds an error boundary around both. |
 | `acl.ts` | Whether what the component offers may be done: a function of what `props.ts` gets, the route, and the backend's snapshot with what is inherited, returning a boolean. The component and everything below it get it as `acl.allowed`. |
+| `shortcuts.ts` | The keys the component answers while it is on screen: a function of what `props.ts` gets, returning each key with its label and what it does (send a chart's event, focus an element, run a function). |
 | `i18n.ts` | The component's messages, in the source language: an object of any shape whose leaves are ICU messages or functions. |
 | `i18n/<locale>.json` | A translation of them, keyed by the folder's path and the message's path. Loaded on demand. |
 | `style/skins/<name>/index.ts` | The component's CSS for a skin. |
@@ -54,8 +55,8 @@ What the framework guarantees about them:
 
 - **The view is lazy.** The render and its layers load together, on demand. Placeholder and error files load eagerly. A view starts loading the views and skins of the components its render imports, so a child does not wait to render before its own code starts loading.
 - **A component renders only when what it shows changes.** Every component is wrapped in `React.memo`. When a re-render leaves the props, `async`, `state` and `form` as they were, the framework returns the render's last output instead of calling it, and React skips everything inside. A new answer keeps every part equal to the last answer the component showed, so a child given an unchanged part of it gets the same object. What the render gets (what `props.ts` returns, or the props and layers) is shared the same way with what it got last time: when nothing in it changed, the render is not called, and a part that did not change keeps its identity, so react-aria's collections and memoized children skip it.
-- **A component follows only what its files read.** The plugin reads what the first parameter of each function the framework calls destructures (`({ intl, async }) => …`), file by file. A component re-renders for a change of locale only when one of its files reads `intl`, `locale` or `i18n` (or the folder has an `i18n.ts`), for a change of person only when one reads `user`, and for a change of what it may do only when one reads `acl`; a parameter that is not destructured reads everything. A default read that reads the locale or the user is keyed by it, so one person never sees another's cached answer.
-- **Only components that read the route follow the route.** A component with a default read reads the route context, and so does one with a `state.ts` (its chart may read the route when it is created). Other components do not re-render when the address changes. Operations and statecharts read the committed route when they run.
+- **A component follows only what its files read.** The plugin reads what the first parameter of each function the framework calls destructures (`({ intl, async }) => …`), file by file: each file's default export, and the named exports of `async.ts` (operations) and `state.ts` (checks and changes). A helper a file exports for itself or its tests (`sorting(id)` beside a `props.ts`) is not called with what the framework gives, so it reads nothing. A component re-renders for a change of locale only when one of its files reads `intl`, `locale` or `i18n` (or the folder has an `i18n.ts`), for a change of person only when one reads `user`, for a change of what it may do only when one reads `acl`, and for a change of the keys on screen only when one reads `keyboard`; a parameter that is not destructured reads everything. A default read that reads the locale or the user is keyed by it, so one person never sees another's cached answer.
+- **Only components that read the route follow the route.** A component with a default read reads the route context. One with a `state.ts` reads it until its first commit, since its chart may read the route when it is created, and not after. Other components do not re-render when the address changes. Operations and statecharts read the committed route when they run.
 - **What a parent passes is checked** when the child's `props.ts` exports a type named `Props`: the plugin writes the folder's declaration from it. A folder without one takes any props.
 
 ### The i18n layer
@@ -108,6 +109,30 @@ The app does not own its permissions: the backend sends a snapshot of them, and 
 - A rule that throws refuses, and is reported as the `acl` layer's failure. A default read that reads `acl` or `user` is keyed by it.
 - `framework/testing`'s `startFlow` gives a chart `acl: { allowed: true }` and `user: null` unless the test says otherwise.
 
+### Keys
+
+A component folder's `shortcuts.ts` says which keys the component answers while it is on screen. It gets what `props.ts` gets, so a key can follow the locale, what may be done, the chart's state and the component's read:
+
+```ts
+// components/catalogue/shortcuts.ts
+export default ({ i18n, acl, async: { default: answer } }) => ({
+  '/': { label: i18n.keys.search, focus: 'input[type=search]' },
+  n: { label: i18n.keys.create, run: () => go({ create: true }), when: acl.allowed },
+  ']': { label: i18n.keys.next, run: () => go({ page: answer.page.page + 1 }), when: answer.page.page < answer.page.pages },
+})
+// components/product/editor/shortcuts.ts
+export default ({ i18n }) => ({
+  'mod+s': { label: i18n.keys.save, send: 'save' },
+})
+```
+
+- `send` sends an event of the component's chart, and works only while the chart takes it in the state it is in (`state.can`, guards included). The editor's key does nothing in a read-only editor, whose chart has no `save`, nor while a save runs. The TypeScript plugin types `send` with the chart's events, so `send: 'sav'` is an error.
+- `focus` focuses the first element of the component that matches a selector; `run` calls a function; `when`, true when left out, says whether the key may be used now.
+- `mod` is ⌘ on Apple devices and Ctrl elsewhere. A symbol (`?`, `/`, `[`) matches with or without shift, as keyboard layouts need.
+- One listener on the document. A key reaches a component that can be reached: an element with its class on screen, and nothing hiding it (`inert`, or the `aria-hidden` a modal dialog sets on everything outside it), so the catalogue's keys stop while a dialog is open over it. A key without a modifier is left to the field that has the focus: `/` and `n` type in a search. When two components answer the same key, the one holding the focus wins, then the one shown last. A key some component on screen declares is the app's, even when it does nothing now: `mod+s` never opens the browser's "save page".
+- A key that runs is an interaction, tracked like a handler, with its place in `shortcuts.ts` (`components/product/editor#shortcuts.mod+s`).
+- A component that reads `keyboard` gets the keys on screen, by component, each with its label, the keys as the platform writes them (`⌘ S`, `Ctrl S`) and whether it does something now. The app's `?` list reads it, and is a component of its own, shown only while open, so nothing renders again when the keys change while it is closed.
+
 ### The data layer
 
 Every service operation goes through it.
@@ -132,7 +157,7 @@ Tests wait on it instead of sleeping or polling selectors. It does not see timer
 - Checks, changes and inputs are the file's exported functions, referenced where they apply (`guard: unsaved`). They receive XState's `context`, `event` and `self`, plus `route`, `flags`, `form`, `navigation`, `entity` and `services`. A change that returns an object updates the context.
 - `export const context` returns what the flow remembers. `export type Events` gives the payloads of events that carry one.
 - `after: { 1000: … }` is XState's delayed transition, with the same references.
-- The render gets `state`: one boolean per state (`state.saving`), the `context`, and `send`, which takes only the chart's events.
+- The render gets `state`: one boolean per state (`state.saving`), the `context`, `send`, which takes only the chart's events, and `can`, whether the chart takes an event in the state it is in, guards included.
 
 `framework/testing` runs a `state.ts` without React:
 
@@ -181,7 +206,8 @@ Nobody writes them. The TypeScript plugin shows TypeScript each layer file with 
 
 | File | Functions annotated | With |
 |---|---|---|
-| `render` | the default export | what `props.ts` returns, or the props with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags` |
+| `render` | the default export | what `props.ts` returns, or the props with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags`, `keyboard` |
+| `shortcuts` | the default export, and what it returns | what `props.ts` gets; keys whose `send` takes the chart's events |
 | `props`, `acl` | the default export | the file's own `Props`, with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags` |
 | `async` | the default and every named export | the injection, the route, a `signal` |
 | `state` | the default export; every exported function | the injection with `acl`, `user`, `flags` and the locale; `context`, `event`, the route, the form… |

@@ -222,11 +222,14 @@ function secondComponents(root, file) {
  * user, of what the person may do or of a flag renders again the components that read it, and
  * no other.
  */
-const SOURCES = ['intl', 'locale', 'i18n', 'user', 'acl', 'flags', 'route']
+const SOURCES = ['intl', 'locale', 'i18n', 'user', 'acl', 'flags', 'route', 'keyboard']
 
 /**
  * The top-level names the first parameter of each function the framework calls in a component's
- * files destructures: `({ async, intl }) => …` reads `async` and `intl`. A parameter that is not
+ * files destructures: `({ async, intl }) => …` reads `async` and `intl`. The framework calls the
+ * default export of each file, and the named exports of `async.ts` (operations) and `state.ts`
+ * (checks and changes); a helper a file exports for itself or its tests (`sorting(id)` in a
+ * props.ts) is not called with what the framework gives, so it reads nothing. A parameter that is not
  * destructured (`(props) => …`) may read anything, so it reads every source. The render is left
  * out when a props.ts shapes what it gets, since it then sees props.ts's output, not the sources.
  * Returns the sources each file reads and all of them, each in SOURCES order, and every name
@@ -244,6 +247,7 @@ function readsOf(root, dir) {
   const files = ['props', 'async', 'state', 'acl', 'shortcuts', ...(shaped ? [] : ['render'])]
   const exported = (node) => ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
   const isFunction = (node) => node && (ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node))
+  const isDefault = (node) => ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)
   const collect = (fn) => {
     const parameter = fn.parameters[0]
     if (!parameter) return
@@ -268,6 +272,7 @@ function readsOf(root, dir) {
     if (!file) continue
     read = new Set()
     named = new Set()
+    const callsNamed = layer === 'async' || layer === 'state'
     const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, JSX_FILE.test(file) ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
     for (const statement of source.statements) {
       if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
@@ -283,8 +288,8 @@ function readsOf(root, dir) {
             named = new Set([...before, ...named])
           } else collect(expression)
         }
-      } else if (ts.isFunctionDeclaration(statement) && exported(statement)) collect(statement)
-      else if (ts.isVariableStatement(statement) && exported(statement)) {
+      } else if (ts.isFunctionDeclaration(statement) && exported(statement) && (callsNamed || isDefault(statement))) collect(statement)
+      else if (callsNamed && ts.isVariableStatement(statement) && exported(statement)) {
         for (const declaration of statement.declarationList.declarations) if (isFunction(declaration.initializer)) collect(declaration.initializer)
       }
     }

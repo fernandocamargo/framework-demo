@@ -18,6 +18,7 @@
 // | `clients/*/index`                      | the default export                    | `ClientInjection`          |
 // | `components/…/i18n`                    | its default export is read `as const`, so each message is its literal text, typed from its ICU |
 // | `components/…/acl`                     | the default export                    | what props.ts gets (`RenderProps`) |
+// | `components/…/shortcuts`               | the default export, and what it returns | what props.ts gets (`RenderProps`), `Shortcuts<state.ts>` |
 //
 // `Injection` and `AsyncInjection` carry this app's clients and services, written as a type
 // from the folders: `{ rest: ReturnType<typeof import("…/clients/rest/index").default> }`, and
@@ -25,7 +26,7 @@
 const path = require('node:path')
 const folders = require('../shared/folders.cjs')
 
-const LAYERS = new Set(['render', 'props', 'async', 'placeholder', 'error', 'state', 'i18n', 'acl'])
+const LAYERS = new Set(['render', 'props', 'async', 'placeholder', 'error', 'state', 'i18n', 'acl', 'shortcuts'])
 
 /**
  * @param {typeof import('typescript')} ts
@@ -95,7 +96,9 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
       case 'render':
       case 'props':
       // acl.ts gets what props.ts gets, with the route and the `acl` inherited from above.
-      case 'acl': {
+      case 'acl':
+      // shortcuts.ts gets what props.ts gets too.
+      case 'shortcuts': {
         // With a props.ts, the render gets what it returns; props.ts gets what the render would have.
         const shaping = folders.findLayer(found.dir, 'props')
         if (found.name === 'render' && shaping) return `${types}.ShapedProps<${moduleType(shaping)}>`
@@ -214,6 +217,16 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
     return [{ at: exported.expression.end, constant: true }]
   }
 
+  /** What a default export returns: a service's `meta.ts`, its rules; a `shortcuts.ts`, its keys. */
+  function returned(found, fileName) {
+    if (found.name === 'shortcuts') {
+      const state = folders.findLayer(found.dir, 'state')
+      return `${types}.Shortcuts<${state ? moduleType(state) : 'undefined'}>`
+    }
+    const index = folders.findLayer(path.dirname(fileName), 'index')
+    return index ? `${types}.ServiceMeta<${moduleType(index)}>` : null
+  }
+
   return {
     /** Whether the framework injects into this file. */
     isLayer: (fileName) => kind(fileName) !== null,
@@ -235,7 +248,9 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
       if (!found) return { text, insertions: [] }
       const named = found.name === 'async' || found.name === 'service' || found.name === 'state'
       const found_points = (
-        found.name === 'i18n' ? constPoints(text, fileName) : [...points(text, fileName, named), ...(found.name === 'serviceMeta' ? returnPoints(text, fileName) : [])]
+        found.name === 'i18n'
+          ? constPoints(text, fileName)
+          : [...points(text, fileName, named), ...(found.name === 'serviceMeta' || found.name === 'shortcuts' ? returnPoints(text, fileName) : [])]
       ).sort((a, b) => a.at - b.at)
       // What goes where. At one position: the parameter's annotation, then the parenthesis that
       // closes a bare parameter, then the return type.
@@ -246,8 +261,7 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
           add(point.at, 0, ' as const')
           continue
         }
-        const index = point.returns ? folders.findLayer(path.dirname(fileName), 'index') : null
-        const type = point.returns ? (index ? `${types}.ServiceMeta<${moduleType(index)}>` : null) : annotation(found, point.named)
+        const type = point.returns ? returned(found, fileName) : annotation(found, point.named)
         if (!type) continue
         add(point.at, point.returns ? 2 : 0, `: ${type}`)
         if (point.bare) {

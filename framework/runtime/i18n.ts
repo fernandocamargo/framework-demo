@@ -33,6 +33,7 @@ export type MessagesSpec = {
 
 /** The locale being shown. Only components that read it subscribe, so the others never re-render for it. */
 export const LocaleContext = createContext<string>(SOURCE_LOCALE)
+LocaleContext.displayName = 'Locale'
 
 let active = SOURCE_LOCALE
 /** The locale `Root` shows, for loads started outside a render (a view's children preloading). */

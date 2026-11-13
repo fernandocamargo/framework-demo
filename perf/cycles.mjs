@@ -139,7 +139,11 @@ summaries[0].forEach((step, index) => {
     const byName = new Map()
     for (const component of [...step.framework.unchanged, ...step.other.unchanged]) {
       const cause =
-        component.why?.cause === 'props' ? `props ${component.why.changed.map((change) => `${change.key}${change.sameValue ? '≈' : ''}`).join(',')}` : component.why?.cause
+        component.why?.cause === 'props'
+          ? `props ${component.why.changed.map((change) => `${change.key}${change.sameValue ? '≈' : ''}`).join(',')}`
+          : component.why?.cause === 'own'
+            ? `own${component.why.hooks?.length ? ` hooks ${component.why.hooks.join(',')}` : ''}${component.why.contexts?.length ? ` contexts ${component.why.contexts.join(',')}` : ''}`
+            : component.why?.cause
       const key = `${RENDERS.has(component.fn) ? '' : '  (other) '}${component.name} ← ${cause}`
       byName.set(key, (byName.get(key) ?? 0) + 1)
     }

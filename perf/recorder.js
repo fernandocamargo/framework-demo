@@ -33,7 +33,22 @@
   const why = (fiber) => {
     const previous = fiber.alternate.memoizedProps;
     const next = fiber.memoizedProps;
-    if (previous === next) return { cause: 'own' };
+    if (previous === next) {
+      // Which of its hooks hold something new (effects aside), and which contexts it read changed.
+      const hooks = [];
+      for (let a = fiber.alternate.memoizedState, b = fiber.memoizedState, index = 0; a && b; a = a.next, b = b.next, index++) {
+        const value = b.memoizedState;
+        const effect = value && typeof value === 'object' && 'create' in value && 'tag' in value;
+        if (!effect && !Object.is(a.memoizedState, value)) hooks.push(index);
+      }
+      const before = new Map();
+      for (let dependency = fiber.alternate.dependencies?.firstContext; dependency; dependency = dependency.next) before.set(dependency.context, dependency.memoizedValue);
+      const contexts = [];
+      for (let dependency = fiber.dependencies?.firstContext; dependency; dependency = dependency.next) {
+        if (before.has(dependency.context) && !Object.is(before.get(dependency.context), dependency.memoizedValue)) contexts.push(dependency.context.displayName || 'context');
+      }
+      return { cause: 'own', hooks, contexts };
+    }
     const changed = [];
     for (const key of new Set([...Object.keys(previous || {}), ...Object.keys(next || {})])) {
       if (Object.is(previous[key], next[key])) continue;

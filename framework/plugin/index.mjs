@@ -173,6 +173,54 @@ function trackHandlers(code, id, componentPathValue, file, runtime) {
 }
 
 
+/**
+ * Where each key of a `shortcuts.ts` is declared, as the site of the interactions it runs: the
+ * properties of the object its default export returns (`'mod+s': { label, send: 'save' }`), in
+ * every branch of a condition.
+ */
+function shortcutSites(file, componentPathValue, root) {
+  if (!file) return {}
+  const code = readFileSync(file, 'utf8')
+  const ast = parseAst(code, { lang: 'ts' }, file)
+  const relative = posix(path.relative(root, file))
+  const declaration = ast.body.find((node) => node.type === 'ExportDefaultDeclaration')?.declaration
+  const objects = (node) => {
+    if (!node) return []
+    if (node.type === 'ObjectExpression') return [node]
+    if (node.type === 'ConditionalExpression') return [...objects(node.consequent), ...objects(node.alternate)]
+    if (node.type === 'TSAsExpression' || node.type === 'TSSatisfiesExpression') return objects(node.expression)
+    if (node.type === 'ArrowFunctionExpression' || node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration') {
+      if (node.body.type !== 'BlockStatement') return objects(node.body)
+      const returned = []
+      walk(node.body, (inner) => inner.type === 'ReturnStatement' && returned.push(...objects(inner.argument)))
+      return returned
+    }
+    return []
+  }
+  const sites = {}
+  for (const object of objects(declaration)) {
+    for (const property of object.properties) {
+      if (property.type !== 'Property' || property.computed) continue
+      const keys = property.key.type === 'Identifier' ? property.key.name : String(property.key.value)
+      if (sites[keys]) continue
+      const before = code.slice(0, property.start)
+      const line = before.split('\n').length
+      const column = property.start - before.lastIndexOf('\n')
+      sites[keys] = {
+        id: `${componentPathValue}#shortcuts.${keys}@${line}:${column}`,
+        path: componentPathValue,
+        file: relative,
+        line,
+        column,
+        element: 'shortcuts',
+        prop: keys,
+        handler: code.slice(property.value.start, property.value.end).replace(/\s+/g, ' ').slice(0, 80),
+      }
+    }
+  }
+  return sites
+}
+
 /** @param {Options} options */
 export default function framework(userOptions) {
   const options = resolveOptions(userOptions)
@@ -349,6 +397,8 @@ export default function framework(userOptions) {
           layer('state'),
           layer('form'),
           layer('acl'),
+          layer('shortcuts'),
+          `export const shortcutSites = ${JSON.stringify(shortcutSites(findLayer(dir, 'shortcuts'), componentPath(options.root, dir), options.root))};`,
           `export const children = [${children.map((_, index) => `child${index}`).join(', ')}];`,
         ].join('\n')
       }

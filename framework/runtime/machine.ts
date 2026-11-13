@@ -13,7 +13,8 @@
  * - `export const context` returns what the flow itself remembers; `export const description`
  *   describes the component.
  *
- * The render receives `state`: one boolean per state (`state.editing`), the context, and `send`.
+ * The render receives `state`: one boolean per state (`state.editing`), the context, `send`, and
+ * `can`, whether the chart takes an event now (`state.can({ type: 'save' })`).
  *
  * The declaration (the default export) gets the injection and the sources a component may read:
  * `acl`, `user`, `flags`, the locale and the messages. Its shape may follow them (a read-only
@@ -225,14 +226,16 @@ function useChart(declared: Declared) {
  * holds the sources the declaration may read; `sources`, what guards and actions read when
  * they run.
  */
-export function useStateLayer(path: string, module: StateModule, injection: Sources, declared: Sources, sources: Sources, rendering?: unknown) {
+export function useStateLayer(path: string, module: StateModule, injection: Sources, declared: Sources, sources: Sources, rendering?: () => unknown) {
   // The sources read the committed route. A chart is created in its component's first render,
   // and reads the route at once: for its context, and for the input of the service its first
   // state runs. A component mounted by a change of route is rendered before that route is
-  // committed, so until its first commit the chart reads the route being rendered.
+  // committed, so until its first commit the chart reads the route being rendered. Only until
+  // then: `rendering` reads the route's context, and a component that read it in its last
+  // render would render again at every change of route.
   const committed = useRef(false)
   const live = useRef(sources)
-  live.current = committed.current || rendering === undefined ? sources : { ...sources, route: rendering }
+  live.current = committed.current || rendering === undefined ? sources : { ...sources, route: rendering() }
   useLayoutEffect(() => {
     committed.current = true
     live.current = sources
@@ -254,6 +257,8 @@ export function useStateLayer(path: string, module: StateModule, injection: Sour
       ...Object.fromEntries(flags.map(({ name, path: at }) => [name, snapshot.matches(at as never)])),
       context: snapshot.context,
       send: actor.send,
+      // Whether the chart takes an event in the state it is in, its guards included.
+      can: (event: { type: string }) => snapshot.can(event as never),
     }),
     [snapshot, actor, flags],
   )

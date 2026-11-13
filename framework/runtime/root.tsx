@@ -13,6 +13,7 @@ import type { Acl, Entity, Env, Flags, Navigation, Route, User } from './index'
 import { activateLocale, loadShown, LocaleContext, SOURCE_LOCALE } from './i18n'
 import { createInjection, type Injection } from './injection'
 import { report, setLocation } from './pipeline'
+import { listenToKeys } from './shortcuts'
 import { activateSkin } from './style'
 
 type Sources = { entity: Entity; route: Route; flags: Flags; navigation: Navigation }
@@ -21,6 +22,7 @@ type UserRead = ReturnType<DataLayer['component']>
 type Framework = { injection: Injection; skin: string; sources: Sources; data: DataLayer; user: UserRead | null; acl: UserRead | null }
 
 const FrameworkContext = createContext<Framework | null>(null)
+FrameworkContext.displayName = 'Framework'
 
 export function useFramework() {
   const framework = useContext(FrameworkContext)
@@ -36,6 +38,7 @@ const NONE = {} as never
  * reads this context, so a change of route re-renders those and no other.
  */
 export const RouteContext = createContext<Route>(NONE)
+RouteContext.displayName = 'Route'
 
 /** A view of `ref.current` as if it were the object itself: reading, `in`, keys and spreading. */
 function liveView<T extends object>(ref: { readonly current: T }): T {
@@ -158,6 +161,9 @@ export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, na
 
   // Failures and interactions carry where the app is; setLocation returns what unsets it.
   useEffect(() => (location === undefined ? undefined : setLocation(location)), [location])
+
+  // The keys the components on screen declare in their shortcuts.ts.
+  useEffect(() => listenToKeys(), [])
 
   // What escapes every layer still reaches the pipeline, unidentified.
   useEffect(() => {

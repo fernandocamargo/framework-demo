@@ -49,7 +49,10 @@ before(() => {
   write('components/stray/i18n/pt-BR.json', {})
 
   write('components/reads/render.tsx', 'export default ({ label }) => <p>{label}</p>;\n')
-  write('components/reads/props.ts', 'export default ({ intl, async: { default: page } }) => ({ label: intl.formatNumber(page) });\n')
+  write(
+    'components/reads/props.ts',
+    'export const half = (value) => value / 2;\nexport default ({ intl, async: { default: page } }) => ({ label: intl.formatNumber(half(page)) });\n',
+  )
   write('components/reads/async.ts', 'export default ({ services, locale }) => services.page(locale);\n')
   write('components/reads/state.ts', 'export const allowed = ({ acl }) => acl.allowed;\nexport default ({ services }) => ({ idle: {} });\n')
   write('components/everything/render.tsx', 'export default (props) => <p>{props.label}</p>;\n')
@@ -101,6 +104,7 @@ test('what a component reads is what its files destructure, file by file', () =>
     byLayer: { props: ['intl'], async: ['locale'], state: ['acl'] },
     names: { props: ['async', 'intl'], async: ['locale', 'services'], chart: ['services'], state: ['acl', 'services'] },
   })
+  // props.ts's own helper (`half`) is not called by the framework, so its parameter reads nothing.
   // A parameter that is not destructured may read anything.
-  assert.deepEqual(readsOf(root, dir('everything')).all, ['intl', 'locale', 'i18n', 'user', 'acl', 'flags', 'route'])
+  assert.deepEqual(readsOf(root, dir('everything')).all, ['intl', 'locale', 'i18n', 'user', 'acl', 'flags', 'route', 'keyboard'])
 })
