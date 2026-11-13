@@ -65,7 +65,7 @@ test('a component with messages shows them in the locale on screen, and only com
       return createElement('p', null, (intl as { formatNumber: (value: number) => string }).formatNumber(1234.5))
     }),
     skins: {},
-    reads: ['intl'],
+    reads: { view: ['intl'] },
   })
   const Silent = component({
     path: 'components/silent',

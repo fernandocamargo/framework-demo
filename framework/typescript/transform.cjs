@@ -17,6 +17,7 @@
 // | `services/**/meta`                     | the default export, and what it returns | `Injection<…>`, `ServiceMeta<…>` |
 // | `clients/*/index`                      | the default export                    | `ClientInjection`          |
 // | `components/…/i18n`                    | its default export is read `as const`, so each message is its literal text, typed from its ICU |
+// | `components/…/acl`                     | the default export                    | what props.ts gets (`RenderProps`) |
 //
 // `Injection` and `AsyncInjection` carry this app's clients and services, written as a type
 // from the folders: `{ rest: ReturnType<typeof import("…/clients/rest/index").default> }`, and
@@ -24,7 +25,7 @@
 const path = require('node:path')
 const folders = require('../shared/folders.cjs')
 
-const LAYERS = new Set(['render', 'props', 'async', 'placeholder', 'error', 'state', 'i18n'])
+const LAYERS = new Set(['render', 'props', 'async', 'placeholder', 'error', 'state', 'i18n', 'acl'])
 
 /**
  * @param {typeof import('typescript')} ts
@@ -92,7 +93,9 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
     const { clients, services } = trees()
     switch (found.name) {
       case 'render':
-      case 'props': {
+      case 'props':
+      // acl.ts gets what props.ts gets, with the route and the `acl` inherited from above.
+      case 'acl': {
         // With a props.ts, the render gets what it returns; props.ts gets what the render would have.
         const shaping = folders.findLayer(found.dir, 'props')
         if (found.name === 'render' && shaping) return `${types}.ShapedProps<${moduleType(shaping)}>`
@@ -219,7 +222,7 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
     signature(fileName) {
       const found = kind(fileName)
       if (!found) return ''
-      const layers = found.dir ? ['props', 'async', 'state', 'form', 'i18n'].map((name) => folders.findLayer(found.dir, name) ?? '').join(',') : ''
+      const layers = found.dir ? ['props', 'async', 'state', 'form', 'i18n', 'acl'].map((name) => folders.findLayer(found.dir, name) ?? '').join(',') : ''
       return `${trees().signature}:${layers}:${found.dir && folders.declaredProps(found.dir) ? 'typed' : ''}`
     },
 

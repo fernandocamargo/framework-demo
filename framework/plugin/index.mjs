@@ -311,8 +311,13 @@ export default function framework(userOptions) {
                 `  translations: { ${listTranslations(dir).map(({ locale, file }) => `${JSON.stringify(locale)}: () => import(${JSON.stringify(file)})`).join(', ')} },`,
               ]
             : []),
-          `  reads: ${JSON.stringify(reads.all)},`,
-          `  readsInAsync: ${JSON.stringify(reads.byLayer.async ?? [])},`,
+          `  reads: ${JSON.stringify({
+            view: [...new Set(['props', 'render', 'shortcuts'].flatMap((layer) => reads.byLayer[layer] ?? []))],
+            // Every name acl.ts destructures: a rule that reads only `user` and `acl` is the folder's.
+            acl: reads.names.acl ?? [],
+            async: reads.byLayer.async ?? [],
+            state: reads.byLayer.state ?? [],
+          })},`,
           '});',
         ].join('\n')
       }
@@ -341,6 +346,7 @@ export default function framework(userOptions) {
           layer('async'),
           layer('state'),
           layer('form'),
+          layer('acl'),
           `export const children = [${children.map((_, index) => `child${index}`).join(', ')}];`,
         ].join('\n')
       }

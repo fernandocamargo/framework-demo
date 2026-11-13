@@ -19,6 +19,11 @@ export interface Route {}
 /** The feature flags. */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Flags {}
+/** The person signed in, as `Root`'s `user` read resolves it. */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface User {}
+/** Whether what a component offers may be done, as the nearest `acl.ts` at or above it says. */
+export type Acl = { readonly allowed: boolean }
 /** How components move between routes (a stand-in for a routing layer). */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Navigation {}
@@ -40,6 +45,7 @@ export type {
   Clients,
   ErrorProps,
   FormProps,
+  Access,
   Language,
   Injection,
   Operation,

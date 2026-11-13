@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from 'react'
 import type { I18n, Intl } from './i18n-types'
-import type { Entity, Env, Flags, Navigation, Route } from './index'
+import type { Acl, Entity, Env, Flags, Navigation, Route, User } from './index'
 
 /** The page's URL, read when an operation runs. */
 export type Url = {
@@ -47,8 +47,19 @@ export type Language<I18nModule = undefined> = {
   intl: Intl
 } & ([I18nModule] extends [undefined] ? unknown : { i18n: I18n<I18nModule> })
 
-/** What an export of a component's `async.ts` receives: the injection, the sources, the locale, and a signal that aborts on unmount. */
-export type AsyncInjection<Clients = Tree, Services = Tree> = Injection<Clients, Services> & Sources & Language & { signal: AbortSignal }
+/**
+ * Who is signed in and what may be done, for a component's files. A component whose files read
+ * `user` waits for Root's `user` read the first time, and renders again when the person changes.
+ */
+export type Access = {
+  /** The person signed in, or null: Root's `user` read. */
+  user: User | null
+  /** What the nearest `acl.ts` at or above this component says. */
+  acl: Acl
+}
+
+/** What an export of a component's `async.ts` receives: the injection, the sources, the locale, who is signed in, and a signal that aborts on unmount. */
+export type AsyncInjection<Clients = Tree, Services = Tree> = Injection<Clients, Services> & Sources & Language & Pick<Access, 'user'> & { signal: AbortSignal }
 
 /** What a client's factory receives. */
 export type ClientInjection = { env: Env }
@@ -196,6 +207,7 @@ type Merged<Union> = (Union extends unknown ? (value: Union) => void : never) ex
  */
 export type StateArgs<Clients = Tree, Services = Tree, Module = unknown, Payloads = object, FormModule = undefined, I18nModule = undefined> = Injection<Clients, Services> &
   Sources &
+  Access &
   Language<I18nModule> & {
     context: ContextOf<Module>
     event: StateEvent<Payloads>
@@ -232,7 +244,8 @@ type Layers = { async?: unknown; state?: unknown; events?: unknown; form?: unkno
 export type RenderProps<Folder extends Layers = Layers> = ('passed' extends keyof Folder ? Folder['passed'] : Passed) & { className: string } & ('async' extends keyof Folder ? { async: AsyncProps<Folder['async']> } : unknown) &
   ('state' extends keyof Folder ? { state: StateProps<Folder['state'], Folder['events']> } : unknown) &
   ('form' extends keyof Folder ? { form: FormProps<Folder['form']> } : unknown) &
-  Language<'i18n' extends keyof Folder ? Folder['i18n'] : undefined>
+  Language<'i18n' extends keyof Folder ? Folder['i18n'] : undefined> &
+  Access & { route: Route; flags: Flags }
 
 /**
  * What a render receives when its folder has a `props.ts`: what that file's default export returns,

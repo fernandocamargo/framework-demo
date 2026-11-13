@@ -42,3 +42,18 @@ The flow gains two steps, a switch to Brazilian Portuguese and back. Chromium, o
 - Each switch of locale renders the 18 framework components on screen that read the locale, every one of them changing the page, in one commit; the components that read none of it do not render.
 - Without the two new steps, the other components render again 4,310 times (2,034 changing nothing), fewer than the baseline's 4,389 (2,201): what the render gets now keeps the identity of every part that did not change, and a render that would get the same is not called.
 
+## After the ACL
+
+Every row now holds a delete link of its own (`product/remove-link`), with a rule of its own; the session reads who is signed in from the profile. Chromium, one run, the same 26 steps:
+
+| | i18n | ACL |
+|---|---|---|
+| misses | 0 | 0 |
+| render calls | 235 | 353 |
+| framework components mounted; rendered again (changing nothing) | 82; 171 (40) | 155; 220 (48) |
+| other components rendered again (changing nothing) | 5,594 (2,568) | 5,601 (2,575) |
+| render time (changing nothing) | 150.9 ms (36.0 ms) | 151.9 ms (35.0 ms) |
+
+- The new calls and mounts are the 12 delete links each list shows.
+- A sign-in or a sign-out decides every rule again. The delete link's rule reads only `user` and `acl`, so it is decided where the user read answers, and no link renders unless its answer changes: signing in renders 5 framework components again (3 of them changing nothing), against 17 (15) when each link read the user itself.
+

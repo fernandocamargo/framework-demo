@@ -51,7 +51,7 @@ export type Interaction = {
 }
 
 /** The layer a failure happened in. */
-export type Layer = 'handler' | 'async' | 'service' | 'state' | 'props' | 'render' | 'global'
+export type Layer = 'handler' | 'async' | 'service' | 'state' | 'props' | 'acl' | 'render' | 'global'
 
 export type Failure = {
   kind: 'failure'

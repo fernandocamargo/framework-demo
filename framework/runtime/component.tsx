@@ -9,8 +9,13 @@
  * The render is called as a plain function, inside the component instance's scope, so
  * the handlers it passes are tracked with their placement. It receives the props, the
  * `className` (the component's path), and `async`, `state` and `form` when the folder has them.
+ *
+ * A component also gets, when one of its files reads it: the locale (`i18n`, `intl`, `locale`),
+ * the person signed in (`user`), what it may do (`acl`), the flags and the route. A folder's
+ * `acl.ts` says, as a boolean, whether what the component offers may be done; the component and
+ * everything below it get that as `acl.allowed`, until a folder below says otherwise.
  */
-import { createContext, createElement, memo, Suspense, use, useLayoutEffect, useMemo, useRef, type ComponentType, type ReactNode } from 'react'
+import { createContext, createElement, memo, Suspense, use, useCallback, useLayoutEffect, useMemo, useRef, type ComponentType, type ReactNode } from 'react'
 import { useQueryErrorResetBoundary, useSuspenseQuery } from '@tanstack/react-query'
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary'
 import { Pending, hold } from './activity'
@@ -18,6 +23,7 @@ import { execute, useOperations, type AsyncModule } from './async'
 import { recording, recordingRoute, shareByIdentity } from './data'
 import { useFormLayer, type FormModule } from './form'
 import { activeLocale, intlFor, LocaleContext, loadMessages, showing, SOURCE_LOCALE } from './i18n'
+import type { Acl } from './index'
 import { useStateLayer, type StateModule } from './machine'
 import { report, toError, type Scope } from './pipeline'
 import { RouteContext, useFramework } from './root'
@@ -34,6 +40,8 @@ type ViewModule = {
   async: AsyncModule | undefined
   state: StateModule | undefined
   form: FormModule | undefined
+  /** `acl.ts`: whether what the component offers may be done. */
+  acl?: { default?: unknown } | undefined
   /** The components the render shows, from the plugin: their loads start when this view has loaded. */
   children?: readonly { preload?: () => void }[]
 }
@@ -50,13 +58,19 @@ export type Spec = {
   /** Each translation of the messages, `i18n/<locale>.json`, loaded on demand. */
   translations?: Record<string, () => Promise<{ default: Record<string, string> }>>
   /**
-   * The sources the folder's files read (`intl`, `locale`, `user`, `acl`, `flags`), from what
-   * their functions destructure. Only those make the component render again when they change.
+   * The sources the folder's files read (`intl`, `locale`, `i18n`, `user`, `acl`, `flags`,
+   * `route`), from what their functions destructure: in the view's files (`props.ts`, the render,
+   * `acl.ts`), in `async.ts` and in `state.ts`. Only what the view reads makes the component render
+   * again when it changes; what `async.ts` reads keys its default read.
    */
-  reads?: readonly string[]
-  /** Those of them `async.ts` reads: its default read is keyed by their values too. */
-  readsInAsync?: readonly string[]
+  reads?: { view?: readonly string[]; acl?: readonly string[]; async?: readonly string[]; state?: readonly string[] }
 }
+
+const ALLOWED: Acl = Object.freeze({ allowed: true })
+const REFUSED: Acl = Object.freeze({ allowed: false })
+
+/** What the nearest `acl.ts` above says. With none, everything is allowed. */
+export const AclContext = createContext<Acl>(ALLOWED)
 
 const ScopeContext = createContext<Scope | null>(null)
 
@@ -77,11 +91,26 @@ const sameProps = (a: Props, b: Props) => {
 }
 
 export function component(spec: Spec) {
-  const reads = new Set(spec.reads ?? [])
-  // Whether the component follows the locale: its messages, or `intl` or `locale` read anywhere.
-  // Fixed for the component's life, so the context is read on every render or on none.
-  const followsLocale = Boolean(spec.i18n) || reads.has('intl') || reads.has('locale')
-  const keyedByLocale = (spec.readsInAsync ?? []).some((source) => source === 'intl' || source === 'locale')
+  const inView = new Set(spec.reads?.view ?? [])
+  const inAcl = new Set(spec.reads?.acl ?? [])
+  const inAsync = new Set(spec.reads?.async ?? [])
+  const inState = new Set(spec.reads?.state ?? [])
+  // What the component follows, fixed for its life, so each context is read on every render or
+  // on none: the locale, when it has messages or reads the locale; the user, when any of its
+  // files reads it; the inherited `acl`, when it reads it or has an `acl.ts` (which gets it).
+  const followsLocale = Boolean(spec.i18n) || ['intl', 'locale', 'i18n'].some((source) => inView.has(source) || inAsync.has(source))
+  const keyedByLocale = inAsync.has('intl') || inAsync.has('locale')
+  const readsUser = inView.has('user') || inAsync.has('user') || inState.has('user') || inAcl.has('user')
+  const keyedByUser = inAsync.has('user')
+  const readsAcl = inView.has('acl') || inState.has('acl')
+  const viewReadsRoute = inView.has('route') || inAcl.has('route')
+  // An acl.ts that reads only who is signed in and what is inherited is a rule of the folder,
+  // the same for every instance: it is decided where the user read answers, and an instance
+  // renders again only when its decision changes, not every time the person does (a sign-in
+  // re-decides a delete link in every row, and renders none whose answer stays the same).
+  // `reads.acl` holds every name acl.ts destructures (`*` for one it does not), not only sources.
+  const folderRule = inAcl.size > 0 && [...inAcl].every((name) => name === 'user' || name === 'acl')
+  const userOnlyInRule = folderRule && !(inView.has('user') || inAsync.has('user') || inState.has('user'))
   let view: Promise<ViewModule> | undefined
   // Once the view has loaded, the components it shows start loading theirs, so a child does not
   // wait to render before its own view starts, and React does not render its parent again when
@@ -121,16 +150,34 @@ export function component(spec: Spec) {
 
   /** Every layer of the view but the state layer, called in the same order on every render. */
   function useLayers() {
-    const { injection, skin, sources, data } = useFramework()
+    const { injection, skin, sources, data, user: userRead } = useFramework()
     const language = useLanguage()
+    // The person signed in, from Root's `user` read: a sign-in or a sign-out makes it stale, and
+    // only the components that read it render again.
+    const user = readsUser && !userOnlyInRule ? (userRead ? (useSuspenseQuery(userRead).data as unknown) : null) : undefined
     const module = use(loadView())
+    const inherited = readsAcl || module.acl ? use(AclContext) : ALLOWED
+    // A rule of the folder, decided in the user read's `select`: TanStack renders this component
+    // again only when what `select` returns changes.
+    const rule = folderRule ? module.acl?.default : undefined
+    const decide = useCallback((person: unknown) => decideRule(rule, person, inherited), [rule, inherited])
+    const decided = folderRule ? (userRead ? (useSuspenseQuery({ ...userRead, select: decide }).data as Acl) : decide(null)) : undefined
+    const route = viewReadsRoute ? use(RouteContext) : undefined
+    // What the chart's guards and the operations read when they run: the latest `acl`, set by
+    // each render (show).
+    const judged = useRef<Acl>(inherited)
     const loadThisSkin = spec.skins[skin]
     if (loadThisSkin) use(loadSkin(spec.path, skin, loadThisSkin))
 
     const parent = use(ScopeContext)
     const scope = useMemo(() => ({ path: spec.path, parent }), [parent])
     const { locale } = language
-    const injected = useMemo(() => ({ ...injection, ...sources, ...defined(language) }), [injection, sources, language])
+    const injected = useMemo(() => {
+      const all: Record<string, unknown> = { ...injection, ...sources, ...defined(language), ...defined({ user }) }
+      // A getter: the chart's guards and the operations spread these when they run.
+      if (readsAcl || module.acl) Object.defineProperty(all, 'acl', { get: () => judged.current, enumerable: true })
+      return all
+    }, [injection, sources, language, user, module.acl])
 
     // The default export of async.ts, as a query: it records the services and route parameters
     // it reads, so the data layer knows when to run it again. It gets the query's signal, which
@@ -139,19 +186,20 @@ export function component(spec: Spec) {
     // no other. `use` may read a context behind a condition, and the condition is fixed
     // for any one component once its view has loaded.
     const exported = module.async?.default
-    const route = (typeof exported === 'function' ? use(RouteContext) : null) as Record<string, unknown> | null
+    const readRoute = (typeof exported === 'function' ? use(RouteContext) : null) as Record<string, unknown> | null
+    const userId = (user as { id?: unknown } | null | undefined)?.id ?? null
     const query = useMemo(
       () =>
-        typeof exported !== 'function' || route === null
+        typeof exported !== 'function' || readRoute === null
           ? null
           : data.component(
               spec.path,
-              route,
+              readRoute,
               (record, signal) =>
-                execute(exported, { ...injected, signal, services: recording(injection.services, record.service), route: recordingRoute(route, record.route) }, []),
-              keyedByLocale ? { locale } : undefined,
+                execute(exported, { ...injected, signal, services: recording(injection.services, record.service), route: recordingRoute(readRoute, record.route) }, []),
+              keyedByLocale || keyedByUser ? defined({ locale: keyedByLocale ? locale : undefined, user: keyedByUser ? userId : undefined }) : undefined,
             ),
-      [data, exported, injection, injected, route, locale],
+      [data, exported, injection, injected, readRoute, locale, userId],
     )
     // A view with no default read has no query. A stand-in query would suspend the first instance
     // of each such component once, and React would render everything inside the boundary again
@@ -171,7 +219,34 @@ export function component(spec: Spec) {
     const operations = useOperations(spec.path, module.async, withForm)
     const hasRead = query !== null
     const async = useMemo(() => module.async && { ...operations, ...(hasRead ? { default: initial } : {}) }, [module.async, operations, hasRead, initial])
-    return { module, scope, injection, withForm, form, async, language }
+    const access = useMemo(() => ({ given: defined({ user, route }), inherited, decided }), [user, route, inherited, decided])
+    return { module, scope, injection, withForm, form, async, language, access, judged }
+  }
+
+  /** A rule of the folder (it reads only `user` and `acl`), decided for a person. A rule that throws refuses, and is reported. */
+  function decideRule(rule: unknown, user: unknown, inherited: Acl): Acl {
+    if (typeof rule !== 'function') return inherited
+    try {
+      return (rule as (given: Props) => unknown)({ user, acl: inherited }) ? ALLOWED : REFUSED
+    } catch (thrown) {
+      report(thrown, { layer: 'acl', path: spec.path })
+      return REFUSED
+    }
+  }
+
+  /**
+   * What `acl.ts` says about what the component offers, from what `props.ts` would get, the
+   * route, and the `acl` inherited from above. A rule that throws refuses, and is reported.
+   */
+  function judge(module: ViewModule, given: Props, inherited: Acl): Acl {
+    const rule = module.acl?.default
+    if (typeof rule !== 'function') return inherited
+    try {
+      return (rule as (given: Props) => unknown)({ ...given, acl: inherited }) ? ALLOWED : REFUSED
+    } catch (thrown) {
+      report(thrown, { layer: 'acl', path: spec.path })
+      return REFUSED
+    }
   }
 
   /**
@@ -187,19 +262,23 @@ export function component(spec: Spec) {
    * keeps its identity, so react-aria's collections and memoized children inside skip it.
    */
   function show(props: Props, layers: ReturnType<typeof useLayers>, state: unknown) {
-    const { module, scope, form, async, language } = layers
-    const last = useRef<{ inputs: unknown[]; props: Props; shaped: Props; element: ReactNode } | null>(null)
-    const inputs = [module, scope, async, state, form, language]
+    const { module, scope, form, async, language, access, judged } = layers
+    const last = useRef<{ inputs: unknown[]; props: Props; shaped: Props; acl: Acl; element: ReactNode } | null>(null)
+    const inputs = [module, scope, async, state, form, language, access]
     if (last.current && sameEach(last.current.inputs, inputs) && sameProps(last.current.props, props)) return last.current.element
     const className = classes(spec.path, props.className)
-    const given: Props = { ...props, className, ...(async ? { async } : {}), ...(state ? { state } : {}), ...(module.form ? { form } : {}), ...defined(language) }
-    const shaped = shareByIdentity(last.current?.shaped, shape(module, given, className)) as Props
-    if (last.current && shaped === last.current.shaped) {
+    const given: Props = { ...props, className, ...(async ? { async } : {}), ...(state ? { state } : {}), ...(module.form ? { form } : {}), ...defined(language), ...access.given }
+    const acl = access.decided ?? judge(module, given, access.inherited)
+    judged.current = acl
+    const shaped = shareByIdentity(last.current?.shaped, shape(module, readsAcl || module.acl ? { ...given, acl } : given, className)) as Props
+    if (last.current && shaped === last.current.shaped && acl === last.current.acl) {
       last.current = { ...last.current, inputs, props }
       return last.current.element
     }
-    const element = createElement(ScopeContext, { value: scope }, withScope(scope, () => module.render(shaped)))
-    last.current = { inputs, props, shaped, element }
+    const output = withScope(scope, () => module.render(shaped))
+    // What this folder's acl.ts says reaches every component below, until one of them says otherwise.
+    const element = createElement(ScopeContext, { value: scope }, module.acl ? createElement(AclContext, { value: acl }, output) : output)
+    last.current = { inputs, props, shaped, acl, element }
     return element
   }
 

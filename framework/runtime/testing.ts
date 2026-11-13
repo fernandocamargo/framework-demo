@@ -31,6 +31,8 @@ export const intlOf = (locale = 'en') => intlFor(locale)
 type Sources = Record<string, unknown>
 
 export function startFlow(module: object, sources: Sources = {}) {
+  // What a component gets when nothing above it says otherwise: everything allowed, nobody signed in.
+  sources = { acl: { allowed: true }, user: null, ...sources }
   const live = { current: sources }
   const { machine, flags } = buildMachine('test', module as StateModule, sources, live)
   const actor = createActor(machine)

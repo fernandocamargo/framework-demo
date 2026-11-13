@@ -8,15 +8,17 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { createContext, Suspense, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { hold, Pending, useCommitted, watch } from './activity'
-import { createDataLayer, createQueryClient, type DataLayer } from './data'
-import type { Entity, Env, Flags, Navigation, Route } from './index'
+import { createDataLayer, createQueryClient, recording, type DataLayer } from './data'
+import type { Entity, Env, Flags, Navigation, Route, User } from './index'
 import { activateLocale, loadShown, LocaleContext, SOURCE_LOCALE } from './i18n'
 import { createInjection, type Injection } from './injection'
 import { report, setLocation } from './pipeline'
 import { activateSkin } from './style'
 
 type Sources = { entity: Entity; route: Route; flags: Flags; navigation: Navigation }
-type Framework = { injection: Injection; skin: string; sources: Sources; data: DataLayer }
+/** The query of Root's `user` read, which components that read `user` share. */
+type UserRead = ReturnType<DataLayer['component']>
+type Framework = { injection: Injection; skin: string; sources: Sources; data: DataLayer; user: UserRead | null }
 
 const FrameworkContext = createContext<Framework | null>(null)
 
@@ -57,6 +59,14 @@ export type RootProps = {
   route?: Route
   /** The feature flags. */
   flags?: Flags
+  /**
+   * Who is signed in: a read of the services, such as the session and then the profile it names
+   * (`({ services }) => …`), resolving to the person or `null`. Components whose files read
+   * `user` get it, and wait for it the first time. It runs through the data layer, so a write that
+   * makes one of the services it read stale (a sign-in, a sign-out) reads it again, and only the
+   * components that read `user` render again, if the person changed. Keep the function stable.
+   */
+  user?: (injection: Injection & { signal: AbortSignal }) => Promise<User | null>
   /** How components move between routes. A stand-in until the routing layer is designed. */
   navigation?: Navigation
   /** The skin of the whole page. */
@@ -81,7 +91,7 @@ export type RootProps = {
   children?: ReactNode
 }
 
-export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, navigation = NONE, skin = 'default', locale = SOURCE_LOCALE, location, client: given, children }: RootProps) {
+export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, navigation = NONE, skin = 'default', locale = SOURCE_LOCALE, user, location, client: given, children }: RootProps) {
   // Services were created once and read the entity when they run, so the entity they see is live.
   const current = useRef(entity)
   current.current = entity
@@ -127,7 +137,11 @@ export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, na
     }
   }, [locale, shown])
   useCommitted(shown)
-  const framework = useMemo(() => ({ injection, skin, sources, data }), [injection, skin, sources, data])
+  const userRead = useMemo(
+    () => (user ? data.component('framework/user', {}, (record, signal) => user({ ...injection, signal, services: recording(injection.services, record.service) })) : null),
+    [data, injection, user],
+  )
+  const framework = useMemo(() => ({ injection, skin, sources, data, user: userRead }), [injection, skin, sources, data, userRead])
 
   // Failures and interactions carry where the app is; setLocation returns what unsets it.
   useEffect(() => (location === undefined ? undefined : setLocation(location)), [location])

@@ -80,7 +80,7 @@ export const STEPS = [
   },
   {
     name: 'fill the demo account in',
-    act: (page) => dialog(page, 'Sign in').getByRole('button', { name: 'Fill it in' }).click(),
+    act: (page) => dialog(page, 'Sign in').getByRole('button', { name: /^Emily,/ }).click(),
     check: async (page) => (await dialog(page, 'Sign in').getByRole('textbox', { name: 'Username' }).inputValue()) !== '',
   },
   {

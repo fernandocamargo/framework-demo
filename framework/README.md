@@ -45,6 +45,7 @@ A folder under `components/` with a `render` file and no `index` is a component.
 | `form.ts` | `seed` (server data to values) and `payload` (values to a request). |
 | `placeholder.tsx` | Shows while the view loads and reads. Adds a `Suspense`. |
 | `error.tsx` | Shows when the view fails. Adds an error boundary around both. |
+| `acl.ts` | Whether what the component offers may be done: a function of what `props.ts` gets, with the route and the `acl` inherited from above, returning a boolean. The component and everything below it get `acl.allowed`. |
 | `i18n.ts` | The component's messages, in the source language: an object of any shape whose leaves are ICU messages or functions. |
 | `i18n/<locale>.json` | A translation of them, keyed by the folder's path and the message's path. Loaded on demand. |
 | `style/skins/<name>/index.ts` | The component's CSS for a skin. |
@@ -53,7 +54,7 @@ What the framework guarantees about them:
 
 - **The view is lazy.** The render and its layers load together, on demand. Placeholder and error files load eagerly. A view starts loading the views and skins of the components its render imports, so a child does not wait to render before its own code starts loading.
 - **A component renders only when what it shows changes.** Every component is wrapped in `React.memo`. When a re-render leaves the props, `async`, `state` and `form` as they were, the framework returns the render's last output instead of calling it, and React skips everything inside. A new answer keeps every part equal to the last answer the component showed, so a child given an unchanged part of it gets the same object. What the render gets (what `props.ts` returns, or the props and layers) is shared the same way with what it got last time: when nothing in it changed, the render is not called, and a part that did not change keeps its identity, so react-aria's collections and memoized children skip it.
-- **A component follows only what its files read.** The plugin reads what the first parameter of each function the framework calls destructures (`({ intl, async }) => …`), file by file. A component re-renders for a change of locale only when one of its files reads `intl`, `locale` or `i18n` (or the folder has an `i18n.ts`); a parameter that is not destructured reads everything. A default read that reads the locale is keyed by it.
+- **A component follows only what its files read.** The plugin reads what the first parameter of each function the framework calls destructures (`({ intl, async }) => …`), file by file. A component re-renders for a change of locale only when one of its files reads `intl`, `locale` or `i18n` (or the folder has an `i18n.ts`), for a change of person only when one reads `user`, and for a change of what it may do only when one reads `acl`; a parameter that is not destructured reads everything. A default read that reads the locale or the user is keyed by it, so one person never sees another's cached answer.
 - **Only components that read the route follow the route.** A component with a default read reads the route context, and so does one with a `state.ts` (its chart may read the route when it is created). Other components do not re-render when the address changes. Operations and statecharts read the committed route when they run.
 - **What a parent passes is checked** when the child's `props.ts` exports a type named `Props`: the plugin writes the folder's declaration from it. A folder without one takes any props.
 
@@ -76,6 +77,25 @@ export default {
 - The messages of a folder in a locale are built once and shared by every instance.
 - The TypeScript plugin reads `i18n.ts` `as const`, so each message's type is its own text, and `runtime/i18n-types.ts` reads the ICU in it. The checks read every translation against `i18n.ts`: see "Mistakes it names".
 - `framework/testing`'s `messagesOf(module, locale?, translations?)` builds a folder's `i18n` for a test of its `props.ts`, and `intlOf(locale)` gives `intl`.
+
+### Who is signed in, and what they may do
+
+- `Root`'s `user` is a read of the services that resolves to the person signed in, or `null`: here the session the API client holds, then the profile it names (`/auth/me`, which carries the role). It runs through the data layer, so a write that makes a service it read stale (a sign-in, a sign-out) reads it again. A component whose files read `user` waits for it the first time.
+- A folder's `acl.ts` returns a boolean, from what `props.ts` would get (the props, `async`, `state`, `form`, `user`, the messages), the route, and `acl`, what the folder above decided:
+
+  ```ts
+  // components/app/acl.ts: everything below inherits it
+  export default ({ user }) => user === null || user.role === 'admin' || user.role === 'moderator'
+  // components/product/remove-link/acl.ts: one link, deep in a row, narrower
+  export default ({ user, acl }) => acl.allowed && (user === null || user.role === 'admin')
+  // components/bulk-price/acl.ts: a rule that reads the form
+  export default ({ user, form }) => user === null || user.role === 'admin' || (user.role === 'moderator' && form.values.percent <= 20)
+  ```
+
+- The component, and every component below it until a folder says otherwise, gets `acl.allowed`. A render or a `props.ts` branches on it (hide an action, lock a form); a chart's guard reads it when the event arrives (`save: [{ guard: refused }, …]`), so a refused action goes nowhere whatever sent it.
+- A rule that throws refuses, and is reported as the `acl` layer's failure.
+- A rule that reads only `user` and `acl` is the folder's, the same for every instance: it is decided where the user read answers, and an instance renders again only when its decision changes. A sign-in re-decides the delete link in every row and renders none whose answer is the same.
+- `framework/testing`'s `startFlow` gives a chart `acl: { allowed: true }` and `user: null` unless the test says otherwise, as `Root` does.
 
 ### The data layer
 
@@ -150,8 +170,8 @@ Nobody writes them. The TypeScript plugin shows TypeScript each layer file with 
 
 | File | Functions annotated | With |
 |---|---|---|
-| `render` | the default export | what `props.ts` returns, or the props with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale` |
-| `props` | the default export | the file's own `Props`, with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale` |
+| `render` | the default export | what `props.ts` returns, or the props with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags` |
+| `props`, `acl` | the default export | the file's own `Props`, with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags` |
 | `async` | the default and every named export | the injection, the route, a `signal` |
 | `state` | the default export; every exported function | the injection; `context`, `event`, the route, the form… |
 | `placeholder`, `error` | the default export | the props, and `i18n`, `intl` and `locale` when the folder has an `i18n.ts`; the `error` and `resetErrorBoundary` |

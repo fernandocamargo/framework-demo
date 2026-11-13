@@ -222,21 +222,24 @@ function secondComponents(root, file) {
  * user, of what the person may do or of a flag renders again the components that read it, and
  * no other.
  */
-const SOURCES = ['intl', 'locale', 'i18n', 'user', 'acl', 'flags']
+const SOURCES = ['intl', 'locale', 'i18n', 'user', 'acl', 'flags', 'route']
 
 /**
  * The top-level names the first parameter of each function the framework calls in a component's
  * files destructures: `({ async, intl }) => …` reads `async` and `intl`. A parameter that is not
  * destructured (`(props) => …`) may read anything, so it reads every source. The render is left
  * out when a props.ts shapes what it gets, since it then sees props.ts's output, not the sources.
- * Returns the sources each file reads and all of them, each in SOURCES order:
- * `{ all: ['intl'], byLayer: { props: ['intl'], async: [] } }`.
+ * Returns the sources each file reads and all of them, each in SOURCES order, and every name
+ * each file destructures (`*` for a parameter that is not destructured):
+ * `{ all: ['intl'], byLayer: { props: ['intl'], async: [] }, names: { props: ['intl', 'async'] } }`.
  */
 function readsOf(root, dir) {
   const ts = typescriptFor(root)
   const all = new Set()
   const byLayer = {}
+  const names = {}
   let read
+  let named
   const shaped = Boolean(findLayer(dir, 'props'))
   const files = ['props', 'async', 'state', 'acl', 'shortcuts', ...(shaped ? [] : ['render'])]
   const exported = (node) => ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
@@ -247,15 +250,24 @@ function readsOf(root, dir) {
     if (ts.isObjectBindingPattern(parameter.name)) {
       for (const element of parameter.name.elements) {
         const name = element.propertyName ?? element.name
-        if (element.dotDotDotToken) SOURCES.forEach((source) => read.add(source))
-        else if (ts.isIdentifier(name) || ts.isStringLiteral(name)) read.add(name.text)
+        if (element.dotDotDotToken) {
+          SOURCES.forEach((source) => read.add(source))
+          named.add('*')
+        } else if (ts.isIdentifier(name) || ts.isStringLiteral(name)) {
+          read.add(name.text)
+          named.add(name.text)
+        }
       }
-    } else SOURCES.forEach((source) => read.add(source))
+    } else {
+      SOURCES.forEach((source) => read.add(source))
+      named.add('*')
+    }
   }
   for (const layer of files) {
     const file = findLayer(dir, layer)
     if (!file) continue
     read = new Set()
+    named = new Set()
     const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, JSX_FILE.test(file) ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
     for (const statement of source.statements) {
       if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
@@ -268,9 +280,10 @@ function readsOf(root, dir) {
       }
     }
     byLayer[layer] = SOURCES.filter((source) => read.has(source))
+    names[layer] = [...named].sort()
     for (const source of read) all.add(source)
   }
-  return { all: SOURCES.filter((source) => all.has(source)), byLayer }
+  return { all: SOURCES.filter((source) => all.has(source)), byLayer, names }
 }
 
 /**
