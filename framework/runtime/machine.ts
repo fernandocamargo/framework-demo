@@ -14,11 +14,18 @@
  *   describes the component.
  *
  * The render receives `state`: one boolean per state (`state.editing`), the context, and `send`.
+ *
+ * The declaration (the default export) gets the injection and the sources a component may read:
+ * `acl`, `user`, `flags`, the locale and the messages. Its shape may follow them (a read-only
+ * editor has no `save`). When what it read changes, the chart is declared again, and the running
+ * flow moves to the new chart at its next rest (no service running, no delay pending), keeping its
+ * state and context when the new chart has that state, starting over when it has not.
  */
-import { enqueueActions, fromPromise, setup, type AnyStateMachine, type SnapshotFrom } from 'xstate'
-import { useActorRef, useSelector } from '@xstate/react'
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { createActor, enqueueActions, fromPromise, setup, type AnyActorRef, type AnyStateMachine, type SnapshotFrom } from 'xstate'
+import { useSelector } from '@xstate/react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { report } from './pipeline'
+import { sameParts, tracking } from './reads'
 
 type Sources = Record<string, unknown>
 type Config = Record<string, unknown>
@@ -126,8 +133,99 @@ export function buildMachine(path: string, module: StateModule, injection: Sourc
   return { machine: machine as AnyStateMachine, flags: flagNames }
 }
 
-/** The machine of a component instance, with live sources, as the render sees it. */
-export function useStateLayer(path: string, module: StateModule, injection: Sources, sources: Sources, rendering?: unknown) {
+/** A chart, declared from the injection and what its declaration read of the sources. */
+type Declared = { machine: AnyStateMachine; flags: { name: string; path: string }[]; module: StateModule; injection: Sources; sources: Sources; read: Map<string, Set<string>> }
+
+/** Declares the chart, recording which sources its declaration read, and which of their parts. */
+function declare(path: string, module: StateModule, injection: Sources, sources: Sources, live: { current: Sources }): Declared {
+  const read = new Map<string, Set<string>>()
+  const given = new Proxy(injection, {
+    get(target, key, receiver) {
+      if (typeof key !== 'string' || !Object.hasOwn(sources, key)) return Reflect.get(target, key, receiver)
+      let keys = read.get(key)
+      if (!keys) read.set(key, (keys = new Set()))
+      return tracking(sources[key], keys)
+    },
+    has: (target, key) => Reflect.has(target, key) || (typeof key === 'string' && Object.hasOwn(sources, key)),
+  })
+  return { ...buildMachine(path, module, given, live), module, injection, sources, read }
+}
+
+/** Whether the declaration would see something else now: another module or injection, or another value in what it read. */
+function stale(declared: Declared, module: StateModule, injection: Sources, sources: Sources) {
+  if (declared.module !== module || declared.injection !== injection) return true
+  for (const [source, keys] of declared.read) {
+    const before = declared.sources[source]
+    const after = sources[source]
+    // An object read for none of its parts depends on nothing in it; a value, on itself.
+    if (keys.size === 0 ? typeof before !== 'object' && !Object.is(before, after) : !sameParts(before, after, keys)) return true
+  }
+  return false
+}
+
+/** No service running and no delay pending: the flow may move to another chart. */
+const atRest = (snapshot: SnapshotFrom<AnyStateMachine>) => {
+  const nodes = (snapshot as unknown as { _nodes?: { invoke?: unknown[]; after?: unknown[] }[] })._nodes ?? []
+  return Object.keys(snapshot.children ?? {}).length === 0 && !nodes.some((node) => (node.invoke?.length ?? 0) > 0 || (node.after?.length ?? 0) > 0)
+}
+
+/** The running flow's state and context, in another chart; nothing when that chart has no such state. */
+function carried(machine: AnyStateMachine, snapshot: SnapshotFrom<AnyStateMachine>) {
+  try {
+    return { snapshot: machine.resolveState({ value: snapshot.value, context: snapshot.context }) }
+  } catch {
+    return undefined
+  }
+}
+
+const forEachActor = (actor: AnyActorRef, callback: (actor: AnyActorRef) => void) => {
+  callback(actor)
+  for (const child of Object.values((actor.getSnapshot() as { children?: Record<string, AnyActorRef> }).children ?? {})) forEachActor(child, callback)
+}
+
+/**
+ * Stops an actor so that React may start it again: Strict Effects stop and start every effect
+ * once. As @xstate/react does, each actor keeps its snapshot and may be started again.
+ */
+function stopRestartably(actor: AnyActorRef) {
+  type Internal = AnyActorRef & { observers: Set<unknown>; _processingStatus: number; _snapshot: unknown; system: { getSnapshot?: () => unknown; _snapshot?: unknown } }
+  const kept: [Internal, unknown][] = []
+  forEachActor(actor, (each) => {
+    kept.push([each as Internal, each.getSnapshot()])
+    ;(each as Internal).observers = new Set()
+  })
+  const system = (actor as Internal).system
+  const systemSnapshot = system.getSnapshot?.()
+  actor.stop()
+  system._snapshot = systemSnapshot
+  for (const [each, snapshot] of kept) {
+    each._processingStatus = 0
+    each._snapshot = snapshot
+  }
+}
+
+/** The running chart: the declared one, once the flow is at rest; the last one until then. */
+function useChart(declared: Declared) {
+  const [current, setCurrent] = useState(() => ({ declared, actor: createActor(declared.machine) as AnyActorRef }))
+  let running = current
+  if (declared !== current.declared && atRest(current.actor.getSnapshot())) {
+    running = { declared, actor: createActor(declared.machine, carried(declared.machine, current.actor.getSnapshot())) as AnyActorRef }
+    setCurrent(running)
+  }
+  const { actor } = running
+  useEffect(() => {
+    actor.start()
+    return () => stopRestartably(actor)
+  }, [actor])
+  return running
+}
+
+/**
+ * The machine of a component instance, with live sources, as the render sees it. `declared`
+ * holds the sources the declaration may read; `sources`, what guards and actions read when
+ * they run.
+ */
+export function useStateLayer(path: string, module: StateModule, injection: Sources, declared: Sources, sources: Sources, rendering?: unknown) {
   // The sources read the committed route. A chart is created in its component's first render,
   // and reads the route at once: for its context, and for the input of the service its first
   // state runs. A component mounted by a change of route is rendered before that route is
@@ -139,8 +237,11 @@ export function useStateLayer(path: string, module: StateModule, injection: Sour
     committed.current = true
     live.current = sources
   })
-  const { machine, flags } = useMemo(() => buildMachine(path, module, injection, live), [path, module, injection])
-  const actor = useActorRef(machine)
+  const chart = useRef<Declared | null>(null)
+  if (!chart.current || stale(chart.current, module, injection, declared)) chart.current = declare(path, module, injection, declared, live)
+  const running = useChart(chart.current)
+  const { actor } = running
+  const { flags } = running.declared
   const snapshot = useSelector(actor, (state: SnapshotFrom<AnyStateMachine>) => state)
 
   useEffect(() => {

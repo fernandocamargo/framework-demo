@@ -114,10 +114,10 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
         return `${types}.RenderProps<{ ${layers.join('; ')} }>`
       }
       case 'state': {
-        if (!named) return `${types}.Injection<${clients}, ${services}>`
         const file = folders.findLayer(found.dir, 'state')
         const form = folders.findLayer(found.dir, 'form')
         const i18n = folders.findLayer(found.dir, 'i18n')
+        if (!named) return `${types}.ChartInjection<${clients}, ${services}, ${i18n ? moduleType(i18n) : 'undefined'}>`
         return `${types}.StateArgs<${clients}, ${services}, ${moduleType(file)}, ${exportsEvents(file) ? `${typeImport(file)}.Events` : 'object'}, ${form ? moduleType(form) : 'undefined'}, ${i18n ? moduleType(i18n) : 'undefined'}>`
       }
       case 'async':

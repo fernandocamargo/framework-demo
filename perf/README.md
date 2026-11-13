@@ -57,3 +57,7 @@ Every row now holds a delete link of its own (`product/remove-link`), with a rul
 - The new calls and mounts are the 12 delete links each list shows.
 - A sign-in or a sign-out decides every rule again. The delete link's rule reads only `user` and `acl`, so it is decided where the user read answers, and no link renders unless its answer changes: signing in renders 5 framework components again (3 of them changing nothing), against 17 (15) when each link read the user itself.
 
+## After the ACL became the backend's snapshot
+
+The rules test `/auth/permissions`' snapshot instead of role names; the charts of the editor, the delete dialog and the bulk change are declared from it. Chromium, one run, the same 26 steps: 0 misses, 358 render calls, framework components rendered again 220 times (48 changing nothing), render time 136.3 ms (30.3 ms changing nothing). Signing in still renders 5 framework components again: each follows only the parts of the snapshot it reads, and the rules that read only `acl` are decided where the snapshot is read.
+

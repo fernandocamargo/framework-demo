@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from 'react'
 import type { I18n, Intl } from './i18n-types'
-import type { Acl, Entity, Env, Flags, Navigation, Route, User } from './index'
+import type { Allowed, Entity, Env, Flags, Navigation, Route, User } from './index'
 
 /** The page's URL, read when an operation runs. */
 export type Url = {
@@ -54,9 +54,18 @@ export type Language<I18nModule = undefined> = {
 export type Access = {
   /** The person signed in, or null: Root's `user` read. */
   user: User | null
-  /** What the nearest `acl.ts` at or above this component says. */
-  acl: Acl
+  /**
+   * The backend's snapshot (Root's `acl` read), with `allowed`: what the nearest `acl.ts` at or
+   * above this component decided. A component follows only the parts of it it reads.
+   */
+  acl: Allowed
 }
+
+/**
+ * What a chart's declaration (state.ts's default export) receives: the injection, and the sources
+ * its shape may follow. When a part it read changes, the chart is declared again.
+ */
+export type ChartInjection<Clients = Tree, Services = Tree, I18nModule = undefined> = Injection<Clients, Services> & Access & Language<I18nModule> & { flags: Flags }
 
 /** What an export of a component's `async.ts` receives: the injection, the sources, the locale, who is signed in, and a signal that aborts on unmount. */
 export type AsyncInjection<Clients = Tree, Services = Tree> = Injection<Clients, Services> & Sources & Language & Pick<Access, 'user'> & { signal: AbortSignal }

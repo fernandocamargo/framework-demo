@@ -21,9 +21,10 @@ import { ErrorBoundary, type FallbackProps } from 'react-error-boundary'
 import { Pending, hold } from './activity'
 import { execute, useOperations, type AsyncModule } from './async'
 import { recording, recordingRoute, shareByIdentity } from './data'
+import { pick, tracking, untracked } from './reads'
 import { useFormLayer, type FormModule } from './form'
 import { activeLocale, intlFor, LocaleContext, loadMessages, showing, SOURCE_LOCALE } from './i18n'
-import type { Acl } from './index'
+import type { Allowed } from './index'
 import { useStateLayer, type StateModule } from './machine'
 import { report, toError, type Scope } from './pipeline'
 import { RouteContext, useFramework } from './root'
@@ -59,18 +60,33 @@ export type Spec = {
   translations?: Record<string, () => Promise<{ default: Record<string, string> }>>
   /**
    * The sources the folder's files read (`intl`, `locale`, `i18n`, `user`, `acl`, `flags`,
-   * `route`), from what their functions destructure: in the view's files (`props.ts`, the render,
-   * `acl.ts`), in `async.ts` and in `state.ts`. Only what the view reads makes the component render
-   * again when it changes; what `async.ts` reads keys its default read.
+   * `route`), from what their functions destructure: in the view's files (`props.ts`, the render),
+   * in `acl.ts` (every name it destructures), in `async.ts`, in `state.ts`, and in the chart's
+   * declaration alone. Only what the view reads makes the component render again when it
+   * changes; what `async.ts` reads keys its default read; what the declaration reads, declares the
+   * chart again.
    */
-  reads?: { view?: readonly string[]; acl?: readonly string[]; async?: readonly string[]; state?: readonly string[] }
+  reads?: { view?: readonly string[]; acl?: readonly string[]; async?: readonly string[]; state?: readonly string[]; chart?: readonly string[] }
 }
 
-const ALLOWED: Acl = Object.freeze({ allowed: true })
-const REFUSED: Acl = Object.freeze({ allowed: false })
+/** What the nearest `acl.ts` above decided. With none, everything is allowed. */
+export const AclContext = createContext<boolean>(true)
 
-/** What the nearest `acl.ts` above says. With none, everything is allowed. */
-export const AclContext = createContext<Acl>(ALLOWED)
+const NO_SNAPSHOT = Object.freeze({})
+/** Each snapshot with each decision on it, one object per pair, so it keeps its identity. */
+const decisions = new WeakMap<object, [Allowed?, Allowed?]>()
+
+/** The backend's snapshot with a decision on it: what a component gets as `acl`. */
+function allowedOn(snapshot: unknown, allowed: boolean): Allowed {
+  const base = (snapshot && typeof snapshot === 'object' ? snapshot : NO_SNAPSHOT) as object
+  let pair = decisions.get(base)
+  if (!pair) decisions.set(base, (pair = []))
+  const at = allowed ? 1 : 0
+  return (pair[at] ??= Object.freeze({ ...base, allowed }) as Allowed)
+}
+
+/** The keys of the snapshot a component read; `allowed` is the decision's, not the snapshot's. */
+const ofSnapshot = (keys: ReadonlySet<string>) => new Set([...keys].filter((key) => key !== 'allowed'))
 
 const ScopeContext = createContext<Scope | null>(null)
 
@@ -95,22 +111,26 @@ export function component(spec: Spec) {
   const inAcl = new Set(spec.reads?.acl ?? [])
   const inAsync = new Set(spec.reads?.async ?? [])
   const inState = new Set(spec.reads?.state ?? [])
+  const inChart = new Set(spec.reads?.chart ?? [])
+  const anywhere = (source: string) => [inView, inAcl, inAsync, inState, inChart].some((reads) => reads.has(source))
   // What the component follows, fixed for its life, so each context is read on every render or
-  // on none: the locale, when it has messages or reads the locale; the user, when any of its
-  // files reads it; the inherited `acl`, when it reads it or has an `acl.ts` (which gets it).
-  const followsLocale = Boolean(spec.i18n) || ['intl', 'locale', 'i18n'].some((source) => inView.has(source) || inAsync.has(source))
+  // on none: the locale, when it has messages or reads the locale; the user and the backend's
+  // snapshot, when any of its files reads them.
+  const followsLocale = Boolean(spec.i18n) || ['intl', 'locale', 'i18n'].some((source) => inView.has(source) || inAsync.has(source) || inChart.has(source))
   const keyedByLocale = inAsync.has('intl') || inAsync.has('locale')
-  const readsUser = inView.has('user') || inAsync.has('user') || inState.has('user') || inAcl.has('user')
+  const readsUser = anywhere('user')
   const keyedByUser = inAsync.has('user')
-  const readsAcl = inView.has('acl') || inState.has('acl')
+  const readsAcl = anywhere('acl')
+  const keyedByAcl = inAsync.has('acl')
   const viewReadsRoute = inView.has('route') || inAcl.has('route')
-  // An acl.ts that reads only who is signed in and what is inherited is a rule of the folder,
-  // the same for every instance: it is decided where the user read answers, and an instance
-  // renders again only when its decision changes, not every time the person does (a sign-in
-  // re-decides a delete link in every row, and renders none whose answer stays the same).
-  // `reads.acl` holds every name acl.ts destructures (`*` for one it does not), not only sources.
-  const folderRule = inAcl.size > 0 && [...inAcl].every((name) => name === 'user' || name === 'acl')
-  const userOnlyInRule = folderRule && !(inView.has('user') || inAsync.has('user') || inState.has('user'))
+  // An acl.ts that reads only `acl` (the snapshot, and what is inherited) is a rule of the folder,
+  // the same for every instance: it is decided where the snapshot is read, and an instance renders
+  // again only when its decision changes, not every time the snapshot does (a sign-in re-decides
+  // a delete link in every row, and renders none whose answer stays the same).
+  const folderRule = inAcl.size > 0 && [...inAcl].every((name) => name === 'acl')
+  // A rule that reads the chart's state is decided after the chart; any other, before it, so the
+  // chart's declaration and its guards see this render's decision.
+  const ruleReadsState = inAcl.has('state') || inAcl.has('*')
   let view: Promise<ViewModule> | undefined
   // Once the view has loaded, the components it shows start loading theirs, so a child does not
   // wait to render before its own view starts, and React does not render its parent again when
@@ -150,22 +170,38 @@ export function component(spec: Spec) {
 
   /** Every layer of the view but the state layer, called in the same order on every render. */
   function useLayers() {
-    const { injection, skin, sources, data, user: userRead } = useFramework()
+    const { injection, skin, sources, data, user: userRead, acl: aclRead } = useFramework()
     const language = useLanguage()
     // The person signed in, from Root's `user` read: a sign-in or a sign-out makes it stale, and
     // only the components that read it render again.
-    const user = readsUser && !userOnlyInRule ? (userRead ? (useSuspenseQuery(userRead).data as unknown) : null) : undefined
+    const user = readsUser ? (userRead ? (useSuspenseQuery(userRead).data as unknown) : null) : undefined
     const module = use(loadView())
-    const inherited = readsAcl || module.acl ? use(AclContext) : ALLOWED
-    // A rule of the folder, decided in the user read's `select`: TanStack renders this component
-    // again only when what `select` returns changes.
+    const inherited = readsAcl || module.acl ? use(AclContext) : true
+    // The parts of the backend's snapshot this component's files read, recorded as they read
+    // them (reads.ts). The component follows those parts, and its own rule's decision: TanStack
+    // renders it again only when what `select` returns changes.
+    const keys = useRef(new Set<string>()).current
+    const views = useRef(new WeakMap<object, Allowed>()).current
+    const view = useCallback(
+      (acl: Allowed) => {
+        let tracked = views.get(acl)
+        if (!tracked) views.set(acl, (tracked = tracking(acl, keys)))
+        return tracked
+      },
+      [views, keys],
+    )
     const rule = folderRule ? module.acl?.default : undefined
-    const decide = useCallback((person: unknown) => decideRule(rule, person, inherited), [rule, inherited])
-    const decided = folderRule ? (userRead ? (useSuspenseQuery({ ...userRead, select: decide }).data as Acl) : decide(null)) : undefined
+    const select = useCallback(
+      (snapshot: unknown) => ({ parts: pick(snapshot, ofSnapshot(keys)), decided: rule ? decide(rule, { acl: allowedOn(snapshot, inherited) }) : undefined }),
+      [rule, inherited, keys],
+    )
+    const followed = readsAcl ? (aclRead ? (useSuspenseQuery({ ...aclRead, select }).data as ReturnType<typeof select>) : select(NO_SNAPSHOT)) : undefined
+    const latest = useCallback(() => (aclRead ? data.client.getQueryData(aclRead.queryKey) : NO_SNAPSHOT), [aclRead, data])
+    const snapshot = readsAcl ? latest() : undefined
     const route = viewReadsRoute ? use(RouteContext) : undefined
-    // What the chart's guards and the operations read when they run: the latest `acl`, set by
-    // each render (show).
-    const judged = useRef<Acl>(inherited)
+    // What the chart's guards and the operations read when they run: the latest decision, set by
+    // each render.
+    const judged = useRef<boolean>(inherited)
     const loadThisSkin = spec.skins[skin]
     if (loadThisSkin) use(loadSkin(spec.path, skin, loadThisSkin))
 
@@ -174,10 +210,11 @@ export function component(spec: Spec) {
     const { locale } = language
     const injected = useMemo(() => {
       const all: Record<string, unknown> = { ...injection, ...sources, ...defined(language), ...defined({ user }) }
-      // A getter: the chart's guards and the operations spread these when they run.
-      if (readsAcl || module.acl) Object.defineProperty(all, 'acl', { get: () => judged.current, enumerable: true })
+      // A getter: the chart's guards and the operations spread these when they run, and get the
+      // snapshot and the decision of that moment.
+      if (readsAcl) Object.defineProperty(all, 'acl', { get: () => view(allowedOn(latest(), judged.current)), enumerable: true })
       return all
-    }, [injection, sources, language, user, module.acl])
+    }, [injection, sources, language, user, view, latest])
 
     // The default export of async.ts, as a query: it records the services and route parameters
     // it reads, so the data layer knows when to run it again. It gets the query's signal, which
@@ -197,9 +234,11 @@ export function component(spec: Spec) {
               readRoute,
               (record, signal) =>
                 execute(exported, { ...injected, signal, services: recording(injection.services, record.service), route: recordingRoute(readRoute, record.route) }, []),
-              keyedByLocale || keyedByUser ? defined({ locale: keyedByLocale ? locale : undefined, user: keyedByUser ? userId : undefined }) : undefined,
+              keyedByLocale || keyedByUser || keyedByAcl
+                ? defined({ locale: keyedByLocale ? locale : undefined, user: keyedByUser ? userId : undefined, acl: keyedByAcl ? snapshot : undefined })
+                : undefined,
             ),
-      [data, exported, injection, injected, readRoute, locale, userId],
+      [data, exported, injection, injected, readRoute, locale, userId, snapshot],
     )
     // A view with no default read has no query. A stand-in query would suspend the first instance
     // of each such component once, and React would render everything inside the boundary again
@@ -219,34 +258,39 @@ export function component(spec: Spec) {
     const operations = useOperations(spec.path, module.async, withForm)
     const hasRead = query !== null
     const async = useMemo(() => module.async && { ...operations, ...(hasRead ? { default: initial } : {}) }, [module.async, operations, hasRead, initial])
-    const access = useMemo(() => ({ given: defined({ user, route }), inherited, decided }), [user, route, inherited, decided])
-    return { module, scope, injection, withForm, form, async, language, access, judged }
+    const access = useMemo(
+      () => ({ given: defined({ user, route }), user, inherited, decided: followed?.decided, snapshot, view }),
+      [user, route, inherited, followed, snapshot, view],
+    )
+    return { module, scope, injection, sources, withForm, form, async, language, access, judged }
   }
 
-  /** A rule of the folder (it reads only `user` and `acl`), decided for a person. A rule that throws refuses, and is reported. */
-  function decideRule(rule: unknown, user: unknown, inherited: Acl): Acl {
-    if (typeof rule !== 'function') return inherited
+  /** Runs a rule. A rule that throws refuses, and is reported as the acl layer's failure. */
+  function decide(rule: unknown, given: Props): boolean {
     try {
-      return (rule as (given: Props) => unknown)({ user, acl: inherited }) ? ALLOWED : REFUSED
+      return Boolean((rule as (given: Props) => unknown)(given))
     } catch (thrown) {
       report(thrown, { layer: 'acl', path: spec.path })
-      return REFUSED
+      return false
     }
+  }
+
+  /** What a render, props.ts and acl.ts get from the props and the layers. */
+  function givenOf(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, className: string): Props {
+    const { module, form, async, language, access } = layers
+    return { ...props, className, ...(async ? { async } : {}), ...(state ? { state } : {}), ...(module.form ? { form } : {}), ...defined(language), ...access.given }
   }
 
   /**
-   * What `acl.ts` says about what the component offers, from what `props.ts` would get, the
-   * route, and the `acl` inherited from above. A rule that throws refuses, and is reported.
+   * This instance's decision: its folder rule's, already decided where the snapshot is read; its
+   * own acl.ts's, from what props.ts would get, the route and the snapshot with what is inherited
+   * on it; or what it inherits.
    */
-  function judge(module: ViewModule, given: Props, inherited: Acl): Acl {
+  function decisionOf(module: ViewModule, given: Props, access: ReturnType<typeof useLayers>['access']): boolean {
+    if (access.decided !== undefined) return access.decided
     const rule = module.acl?.default
-    if (typeof rule !== 'function') return inherited
-    try {
-      return (rule as (given: Props) => unknown)({ ...given, acl: inherited }) ? ALLOWED : REFUSED
-    } catch (thrown) {
-      report(thrown, { layer: 'acl', path: spec.path })
-      return REFUSED
-    }
+    if (typeof rule !== 'function') return access.inherited
+    return decide(rule, { ...given, acl: access.view(allowedOn(access.snapshot, access.inherited)) })
   }
 
   /**
@@ -261,24 +305,26 @@ export function component(spec: Spec) {
    * nothing the render reads) does not call the render either, and a part that did not change
    * keeps its identity, so react-aria's collections and memoized children inside skip it.
    */
-  function show(props: Props, layers: ReturnType<typeof useLayers>, state: unknown) {
+  function show(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, decided?: boolean) {
     const { module, scope, form, async, language, access, judged } = layers
-    const last = useRef<{ inputs: unknown[]; props: Props; shaped: Props; acl: Acl; element: ReactNode } | null>(null)
-    const inputs = [module, scope, async, state, form, language, access]
+    const last = useRef<{ inputs: unknown[]; props: Props; shaped: Props; allowed: boolean; element: ReactNode } | null>(null)
+    const inputs = [module, scope, async, state, form, language, access, decided]
     if (last.current && sameEach(last.current.inputs, inputs) && sameProps(last.current.props, props)) return last.current.element
     const className = classes(spec.path, props.className)
-    const given: Props = { ...props, className, ...(async ? { async } : {}), ...(state ? { state } : {}), ...(module.form ? { form } : {}), ...defined(language), ...access.given }
-    const acl = access.decided ?? judge(module, given, access.inherited)
-    judged.current = acl
-    const shaped = shareByIdentity(last.current?.shaped, shape(module, readsAcl || module.acl ? { ...given, acl } : given, className)) as Props
-    if (last.current && shaped === last.current.shaped && acl === last.current.acl) {
+    const given = givenOf(props, layers, state, className)
+    const allowed = decided ?? decisionOf(module, given, access)
+    judged.current = allowed
+    const output = shape(module, readsAcl ? { ...given, acl: access.view(allowedOn(access.snapshot, allowed)) } : given, className)
+    // The framework's own comparison reads every key; it records none.
+    const shaped = untracked(() => shareByIdentity(last.current?.shaped, output)) as Props
+    if (last.current && shaped === last.current.shaped && allowed === last.current.allowed) {
       last.current = { ...last.current, inputs, props }
       return last.current.element
     }
-    const output = withScope(scope, () => module.render(shaped))
-    // What this folder's acl.ts says reaches every component below, until one of them says otherwise.
-    const element = createElement(ScopeContext, { value: scope }, module.acl ? createElement(AclContext, { value: acl }, output) : output)
-    last.current = { inputs, props, shaped, acl, element }
+    const rendered = withScope(scope, () => module.render(shaped))
+    // What this folder's acl.ts decided reaches every component below, until one of them decides otherwise.
+    const element = createElement(ScopeContext, { value: scope }, module.acl ? createElement(AclContext, { value: allowed }, rendered) : rendered)
+    last.current = { inputs, props, shaped, allowed, element }
     return element
   }
 
@@ -297,11 +343,24 @@ export function component(spec: Spec) {
   // calls a hook behind a condition. The view's module, once loaded, decides which.
   function StatefulView(props: Props) {
     const layers = useLayers()
+    const { module, access, judged, language, sources } = layers
+    // The decision comes before the chart, so its declaration and its guards see this render's.
+    // A rule that reads the chart's state is decided after it, in show.
+    const early = ruleReadsState ? undefined : decisionOf(module, givenOf(props, layers, undefined, classes(spec.path, props.className)), access)
+    if (early !== undefined) judged.current = early
+    // What the declaration may read, besides the injection: the chart is declared again when a
+    // part it read changes, and keeps its place (machine.ts).
+    const declared = defined({
+      acl: readsAcl ? access.view(allowedOn(access.snapshot, judged.current)) : undefined,
+      user: access.user,
+      flags: sources.flags,
+      ...language,
+    })
     // The route being rendered, for the chart's first reads (machine.ts). So a component with a
     // state.ts renders its layers again when the route changes; its render is still skipped
     // when what it shows is the same.
-    const state = useStateLayer(spec.path, layers.module.state as StateModule, layers.injection, layers.withForm, use(RouteContext))
-    return show(props, layers, state)
+    const state = useStateLayer(spec.path, module.state as StateModule, layers.injection, declared, layers.withForm, use(RouteContext))
+    return show(props, layers, state, early)
   }
   function StatelessView(props: Props) {
     return show(props, useLayers(), undefined)

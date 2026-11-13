@@ -45,7 +45,7 @@ A folder under `components/` with a `render` file and no `index` is a component.
 | `form.ts` | `seed` (server data to values) and `payload` (values to a request). |
 | `placeholder.tsx` | Shows while the view loads and reads. Adds a `Suspense`. |
 | `error.tsx` | Shows when the view fails. Adds an error boundary around both. |
-| `acl.ts` | Whether what the component offers may be done: a function of what `props.ts` gets, with the route and the `acl` inherited from above, returning a boolean. The component and everything below it get `acl.allowed`. |
+| `acl.ts` | Whether what the component offers may be done: a function of what `props.ts` gets, the route, and the backend's snapshot with what is inherited, returning a boolean. The component and everything below it get it as `acl.allowed`. |
 | `i18n.ts` | The component's messages, in the source language: an object of any shape whose leaves are ICU messages or functions. |
 | `i18n/<locale>.json` | A translation of them, keyed by the folder's path and the message's path. Loaded on demand. |
 | `style/skins/<name>/index.ts` | The component's CSS for a skin. |
@@ -80,22 +80,33 @@ export default {
 
 ### Who is signed in, and what they may do
 
-- `Root`'s `user` is a read of the services that resolves to the person signed in, or `null`: here the session the API client holds, then the profile it names (`/auth/me`, which carries the role). It runs through the data layer, so a write that makes a service it read stale (a sign-in, a sign-out) reads it again. A component whose files read `user` waits for it the first time.
-- A folder's `acl.ts` returns a boolean, from what `props.ts` would get (the props, `async`, `state`, `form`, `user`, the messages), the route, and `acl`, what the folder above decided:
+The app does not own its permissions: the backend sends a snapshot of them, and the framework only carries it. Each consumer tests it against whatever else it knows, and chooses how to react.
+
+- `Root`'s `user` is a read of the services that resolves to the person signed in, or `null` (here the session, then the profile it names). `Root`'s `acl` is another, that resolves to the backend's snapshot (here `/auth/permissions`: a role, grants by resource and action, and limits). Both run through the data layer, so a sign-in or a sign-out reads them again.
+- Every component file and chart declaration that reads `acl` gets the snapshot, with `allowed` on it: the decision of the nearest `acl.ts` at or above the component. A folder's `acl.ts` makes that decision for its subtree, as a function of what `props.ts` would get, the route, and `acl` with what it inherits:
 
   ```ts
   // components/app/acl.ts: everything below inherits it
-  export default ({ user }) => user === null || user.role === 'admin' || user.role === 'moderator'
+  export default ({ acl }) => acl.role === 'guest' || acl.grants.products.includes('update')
   // components/product/remove-link/acl.ts: one link, deep in a row, narrower
-  export default ({ user, acl }) => acl.allowed && (user === null || user.role === 'admin')
-  // components/bulk-price/acl.ts: a rule that reads the form
-  export default ({ user, form }) => user === null || user.role === 'admin' || (user.role === 'moderator' && form.values.percent <= 20)
+  export default ({ acl }) => acl.allowed && (acl.role === 'guest' || acl.grants.products.includes('delete'))
+  // components/bulk-price/acl.ts: the backend's limit against what the form says
+  export default ({ acl, form }) => acl.role === 'guest' || (acl.grants.prices.includes('update') && (acl.limits.priceChange === null || form.values.percent <= acl.limits.priceChange))
   ```
 
-- The component, and every component below it until a folder says otherwise, gets `acl.allowed`. A render or a `props.ts` branches on it (hide an action, lock a form); a chart's guard reads it when the event arrives (`save: [{ guard: refused }, …]`), so a refused action goes nowhere whatever sent it.
-- A rule that throws refuses, and is reported as the `acl` layer's failure.
-- A rule that reads only `user` and `acl` is the folder's, the same for every instance: it is decided where the user read answers, and an instance renders again only when its decision changes. A sign-in re-decides the delete link in every row and renders none whose answer is the same.
-- `framework/testing`'s `startFlow` gives a chart `acl: { allowed: true }` and `user: null` unless the test says otherwise, as `Root` does.
+- A render or a `props.ts` branches on it (hide an action, lock a form). A chart's guard reads it when the event arrives. A chart's declaration reads it too, so the chart's shape follows it: a read-only editor has no `save`.
+
+  ```ts
+  export default ({ services, acl }) => ({
+    editing: { on: { ...(acl.allowed && { save: [ /* … */ ] }), close: [ /* … */ ] } },
+  })
+  ```
+
+- When a part a declaration read changes, the chart is declared again, and the running flow moves to it at its next rest (no service running, no delay pending): in the same state, with the same context, when the new chart has that state; from the start when it has not. A flow saving when the grant goes sees the save through first.
+- A component follows only the parts of the snapshot its files read (`runtime/reads.ts` records them): one that reads `acl.allowed` alone renders again when the decision changes, not when the snapshot does.
+- A rule that reads only `acl` is the folder's, the same for every instance: it is decided where the snapshot is read, and an instance renders again only when its decision changes. A sign-in decides the delete link in every row again, and renders none whose answer is the same.
+- A rule that throws refuses, and is reported as the `acl` layer's failure. A default read that reads `acl` or `user` is keyed by it.
+- `framework/testing`'s `startFlow` gives a chart `acl: { allowed: true }` and `user: null` unless the test says otherwise.
 
 ### The data layer
 
@@ -173,7 +184,7 @@ Nobody writes them. The TypeScript plugin shows TypeScript each layer file with 
 | `render` | the default export | what `props.ts` returns, or the props with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags` |
 | `props`, `acl` | the default export | the file's own `Props`, with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags` |
 | `async` | the default and every named export | the injection, the route, a `signal` |
-| `state` | the default export; every exported function | the injection; `context`, `event`, the route, the form… |
+| `state` | the default export; every exported function | the injection with `acl`, `user`, `flags` and the locale; `context`, `event`, the route, the form… |
 | `placeholder`, `error` | the default export | the props, and `i18n`, `intl` and `locale` when the folder has an `i18n.ts`; the `error` and `resetErrorBoundary` |
 | `i18n` | its default export is read `as const` | each message's own text, which `I18n<…>` reads as ICU |
 | `services/**/index` | every export | the injection |

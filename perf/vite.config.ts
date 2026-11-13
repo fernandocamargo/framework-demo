@@ -9,7 +9,7 @@ import base from '../vite.config.ts'
 
 /** Insertions into the runtime's component.tsx, each before an anchor that must be there. */
 const EDITS: [anchor: string, before: string][] = [
-  ['const output = withScope(scope, () => module.render(shaped))', 'globalThis.__renderCall?.(spec.path)\n    '],
+  ['const rendered = withScope(scope, () => module.render(shaped))', 'globalThis.__renderCall?.(spec.path)\n    '],
   ['const module = use(loadView())', "if (loadView().status !== 'fulfilled') globalThis.__suspend?.(spec.path, 'view')\n    "],
   ['if (loadThisSkin) use(loadSkin(', "if (loadThisSkin && loadSkin(spec.path, skin, loadThisSkin).status !== 'fulfilled') globalThis.__suspend?.(spec.path, 'skin')\n    "],
   ['const answer: unknown = query ? useSuspenseQuery(', "if (query && __client.getQueryData(query.queryKey) === undefined) globalThis.__suspend?.(spec.path, 'data')\n    "],

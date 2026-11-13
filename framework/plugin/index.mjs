@@ -317,6 +317,8 @@ export default function framework(userOptions) {
             acl: reads.names.acl ?? [],
             async: reads.byLayer.async ?? [],
             state: reads.byLayer.state ?? [],
+            // What the chart's declaration destructures: it is declared again when those change.
+            chart: reads.names.chart ?? [],
           })},`,
           '});',
         ].join('\n')

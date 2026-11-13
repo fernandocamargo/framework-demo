@@ -113,3 +113,39 @@ test('a rule that throws refuses, and is reported as the acl layer', async () =>
   expect(failures.map((failure) => [failure.layer, failure.path, failure.error.message])).toContainEqual(['acl', 'components/guarded', 'no rule'])
   stop()
 })
+
+test('a component follows only the parts of the backend snapshot it reads', async () => {
+  const calls: string[] = []
+  const Decision = component({
+    path: 'components/decision',
+    view: view(({ acl }) => {
+      calls.push('decision')
+      return createElement('i', null, (acl as { allowed: boolean }).allowed ? 'yes ' : 'no ')
+    }),
+    skins: {},
+    reads: { view: ['acl'] },
+  })
+  const Limit = component({
+    path: 'components/limit',
+    view: view(({ acl }) => {
+      calls.push('limit')
+      return createElement('b', null, String((acl as { limits: { change: number } }).limits.change))
+    }),
+    skins: {},
+    reads: { view: ['acl'] },
+  })
+  let snapshot = { role: 'moderator', limits: { change: 20 } }
+  const acl = (async () => snapshot) as never
+  const client = createQueryClient()
+  const { container } = await show(createElement(Root, { entity, client, acl }, createElement(Decision), createElement(Limit)))
+  expect(container.textContent).toBe('yes 20')
+
+  calls.length = 0
+  snapshot = { role: 'admin', limits: { change: 50 } }
+  await act(async () => {
+    await client.invalidateQueries()
+  })
+  await settle()
+  expect(container.textContent).toBe('yes 50')
+  expect(calls).toEqual(['limit'])
+})

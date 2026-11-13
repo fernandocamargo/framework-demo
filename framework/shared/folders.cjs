@@ -273,7 +273,16 @@ function readsOf(root, dir) {
       if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
         let expression = statement.expression
         while (ts.isParenthesizedExpression(expression)) expression = expression.expression
-        if (isFunction(expression)) collect(expression)
+        if (isFunction(expression)) {
+          // A chart's declaration, apart: what it reads may change the chart's shape.
+          if (layer === 'state') {
+            const before = new Set(named)
+            named = new Set()
+            collect(expression)
+            names.chart = [...named].sort()
+            named = new Set([...before, ...named])
+          } else collect(expression)
+        }
       } else if (ts.isFunctionDeclaration(statement) && exported(statement)) collect(statement)
       else if (ts.isVariableStatement(statement) && exported(statement)) {
         for (const declaration of statement.declarationList.declarations) if (isFunction(declaration.initializer)) collect(declaration.initializer)

@@ -99,7 +99,7 @@ test('what a component reads is what its files destructure, file by file', () =>
   assert.deepEqual(readsOf(root, dir('reads')), {
     all: ['intl', 'locale', 'acl'],
     byLayer: { props: ['intl'], async: ['locale'], state: ['acl'] },
-    names: { props: ['async', 'intl'], async: ['locale', 'services'], state: ['acl', 'services'] },
+    names: { props: ['async', 'intl'], async: ['locale', 'services'], chart: ['services'], state: ['acl', 'services'] },
   })
   // A parameter that is not destructured may read anything.
   assert.deepEqual(readsOf(root, dir('everything')).all, ['intl', 'locale', 'i18n', 'user', 'acl', 'flags', 'route'])

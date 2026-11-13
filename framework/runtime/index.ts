@@ -22,8 +22,14 @@ export interface Flags {}
 /** The person signed in, as `Root`'s `user` read resolves it. */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface User {}
-/** Whether what a component offers may be done, as the nearest `acl.ts` at or above it says. */
-export type Acl = { readonly allowed: boolean }
+/**
+ * What the backend says may be done, as `Root`'s `acl` read resolves it: a snapshot the app does
+ * not own. An app declares its shape (`interface Acl { grants: …; limits: … }`).
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface Acl {}
+/** The snapshot as a component gets it: with `allowed`, the decision of the nearest `acl.ts` at or above it. */
+export type Allowed = Acl & { readonly allowed: boolean }
 /** How components move between routes (a stand-in for a routing layer). */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Navigation {}
@@ -46,6 +52,7 @@ export type {
   ErrorProps,
   FormProps,
   Access,
+  ChartInjection,
   Language,
   Injection,
   Operation,
