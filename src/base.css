@@ -1,0 +1,716 @@
+/*
+ * The page's own CSS: the design tokens, a reset, and the look of the controls.
+ *
+ * Components are styled by their skins (style/skins/<name>/index.ts), nested under each
+ * component's class. This file holds only what no component owns: the tokens every skin reads,
+ * and the react-aria controls, styled once by their default class names. Popovers and modals
+ * render in a portal outside the component that opened them, so their look has to live here.
+ */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f5f6f8, #0e1014);
+  --surface: light-dark(#ffffff, #171a21);
+  --surface-2: light-dark(#eef0f4, #1f232c);
+  --border: light-dark(#dde1e8, #2b303b);
+  --border-strong: light-dark(#b9c0cc, #434b5b);
+  --text: light-dark(#151922, #e9ebf1);
+  --muted: light-dark(#566070, #a0a9b8);
+  --accent: light-dark(#3451d1, #8a9dff);
+  --accent-hover: light-dark(#2941b3, #a3b2ff);
+  --on-accent: light-dark(#ffffff, #0e1014);
+  --accent-soft: light-dark(#e8ecff, #20284a);
+  --danger: light-dark(#c02626, #ff8f8f);
+  --danger-soft: light-dark(#fde8e8, #3a1c1f);
+  --warn: light-dark(#9a5200, #ffc27a);
+  --warn-soft: light-dark(#fff1dc, #3a2a14);
+  --ok: light-dark(#18704a, #6fdca3);
+  --ok-soft: light-dark(#def5e9, #15301f);
+  --radius: 10px;
+  --radius-s: 6px;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 10px 30px rgb(0 0 0 / 0.1);
+  --ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  /* The header's height, and the width of the network lab docked beside the page. */
+  --header: 3.75rem;
+  --lab: 25rem;
+  font: 15px / 1.45 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
+  padding: 0;
+}
+ul,
+ol {
+  list-style: none;
+}
+img {
+  display: block;
+  max-inline-size: 100%;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+:focus {
+  outline: none;
+}
+[data-focus-visible],
+:focus-visible {
+  box-shadow: var(--ring);
+}
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- Icons: one element, coloured by the text around it ------------------------------------ */
+.icon {
+  display: inline-block;
+  flex: none;
+  inline-size: 1.1em;
+  block-size: 1.1em;
+  background: currentColor;
+  mask: var(--icon) center / contain no-repeat;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  vertical-align: -0.18em;
+}
+.icon[data-icon='search'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"); }
+.icon[data-icon='plus'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E"); }
+.icon[data-icon='close'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E"); }
+.icon[data-icon='edit'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4'/%3E%3C/svg%3E"); }
+.icon[data-icon='trash'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5'/%3E%3C/svg%3E"); }
+.icon[data-icon='chevron'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
+.icon[data-icon='check'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+.icon[data-icon='alert'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 2.5 20h19L12 3zM12 10v4M12 17.2v.3'/%3E%3C/svg%3E"); }
+.icon[data-icon='star'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='m12 3 2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9 6.6 19.8l1.1-6.1L3.2 9.4l6.1-.8L12 3z'/%3E%3C/svg%3E"); }
+.icon[data-icon='signal'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 19v-3M10 19v-7M15 19V8M20 19V4'/%3E%3C/svg%3E"); }
+.icon[data-icon='tag'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12V4h8l10 10-8 8L3 12z'/%3E%3Ccircle cx='8' cy='9' r='1.3'/%3E%3C/svg%3E"); }
+.icon[data-icon='user'] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6'/%3E%3C/svg%3E"); }
+
+/* ---- Buttons and links ---------------------------------------------------------------------- */
+.react-aria-Button,
+.react-aria-Link[data-variant] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
+  min-block-size: 2.4rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 550;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 120ms var(--ease);
+
+  &[data-hovered] {
+    background: var(--surface-2);
+  }
+  &[data-pressed] {
+    transform: scale(0.98);
+  }
+  &[data-variant='primary'] {
+    border-color: transparent;
+    background: var(--accent);
+    color: var(--on-accent);
+    &[data-hovered] {
+      background: var(--accent-hover);
+    }
+  }
+  &[data-variant='danger'] {
+    border-color: transparent;
+    background: var(--danger);
+    color: var(--on-accent);
+  }
+  &[data-variant='quiet'] {
+    border-color: transparent;
+    background: transparent;
+    &[data-hovered] {
+      background: var(--surface-2);
+    }
+  }
+  &[data-variant='icon'] {
+    inline-size: 2.4rem;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    color: var(--muted);
+    &[data-hovered] {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+  }
+  &[data-disabled],
+  &[data-pending] {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+.react-aria-Link:not([data-variant]) {
+  color: var(--accent);
+  text-decoration: none;
+  border-radius: 3px;
+  cursor: pointer;
+  &[data-hovered] {
+    text-decoration: underline;
+  }
+}
+
+/* ---- Fields --------------------------------------------------------------------------------- */
+.react-aria-TextField,
+.react-aria-NumberField,
+.react-aria-SearchField,
+.react-aria-Select,
+.react-aria-Slider,
+.react-aria-RadioGroup,
+.react-aria-CheckboxGroup {
+  display: grid;
+  gap: 0.3rem;
+  min-inline-size: 0;
+}
+.react-aria-Label {
+  font-size: 0.87rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.react-aria-Input,
+.react-aria-TextArea,
+.react-aria-Select > .react-aria-Button {
+  inline-size: 100%;
+  min-block-size: 2.4rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color 120ms var(--ease);
+
+  &[data-hovered] {
+    border-color: var(--muted);
+  }
+  &[data-focused] {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  &[data-invalid] {
+    border-color: var(--danger);
+  }
+  &::placeholder {
+    color: var(--muted);
+  }
+}
+.react-aria-TextArea {
+  min-block-size: 5.5rem;
+  resize: vertical;
+}
+.react-aria-FieldError,
+.react-aria-Text[slot='errorMessage'] {
+  font-size: 0.87rem;
+  color: var(--danger);
+}
+.react-aria-Text[slot='description'] {
+  font-size: 0.87rem;
+  color: var(--muted);
+}
+.react-aria-Select > .react-aria-Button {
+  justify-content: space-between;
+  font-weight: 400;
+}
+.react-aria-SearchField {
+  position: relative;
+  .react-aria-Input {
+    padding-inline: 2.2rem;
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+  > .icon {
+    position: absolute;
+    inset: 50% auto auto 0.7rem;
+    translate: 0 -50%;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .react-aria-Button {
+    position: absolute;
+    inset: 50% 0.2rem auto auto;
+    translate: 0 -50%;
+    inline-size: 2rem;
+    min-block-size: 2rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+  }
+  &[data-empty] .react-aria-Button {
+    display: none;
+  }
+}
+.react-aria-NumberField .react-aria-Group {
+  display: flex;
+  .react-aria-Input {
+    border-radius: var(--radius-s) 0 0 var(--radius-s);
+    font-variant-numeric: tabular-nums;
+  }
+  .react-aria-Button {
+    inline-size: 2.4rem;
+    padding: 0;
+    border-inline-start: 0;
+    border-radius: 0;
+    &:last-child {
+      border-radius: 0 var(--radius-s) var(--radius-s) 0;
+    }
+  }
+}
+
+/* ---- Popovers and lists --------------------------------------------------------------------- */
+.react-aria-Popover {
+  min-inline-size: var(--trigger-width);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  &[data-entering] {
+    animation: rise 140ms var(--ease);
+  }
+}
+.react-aria-ListBox {
+  max-block-size: min(22rem, 60vh);
+  padding: 0.25rem;
+  overflow: auto;
+}
+.react-aria-ListBoxItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 4px;
+  cursor: default;
+  &[data-focused] {
+    background: var(--accent-soft);
+  }
+  &[data-selected] {
+    font-weight: 600;
+    &::after {
+      content: '';
+      inline-size: 1em;
+      block-size: 1em;
+      background: var(--accent);
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
+    }
+  }
+}
+
+/* ---- Choices -------------------------------------------------------------------------------- */
+.react-aria-Switch,
+.react-aria-Checkbox,
+.react-aria-Radio {
+  /* Their real input is hidden and absolutely placed: it stays inside its label. */
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: default;
+}
+.react-aria-Switch .track {
+  flex: none;
+  inline-size: 2.4rem;
+  block-size: 1.4rem;
+  padding: 2px;
+  border-radius: 1rem;
+  background: var(--border-strong);
+  transition: background 160ms var(--ease);
+  &::before {
+    content: '';
+    display: block;
+    block-size: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #fff;
+    transition: translate 160ms var(--ease);
+  }
+}
+.react-aria-Switch[data-selected] .track {
+  background: var(--accent);
+  &::before {
+    translate: 1rem;
+  }
+}
+.react-aria-Switch[data-focus-visible] .track,
+.react-aria-Checkbox[data-focus-visible] .box,
+.react-aria-Radio[data-focus-visible]::before {
+  box-shadow: var(--ring);
+}
+.react-aria-Switch[data-focus-visible],
+.react-aria-Checkbox[data-focus-visible],
+.react-aria-Radio[data-focus-visible] {
+  box-shadow: none;
+}
+.react-aria-Checkbox .box {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 1.2rem;
+  block-size: 1.2rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: transparent;
+  font-size: 0.8rem;
+}
+.react-aria-Checkbox[data-selected] .box {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.react-aria-RadioGroup .choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.react-aria-Radio {
+  min-block-size: 2rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 1rem;
+  background: var(--surface);
+  font-size: 0.9rem;
+  &[data-selected] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  &[data-focus-visible] {
+    box-shadow: var(--ring);
+  }
+}
+.react-aria-Slider {
+  grid-template-columns: 1fr auto;
+  .react-aria-SliderOutput {
+    font-size: 0.87rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+  }
+  .react-aria-SliderTrack {
+    grid-column: 1 / -1;
+    block-size: 1.6rem;
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 50% 0 auto;
+      block-size: 4px;
+      translate: 0 -50%;
+      border-radius: 2px;
+      background: var(--border-strong);
+    }
+  }
+  .react-aria-SliderThumb {
+    inset-block-start: 50%;
+    inline-size: 1.2rem;
+    block-size: 1.2rem;
+    border: 2px solid var(--surface);
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+    &[data-focus-visible] {
+      box-shadow: var(--ring);
+    }
+  }
+}
+.react-aria-ProgressBar {
+  display: grid;
+  gap: 0.35rem;
+  .bar {
+    block-size: 6px;
+    border-radius: 3px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+  .fill {
+    block-size: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    transition: inline-size 200ms var(--ease);
+  }
+}
+.react-aria-Tabs {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.5rem;
+  min-block-size: 0;
+}
+.react-aria-TabList {
+  display: flex;
+  gap: 0.25rem;
+  border-block-end: 1px solid var(--border);
+}
+.react-aria-Tab {
+  padding: 0.4rem 0.6rem;
+  border-block-end: 2px solid transparent;
+  margin-block-end: -1px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: default;
+  &[data-selected] {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+}
+
+/* ---- Dialogs -------------------------------------------------------------------------------- */
+.react-aria-ModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(8 10 16 / 0.5);
+  overflow: auto;
+  &[data-entering] {
+    animation: fade 160ms var(--ease);
+  }
+  &.above {
+    z-index: 25;
+  }
+}
+/* A dialog centres in what the docked network lab leaves of a wide screen. */
+@media (min-width: 64.01rem) {
+  body:has(#network-lab) .react-aria-ModalOverlay {
+    padding-inline-end: calc(var(--lab) + 1rem);
+  }
+}
+.react-aria-Modal {
+  inline-size: min(34rem, 100%);
+  max-block-size: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  &[data-entering] {
+    animation: rise 200ms var(--ease);
+  }
+  &[data-size='small'] {
+    inline-size: min(26rem, 100%);
+  }
+  &[data-size='large'] {
+    inline-size: min(44rem, 100%);
+  }
+}
+.react-aria-Dialog {
+  /* A dialog takes the focus itself when nothing inside asks for it: its edge is ring enough. */
+  box-shadow: none;
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  .react-aria-Heading {
+    font-size: 1.15rem;
+    line-height: 1.3;
+  }
+  > header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  > footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: end;
+    gap: 0.5rem;
+  }
+}
+
+/* ---- Small shared pieces --------------------------------------------------------------------- */
+.notice {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  &[data-tone='danger'] {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+  &[data-tone='warn'] {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+  &[data-tone='ok'] {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+  .icon {
+    margin-block-start: 0.15em;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-block-start: 0.6rem;
+  }
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.1rem 0.5rem;
+  border-radius: 1rem;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  &[data-tone='ok'] {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+  &[data-tone='warn'] {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+  &[data-tone='danger'] {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+  &[data-tone='accent'] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+}
+.skeleton {
+  border-radius: var(--radius-s);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%) 0 0 / 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+.spinner {
+  inline-size: 1.1em;
+  block-size: 1.1em;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-block-start-color: currentColor;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+/* ---- Failures, as toasts (main.tsx) ---------------------------------------------------------- */
+.react-aria-ToastRegion {
+  position: fixed;
+  inset: auto auto 1rem 1rem;
+  z-index: 40;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.5rem;
+  inline-size: min(24rem, calc(100vw - 2rem));
+}
+.react-aria-Toast {
+  display: flex;
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.7rem 0.6rem 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-inline-start: 4px solid var(--danger);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  animation: rise 200ms var(--ease);
+  .react-aria-ToastContent {
+    display: grid;
+    gap: 0.15rem;
+    flex: 1;
+    min-inline-size: 0;
+  }
+  [slot='title'] {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  [slot='description'] {
+    overflow-wrap: anywhere;
+  }
+  .react-aria-Button {
+    inline-size: 2rem;
+    min-block-size: 2rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes travel {
+  from {
+    translate: -100%;
+  }
+  to {
+    translate: 250%;
+  }
+}
+@keyframes spin {
+  to {
+    rotate: 1turn;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+@media (forced-colors: active) {
+  .icon {
+    background: CanvasText;
+  }
+}
