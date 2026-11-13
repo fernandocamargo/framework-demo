@@ -42,7 +42,7 @@ export type { I18n, Intl, Message } from './i18n-types'
 export { css, selector } from './style'
 export { track } from './track'
 export type { Keyboard } from './shortcuts'
-export { connect, consent, onFailure, pipeline, type Destination, type Failure, type Interaction, type Layer, type Site } from './pipeline'
+export { connect, consent, onData, onFailure, pipeline, type DataEvent, type Destination, type Failure, type Interaction, type Layer, type Site } from './pipeline'
 export type { ServiceRule } from './data'
 export type {
   AsyncInjection,

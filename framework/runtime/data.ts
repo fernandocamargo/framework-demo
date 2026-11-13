@@ -15,6 +15,7 @@
  *   again, and a write that fails is taken out, the others staying (a rebase, not a restore).
  * - **Other tabs.** With a channel open (`Root`'s `sync`), a write that succeeds tells the other
  *   tabs of the app which reads it made stale, by path, and they read them again.
+ * - **What it does** goes to the pipelines as `data` events (pipeline.ts), for an inspector.
  * - **Components.** A component's `async.ts` default export runs as a query of its own. The
  *   framework records the reads it calls and the route parameters it reads, so nobody declares
  *   what a component depends on.
@@ -22,7 +23,8 @@
  */
 import { QueryCache, QueryClient, hashKey, type Query } from '@tanstack/react-query'
 import { hold } from './activity'
-import { report } from './pipeline'
+import { emitData, report } from './pipeline'
+import { activeInteraction } from './track'
 
 /** What a service folder's `meta.ts` says about one of its operations. */
 export type ServiceRule = {
@@ -208,7 +210,8 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
   /** Works the components' answers out again from the cache, for those that read one of these. */
   const rederive = (targets: Set<string>) => {
     for (const query of client.getQueryCache().getAll()) {
-      if (query.queryKey[0] !== 'component' || query.state.data === undefined) continue
+      // Only what is on screen: one off screen is read anew when it shows again.
+      if (query.queryKey[0] !== 'component' || query.state.data === undefined || query.getObserversCount() === 0) continue
       const read = dependencies.get(query.queryHash)?.services
       const derive = derivers.get(query.queryHash)
       if (!read || !derive || ![...read].some((path) => targets.has(path))) continue
@@ -218,7 +221,9 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
         derive(peek).then(
           (data) => {
             // Only the last of several, for one that was worked out again meanwhile.
-            if (latest.get(query.queryHash) === turn) client.setQueryData(query.queryKey, data)
+            if (latest.get(query.queryHash) !== turn) return
+            client.setQueryData(query.queryKey, data)
+            emitData({ action: 'derive', path: String(query.queryKey[1]), reads: [...read].filter((path) => targets.has(path)) })
           },
           () => undefined,
         ),
@@ -236,8 +241,10 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
     rederive(targets)
   }
 
-  const invalidatePaths = (targets: Set<string>) => {
+  /** Makes the reads at these paths stale, and every component that read one; `by` is the write's path. */
+  const invalidatePaths = (targets: Set<string>, by: string, fromTab = false) => {
     if (!targets.size) return Promise.resolve()
+    emitData({ action: 'stale', path: by, reads: [...targets], ...(fromTab ? { outcome: 'received' as const } : {}) })
     const stale = (query: Query) => {
       const [first] = query.queryKey
       if (typeof first === 'string' && targets.has(first)) return true
@@ -262,9 +269,13 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
       if (typeof BroadcastChannel === 'undefined') return () => undefined
       const channel = new BroadcastChannel(name)
       tracking.channel = channel
-      channel.onmessage = (event: MessageEvent<{ invalidate?: unknown }>) => {
+      channel.onmessage = (event: MessageEvent<{ invalidate?: unknown; by?: unknown }>) => {
         const stale = event.data?.invalidate
-        if (Array.isArray(stale)) void hold(invalidatePaths(new Set(stale.filter((path): path is string => typeof path === 'string'))))
+        if (!Array.isArray(stale)) return
+        const reads = stale.filter((path): path is string => typeof path === 'string')
+        const by = typeof event.data.by === 'string' ? event.data.by : 'another tab'
+        emitData({ action: 'tab', path: by, outcome: 'received', reads })
+        void hold(invalidatePaths(new Set(reads), by, true))
       }
       return () => {
         channel.close()
@@ -284,11 +295,20 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
           queryKey,
           // The answer with the writes sent laid over it, so a read that lands while a write is
           // on its way does not undo what the write shows.
-          queryFn: async () => shownOf(hashKey(queryKey), path, await operation(...args)),
+          queryFn: async () => {
+            const started = performance.now()
+            const answer = await operation(...args)
+            emitData({ action: 'read', path, ms: Math.round(performance.now() - started) })
+            return shownOf(hashKey(queryKey), path, answer)
+          },
           meta: { service: path },
           ...(rule.freshFor ? { staleTime: rule.freshFor } : {}),
         })
       }
+      // The interaction whose handler sent it, if one did: its handler is running now.
+      const cause = activeInteraction()?.id
+      const started = performance.now()
+      emitData({ action: 'write', path, outcome: 'sent', ...(cause === undefined ? {} : { cause }) })
       // An optimistic write shows its changes now, over every answer of the reads it changes.
       const write: Sent | null = rule?.optimistic?.length
         ? { changes: rule.optimistic.flatMap(({ read, change }) => (pathOf(read) ? [{ path: pathOf(read)!, change: change as Sent['changes'][number]['change'] }] : [])), args }
@@ -297,6 +317,7 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
       if (write) {
         sent.push(write)
         reshow(changed)
+        emitData({ action: 'optimistic', path, reads: [...changed] })
       }
       const settle = () => {
         if (write) sent.splice(sent.indexOf(write), 1)
@@ -316,16 +337,22 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
                 }
                 settle()
               }
+              emitData({ action: 'write', path, outcome: 'done', ms: Math.round(performance.now() - started) })
               const stale = new Set([...paths(rule?.invalidates ?? []), ...changed])
-              tracking.channel?.postMessage({ invalidate: [...stale] })
-              if (stale.size) await invalidatePaths(stale)
+              if (tracking.channel && stale.size) {
+                tracking.channel.postMessage({ invalidate: [...stale], by: path })
+                emitData({ action: 'tab', path, outcome: 'sent', reads: [...stale] })
+              }
+              if (stale.size) await invalidatePaths(stale, path)
               return result
             },
             (error: unknown) => {
+              emitData({ action: 'write', path, outcome: 'failed', ms: Math.round(performance.now() - started) })
               // A rebase: the server's answers again, with the writes still on their way over them.
               if (write) {
                 settle()
                 reshow(changed)
+                emitData({ action: 'rollback', path, reads: [...changed] })
               }
               throw report(error, { layer: 'service', path })
             },
@@ -361,7 +388,9 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
           // An optimistic write works this answer out again from the cache, with what it changed.
           const derive = (peek: Peek) => run({ service: () => undefined, route: () => undefined, peek }, new AbortController().signal)
           derivers.set(hashKey(queryKey), derive)
+          const started = performance.now()
           const data = await run({ service: (service) => read.services.add(service), route: (key, value) => read.route.set(key, value) }, signal)
+          emitData({ action: 'read', path, reads: [...read.services], ms: Math.round(performance.now() - started) })
           // The first run teaches which route parameters matter; its answer is kept under that
           // key too, so the next render finds it there.
           if (!learned) {

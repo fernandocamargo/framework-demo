@@ -206,16 +206,17 @@ A component's `form.ts` says how server data becomes the form's values (`seed`) 
 
 ### The pipelines
 
-One `EventTarget` carries two kinds of event.
+One `EventTarget` carries three kinds of event.
 
-- **Interactions.** The Vite plugin wraps every JSX `on…` handler of a render, placeholder or error file in `track(handler, site, key)`. Each interaction carries:
+- **Interactions.** The Vite plugin wraps every JSX `on…` handler of a render, placeholder or error file in `track(handler, site, key)`, and every key a `shortcuts.ts` declares runs the same way, with its place in that file. Each interaction carries:
   - its build-time placement: path, file, line, element, prop;
   - its run-time chain of parent components;
   - its cause, when another handler called it;
   - the DOM event's type, and never values.
 
   `data-track="off"` opts an element out. Destinations plug in with `connect({ name, purpose, accept, map, send, batch })` and wait for consent.
-- **Failures.** Each layer reports what it catches, once, tagged with layer, path and what was running: services and component queries, async operations, handlers, charts, `props.ts`, render errors, and the window's `error` and `unhandledrejection` as unidentified. `onFailure(listener)` listens to all of them.
+- **Failures.** Each layer reports what it catches, once, tagged with layer, path and what was running: services and component queries, async operations, handlers, charts, `props.ts`, `acl.ts`, `shortcuts.ts`, render errors, and the window's `error` and `unhandledrejection` as unidentified. `onFailure(listener)` listens to all of them.
+- **Data.** What the data layer does: each read the server answers, with how long it took; each component's default read, with the reads it called; each write, sent and ended, with the interaction whose handler sent it; each optimistic change shown and each one taken back; each component answer worked out again from the cache; the reads each write made stale; each message to and from the other tabs. `onData(listener)` listens to them. The demo's network lab shows them, with the interactions and failures, as an inspector.
 
 ### Skins
 

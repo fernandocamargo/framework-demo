@@ -1,10 +1,15 @@
 /**
- * The pipelines: one `EventTarget` that carries two kinds of event.
+ * The pipelines: one `EventTarget` that carries three kinds of event.
  *
- * - `interaction`: every `on…` handler a render passes, tracked by default with its placement.
- *   The framework's plugin wraps each one; nobody writes tracking code.
+ * - `interaction`: every `on…` handler a render passes, tracked by default with its placement,
+ *   and every key a `shortcuts.ts` declares. The framework's plugin wraps each one; nobody writes
+ *   tracking code.
  * - `failure`: every layer's failures, tagged with where they happened: the component or
  *   service path, the layer, and what was running. Reported once, where first caught.
+ * - `data`: what the data layer does: each read the server answers, each write and how it ended,
+ *   the reads a write made stale, each optimistic change and each one taken back, each component
+ *   answer worked out again from the cache, and each message to or from the other tabs. A write
+ *   started by a handler names the interaction (`cause`).
  *
  * Listeners plug in with `connect` (destinations such as analytics tools, held until consent)
  * or `addEventListener('failure', …)` (an error tracker). Dispatch waits for a microtask, so
@@ -71,7 +76,32 @@ export type Failure = {
   at: number
 }
 
-type Event = Interaction | Failure
+/** What the data layer did. */
+export type DataEvent = {
+  kind: 'data'
+  id: number
+  /**
+   * - `read`: the server answered a read (`path` is the operation's), or a component's default read
+   *   ran (`path` is the component's, `reads` what it called);
+   * - `derive`: a component's answer was worked out again from the cache, for an optimistic write;
+   * - `write`: a write was sent, or ended (`outcome`);
+   * - `optimistic`: a write's changes to `reads` show; `rollback`: they were taken back;
+   * - `stale`: `reads` were made stale, by the write at `path`, or by another tab's;
+   * - `tab`: a message to the other tabs (`outcome: 'sent'`) or from one (`'received'`).
+   */
+  action: 'read' | 'derive' | 'write' | 'optimistic' | 'rollback' | 'stale' | 'tab'
+  path: string
+  reads?: string[]
+  outcome?: 'sent' | 'done' | 'failed' | 'received'
+  /** The interaction whose handler started it. */
+  cause?: number
+  /** How long it took, in milliseconds. */
+  ms?: number
+  route: string
+  at: number
+}
+
+type Event = Interaction | Failure | DataEvent
 type Processor = (event: Event) => Event | null
 
 /**
@@ -206,3 +236,15 @@ export function onFailure(listener: (failure: Failure) => void) {
   pipeline.addEventListener('failure', handle)
   return () => pipeline.removeEventListener('failure', handle)
 }
+
+/** Listens to what the data layer does. Returns the function that stops listening. */
+export function onData(listener: (event: DataEvent) => void) {
+  const handle = (event: globalThis.Event) => listener((event as CustomEvent<DataEvent>).detail)
+  pipeline.addEventListener('data', handle)
+  return () => pipeline.removeEventListener('data', handle)
+}
+
+/** Emits what the data layer did, stamped. */
+export const emitData = (event: Omit<DataEvent, 'kind' | 'id' | 'route' | 'at'>) =>
+  pipeline.emit({ kind: 'data', id: nextId(), ...event, route: currentRoute(), at: performance.now() })
+

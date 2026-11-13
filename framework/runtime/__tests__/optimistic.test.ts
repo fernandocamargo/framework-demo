@@ -1,3 +1,4 @@
+import { QueryObserver } from '@tanstack/react-query'
 import { createDataLayer, createQueryClient, name, recording, update } from '../data'
 
 type Product = { id: number; stock: number }
@@ -79,6 +80,8 @@ test('a component that read what a write changes is worked out again from the ca
     return { label: `${product.stock} in stock` }
   })
   await client.fetchQuery(query)
+  // On screen: a component observes it. One off screen is read anew when it shows again.
+  const stop = new QueryObserver(client, query).subscribe(() => undefined)
   const reads = server.reads
   expect(client.getQueryData<{ label: string }>(query.queryKey)?.label).toBe('10 in stock')
 
@@ -93,6 +96,7 @@ test('a component that read what a write changes is worked out again from the ca
   await sent
   await settle()
   expect(client.getQueryData<{ label: string }>(query.queryKey)?.label).toBe('10 in stock')
+  stop()
 })
 
 test("a write that succeeds in one tab makes the same reads stale in the others", async () => {

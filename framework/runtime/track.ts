@@ -15,6 +15,9 @@ const NO_SCOPE = {}
 let active: Interaction | null = null
 let current: Scope | null = null
 
+/** The interaction whose handler is running now, if one is. */
+export const activeInteraction = () => active
+
 /** The component instance rendering right now. Set by the generated component around its render. */
 export const currentScope = () => current
 
