@@ -93,13 +93,13 @@ export default ({ className, i18n, open, send, change, expireToken, breakRefresh
             <ol className="log" aria-label={i18n.tracked.label}>
               {tracked.length === 0 && <li className="none">{i18n.tracked.none}</li>}
               {tracked.map((entry) => (
-                <li key={`${entry.type}-${entry.id}`}>
+                <li key={entry.id} data-kind={entry.type}>
                   <time>{entry.when}</time>
                   <span className="badge" data-tone={entry.tone}>
                     {entry.kind}
                   </span>
                   <span>
-                    {entry.text} <small>{entry.where}</small>
+                    {entry.text && <code>{entry.text}</code>} <small>{entry.where}</small>
                   </span>
                 </li>
               ))}

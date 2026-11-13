@@ -442,3 +442,21 @@ test('the tabs share the session and the catalogue: a sign-in, a count and a sig
   expect(await one.getByRole('banner').innerText()).not.toContain('Emily Johnson')
   expect(await lamp(one).getByRole('button', { name: 'One more in stock' }).count()).toBe(0)
 })
+
+test('the inspector shows what a press did: the write, its optimistic change, the answer worked out from the cache, and what went stale', async ({ page }) => {
+  await open(page, '#/products?signin=1')
+  await signIn(page)
+  await act(page, () => rows(page).filter({ hasText: 'Arc Floor Lamp' }).getByRole('button', { name: 'One more in stock' }).click())
+  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click())
+  const lab = page.getByRole('complementary', { name: 'Network lab' })
+  await act(page, () => lab.getByRole('tab', { name: 'Inspector' }).click())
+  const inspector = lab.getByRole('list', { name: 'What the app did, latest first' })
+  // The lab reads what the pipelines carried once a second while it is open.
+  await expect(inspector).toContainText('products.setStock sent by Button.onPress (components/catalogue/components/product-row/render.tsx:')
+  const text = await inspector.innerText()
+  expect(text).toContain('shows its change to products.search and products.get now')
+  expect(text).toContain('worked out again from the cache: products.search changed')
+  expect(text).toContain('products.setStock done')
+  expect(text).toContain('products.search and products.get, by products.setStock')
+  expect(text).toContain('Form.onSubmit')
+})

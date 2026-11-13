@@ -79,3 +79,7 @@ Each row has a count with a button on either side, offered to someone signed in 
 - The 24 more re-renders are the 12 rows of the list gaining their buttons at the sign-in and losing them at the sign-out: each changes the page.
 - A save renders the row it changed once, when it is sent. The optimistic change bumps the product's version as the server will, so the server's answer finds nothing new and renders nothing; before it did, the row rendered again for the version alone.
 
+## After the inspector
+
+The data layer's events go to the pipelines, and the lab's tracker listens from the start. The same 26 steps count the same: 0 misses, 385 render calls, framework components rendered again 226 times (28 changing nothing). Events are dispatched after a microtask, outside any render, and nothing renders them until the lab is open.
+

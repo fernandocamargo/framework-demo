@@ -12,7 +12,7 @@ export const change =
   async (changes: Partial<Settings>) =>
     api.lab.change(changes)
 
-/** The API client's latest requests, retries and refreshes, and the pipelines' latest interactions and failures. */
+/** The API client's latest requests, retries and refreshes, and what the pipelines carried lately: interactions, failures, and what the data layer did. */
 export const activity =
   ({ clients: { api, tracker } }) =>
   async () => ({ network: api.lab.activity(), tracked: tracker.recent() })

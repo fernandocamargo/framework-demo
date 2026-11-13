@@ -228,7 +228,9 @@ The end-to-end tests ([`e2e/flows.spec.ts`](e2e/flows.spec.ts)) drive the produc
 | "Expire the access token", then save an edit | The save meets a 401, the client refreshes once, and the save goes again. The list shows all three requests. |
 | "Revoke the refresh token" as well | The save's refresh is refused: it fails with "Your session has expired", and the editor keeps the changes. When the header's own refresh comes due, the session ends there too, and the sign-in dialog opens over the editor. |
 | "Sell out the product being edited", then save | A conflict: somebody else saved meanwhile. Keep yours, or take theirs. Two tabs on the same product do the same thing for real. |
-| The "Interactions and failures" tab | Every `on…` handler in a render is tracked, with the file and line where it was written. No render contains tracking code; the Vite plugin rewrites them. |
+| The "Inspector" tab, after pressing a row's + | What the press did, as the pipelines carried it: the handler with the file and line where it was written, the write it sent, the change shown at once, the list worked out again from the cache, the write done, the reads it made stale and read again, and the message to the other tabs. No render contains tracking code; the Vite plugin rewrites them. |
+| "Every request answers 500", then press a row's + | The count moves at once, then goes back when the server refuses it; the inspector shows the change taken back, and the toast the failure. |
+| Two tabs, signed in in one | The other follows: who is signed in, what they may do, every count and save. Sign out in either, and both are. |
 
 DummyJSON allows about 100 requests in a window it does not state, so sustained stress can earn a real 429. The client retries those too.
 

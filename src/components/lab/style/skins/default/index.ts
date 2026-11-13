@@ -95,6 +95,15 @@ export default css`
     small {
       color: var(--muted);
     }
+    code {
+      font-size: 0.78rem;
+      margin-inline-end: 0.3rem;
+    }
+    /* A component's read and the work it caused, set apart from what the person did. */
+    li[data-kind='interaction'] {
+      padding-block-start: 0.35rem;
+      border-block-start: 1px solid var(--border);
+    }
     .none {
       display: block;
       color: var(--muted);
