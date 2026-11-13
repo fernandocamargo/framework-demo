@@ -4,6 +4,7 @@
 import type { Product } from '@/services/products/types'
 import { sleep } from '../storage'
 import type { Wire } from '../dummyjson/http'
+import { permissionsOf } from '../permissions'
 import * as fixtures from './fixtures'
 
 type Data = { products: Product[]; categories: { slug: string; name: string }[]; users: typeof fixtures.users }
@@ -56,6 +57,12 @@ export function createServer({ data = fixtures as Data, now = Date.now }: { data
       const refresh = /^refresh\.(\d+)\.\d+$/.exec(String(body['refreshToken']))
       if (!refresh) return json(403, { message: 'Invalid refresh token' })
       return json(200, tokens(Number(refresh[1]), Number(body['expiresInMins'] ?? 60)))
+    }
+    // A backend's permissions: a guest's without a token, the token's person's with one.
+    if (path === '/auth/permissions' && method === 'GET') {
+      if (!new Headers(init.headers).get('authorization')) return json(200, permissionsOf(null))
+      const user = signedIn(init)
+      return user ? json(200, permissionsOf(user.role)) : json(401, { message: 'Invalid/Expired Token!' })
     }
     const needsToken = path.startsWith('/auth/')
     if (needsToken && !signedIn(init)) return json(401, { message: 'Invalid/Expired Token!' })

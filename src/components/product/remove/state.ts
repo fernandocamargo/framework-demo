@@ -8,11 +8,10 @@ export const productToRemove = ({ route }) => route.remove ?? 0
 export const rememberTitle = ({ event }) => ({ title: event.output.title as string })
 export const rememberError = ({ event }) => ({ error: event.error instanceof Error ? event.error.message : String(event.error) })
 export const forgetError = () => ({ error: null })
-/** Only those the folder's acl.ts allows may confirm. */
-export const refused = ({ acl }) => !acl.allowed
 export const close = ({ navigation }) => navigation.go({ remove: null })
 
-export default ({ services }) => ({
+// Declared from the folder's decision: for those it refuses, there is nothing to confirm.
+export default ({ services, acl }) => ({
   loading: {
     description: 'Reading the product, to name it in the question.',
     invoke: {
@@ -25,7 +24,7 @@ export default ({ services }) => ({
   },
   confirming: {
     description: 'The person confirms or cancels.',
-    on: { confirm: [{ guard: refused }, { target: 'removing' }], cancel: { actions: close } },
+    on: { ...(acl.allowed && { confirm: 'removing' }), cancel: { actions: close } },
   },
   removing: {
     description: 'The deletion is sent. The lists that showed the product read again when it succeeds.',
@@ -39,6 +38,6 @@ export default ({ services }) => ({
   },
   failed: {
     description: 'The product is still there. The person tries again or gives up.',
-    on: { confirm: 'removing', cancel: { actions: close } },
+    on: { ...(acl.allowed && { confirm: 'removing' }), cancel: { actions: close } },
   },
 })

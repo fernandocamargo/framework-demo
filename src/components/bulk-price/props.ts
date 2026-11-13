@@ -3,12 +3,12 @@
 // the render gives the tag to.
 import type { ReactNode } from 'react'
 import { CURRENCY } from '@/format'
-import { MODERATOR_LIMIT, newPrice, ruleProblem } from './rule'
+import { newPrice, ruleProblem } from './rule'
 import { STEP } from './state'
 
 const STEPS = ['products', 'rule', 'preview', 'apply', 'summary'] as const
 
-export default ({ state, form, i18n, intl, acl, user, async: { default: categories } }) => {
+export default ({ state, form, i18n, intl, acl, async: { default: categories } }) => {
   const { context } = state
   const { values } = form
   const rule = form.payload()
@@ -41,7 +41,7 @@ export default ({ state, form, i18n, intl, acl, user, async: { default: categori
     applyText: i18n.preview.apply({ count: selected.length }),
     canApply: acl.allowed,
     // Why not, for a person signed in whom the rule refuses.
-    limitText: acl.allowed || !user ? null : user.role === 'moderator' ? i18n.limits.moderator({ limit: MODERATOR_LIMIT }) : i18n.limits.user,
+    limitText: acl.allowed ? null : acl.grants.prices.includes('update') ? i18n.limits.over({ limit: acl.limits.priceChange ?? 0 }) : i18n.limits.none,
     progress: { value: context.results.length, total, text: i18n.progress.done({ done: context.results.length, total }) },
     current: context.queue[0] ? i18n.progress.saving({ title: context.queue[0].title }) : null,
     results: context.results.map((result) => ({ ...result, from: money(result.from), to: money(result.to) })),

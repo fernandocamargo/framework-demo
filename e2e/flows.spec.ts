@@ -295,7 +295,7 @@ test("each role sees what it may do: users browse, moderators edit and change pr
   })
   await act(page, () => wizard.getByRole('button', { name: 'Next: preview' }).click())
   expect(await wizard.getByRole('button', { name: /^Apply to/ }).isDisabled()).toBe(true)
-  expect(await wizard.getByRole('note').innerText()).toContain('Moderators change prices by 20% at most.')
+  expect(await wizard.getByRole('note').innerText()).toContain('You change prices by 20% at most.')
   await act(page, () => wizard.getByRole('button', { name: 'Back' }).click())
   await act(page, async () => {
     await wizard.getByRole('textbox', { name: 'By' }).fill('20')

@@ -4,7 +4,7 @@
 import { StrictMode, useEffect, useMemo, useState, useTransition } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Button, I18nProvider, Text, UNSTABLE_Toast as Toast, UNSTABLE_ToastContent as ToastContent, UNSTABLE_ToastQueue as ToastQueue, UNSTABLE_ToastRegion as ToastRegion } from 'react-aria-components'
-import { createQueryClient, onFailure, Root, type Env, type Injection, type Navigation, type User } from 'framework'
+import { createQueryClient, onFailure, Root, type Acl, type Env, type Injection, type Navigation, type User } from 'framework'
 import { go, parse } from './address'
 import { currentLocale, type Locale } from './locales'
 import App from './components/app'
@@ -22,6 +22,9 @@ const client = createQueryClient()
 // the role. Both are reads of the auth service, so a sign-in or a sign-out reads this again, and
 // only the components whose files read `user` render again.
 const whoIsSignedIn = async ({ services }: Injection): Promise<User | null> => ((await services.auth.session()) ? services.auth.profile() : null)
+// What the backend says may be done. The app does not own it: the framework carries it to every
+// component that reads `acl`, and each tests its own rules against it.
+const permissions = ({ services }: Injection): Promise<Acl> => services.auth.permissions()
 
 // Every failure any layer catches arrives here once, tagged with the layer and what was running.
 type Notice = { title: string; description: string }
@@ -73,7 +76,7 @@ function Shell() {
   const locale = useLocale()
   return (
     <I18nProvider locale={locale}>
-      <Root env={env} entity={entity} route={route} navigation={navigation} client={client} locale={locale} user={whoIsSignedIn}>
+      <Root env={env} entity={entity} route={route} navigation={navigation} client={client} locale={locale} user={whoIsSignedIn} acl={permissions}>
         <App navigating={navigating} />
       </Root>
       <ToastRegion queue={toasts} aria-label="Failures">

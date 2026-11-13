@@ -1,6 +1,5 @@
-// Who may apply a bulk price change, and how large: admins, any change; moderators, up to
-// MODERATOR_LIMIT; everyone else, none. The rule reads the form, so it changes as the person
-// types the percentage. Nobody signed in may still try, and is asked to sign in.
-import { MODERATOR_LIMIT } from './rule'
-
-export default ({ user, form }) => user === null || user.role === 'admin' || (user.role === 'moderator' && form.values.percent <= MODERATOR_LIMIT)
+// Who may apply a bulk price change, and how large: the backend grants price updates, and says
+// the largest change each person may apply (null for no limit). The rule reads the form too, so
+// its decision changes as the percentage is typed. A guest may still try, and is asked to sign in.
+export default ({ acl, form }) =>
+  acl.role === 'guest' || (acl.grants.prices.includes('update') && (acl.limits.priceChange === null || form.values.percent <= acl.limits.priceChange))

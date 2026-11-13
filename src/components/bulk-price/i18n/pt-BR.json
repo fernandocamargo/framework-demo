@@ -41,6 +41,6 @@
   "components/bulk-price/back": "Voltar",
   "components/bulk-price/cancel": "Cancelar",
   "components/bulk-price/done": "Concluir",
-  "components/bulk-price/limits/moderator": "Moderadores mudam preços em no máximo {limit, number}%. Um administrador pode aplicar esta.",
-  "components/bulk-price/limits/user": "Só moderadores e administradores mudam preços."
+  "components/bulk-price/limits/over": "Você muda preços em no máximo {limit, number}%. Alguém com um limite maior pode aplicar esta.",
+  "components/bulk-price/limits/none": "Você não tem permissão para mudar preços."
 }

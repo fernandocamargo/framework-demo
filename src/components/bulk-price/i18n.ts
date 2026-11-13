@@ -23,8 +23,8 @@ export default {
     next: 'Next: preview',
   },
   limits: {
-    moderator: 'Moderators change prices by {limit, number}% at most. An admin can apply this one.',
-    user: 'Only moderators and admins change prices.',
+    over: 'You change prices by {limit, number}% at most. Someone with a larger limit can apply this one.',
+    none: 'You are not granted price changes.',
   },
   problems: {
     none: 'The change must be more than 0%.',

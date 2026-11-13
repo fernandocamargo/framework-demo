@@ -1,4 +1,5 @@
-// Who may change the catalogue: moderators and admins. Nobody signed in may still try: the page
-// asks them to sign in first. Every component below inherits this as `acl.allowed`, until a
-// folder below says otherwise (product/remove-link, product/remove, bulk-price).
-export default ({ user }) => user === null || user.role === 'admin' || user.role === 'moderator'
+// Changing the catalogue needs the backend's grant to update products. A guest may still try:
+// the page asks them to sign in first. Every component below inherits this decision as
+// `acl.allowed`, until a folder below decides otherwise (product/remove-link, product/remove,
+// bulk-price).
+export default ({ acl }) => acl.role === 'guest' || acl.grants.products.includes('update')

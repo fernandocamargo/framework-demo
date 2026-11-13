@@ -25,8 +25,6 @@ export const context = ({ route }) => ({
 export const creating = ({ context }) => context.creating
 export const unsaved = ({ form }) => form.unsaved
 export const invalid = ({ form }) => problems(form.values).length > 0
-/** The page's acl.ts says who may change the catalogue; a save from anyone else goes nowhere. */
-export const refused = ({ acl }) => !acl.allowed
 export const isConflict = ({ event }) => event.error instanceof Error && event.error.name === 'ConflictError'
 
 // ---- Changes ---------------------------------------------------------------------------------
@@ -48,7 +46,10 @@ export const changesToSave = ({ form, context, route }) => ({ id: route.edit ?? 
 export const changesToForce = ({ form, route }) => ({ id: route.edit ?? 0, changes: form.payload() })
 export const productToCreate = ({ form }) => form.payload()
 
-export default ({ services }) => ({
+// The chart is declared from what the person may do: a read-only editor has no `save` at all. When
+// that changes (a sign-in, a session that ends), the framework declares it again and the flow keeps
+// its place.
+export default ({ services, acl }) => ({
   starting: {
     always: [{ guard: creating, target: 'editing' }, { target: 'loading' }],
   },
@@ -69,7 +70,7 @@ export default ({ services }) => ({
   editing: {
     description: 'The person changes the fields.',
     on: {
-      save: [{ guard: refused }, { guard: invalid, actions: showProblems }, { guard: creating, target: 'creating' }, { target: 'saving' }],
+      ...(acl.allowed && { save: [{ guard: invalid, actions: showProblems }, { guard: creating, target: 'creating' }, { target: 'saving' }] }),
       close: [{ guard: unsaved, target: 'confirmingDiscard' }, { actions: close }],
     },
   },

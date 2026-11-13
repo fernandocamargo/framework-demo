@@ -44,7 +44,16 @@ declare module 'framework' {
     firstName: string
     lastName: string
     image: string
-    role: 'admin' | 'moderator' | 'user'
+  }
+  /**
+   * What the backend says may be done (`/auth/permissions`): a snapshot the app does not own.
+   * Components get it as `acl`, with `allowed` on it, and test their rules against it.
+   */
+  interface Acl {
+    role: 'admin' | 'moderator' | 'user' | 'guest'
+    grants: { products: ('read' | 'create' | 'update' | 'delete')[]; prices: 'update'[] }
+    /** The largest price change one may apply, in percent; null for no limit. */
+    limits: { priceChange: number | null }
   }
   interface Navigation {
     /** Changes these fields of the address and keeps the others. */

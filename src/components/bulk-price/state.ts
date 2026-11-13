@@ -33,7 +33,7 @@ export const context = () => ({
 export const nothingSelected = ({ form }) => form.values.selected.length === 0
 export const invalidRule = ({ form }) => ruleProblem(form.payload()) !== null
 export const isLargeChange = ({ form }) => form.payload().percent > LARGE_CHANGE
-/** The folder's acl.ts says who may apply which change; anyone else's apply goes nowhere. */
+/** The folder's acl.ts decides, as the percentage is typed, whether this change may be applied. */
 export const refused = ({ acl }) => !acl.allowed
 export const queueLeft = ({ context }) => context.queue.length > 0
 export const hasFailures = ({ context }) => context.results.some((result) => result.error !== null)
@@ -77,7 +77,10 @@ export const nextChange = ({ context, form }) => {
   return { id: item.id, changes: { price: newPrice(item.price, form.payload()) }, version: item.version }
 }
 
-export default ({ services }) => ({
+// Declared from the backend's grants: without the grant to update prices, the preview offers no
+// `apply` at all. Within it, the limit is the folder's acl.ts's decision, read by a guard when the
+// event arrives, since it changes as the percentage is typed.
+export default ({ services, acl }) => ({
   loadingProducts: {
     description: 'Reading the products of the chosen category.',
     invoke: {
@@ -109,7 +112,7 @@ export default ({ services }) => ({
     description: 'Step 3: each old price beside its new one.',
     on: {
       back: 'settingRule',
-      apply: [{ guard: refused }, { guard: isLargeChange, target: 'confirmingLargeChange' }, { target: 'applying', actions: queueSelected }],
+      ...(acl.grants.prices.includes('update') && { apply: [{ guard: refused }, { guard: isLargeChange, target: 'confirmingLargeChange' }, { target: 'applying', actions: queueSelected }] }),
       close: { actions: close },
     },
   },

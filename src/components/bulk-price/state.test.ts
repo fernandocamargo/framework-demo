@@ -7,7 +7,10 @@ import * as wizard from './state'
 const item = (id: number, price: number): Listed => ({ id, title: `Product ${id}`, description: '', category: 'desks', price, stock: 1, rating: 4, thumbnail: '', version: 1 })
 const items = [item(1, 100), item(2, 50), item(3, 10)]
 
-async function atPreview(save: (input: { id: number }) => Promise<unknown>, acl = { allowed: true }) {
+/** The backend's snapshot for someone granted price changes, with the folder's decision on it. */
+const granted = (allowed = true) => ({ role: 'admin', grants: { products: ['read'], prices: ['update'] }, limits: { priceChange: null }, allowed })
+
+async function atPreview(save: (input: { id: number }) => Promise<unknown>, acl = granted()) {
   const fields = formOf(form)
   const go = vi.fn()
   const search = vi.fn(async () => ({ items, total: 3, page: 1, pages: 1 }))
@@ -118,7 +121,16 @@ test('a change above 50% is applied only after a second confirmation', async () 
 
 test("an apply the folder's acl.ts refuses goes nowhere, whatever sent it", async () => {
   const save = vi.fn(async () => ({}))
-  const { flow } = await atPreview(save, { allowed: false })
+  const { flow } = await atPreview(save, granted(false))
+  flow.send({ type: 'apply' })
+  await flow.settled()
+  expect(flow.states).toEqual(['previewing'])
+  expect(save).not.toHaveBeenCalled()
+})
+
+test("without the grant to update prices, the chart is declared with no apply at all", async () => {
+  const save = vi.fn(async () => ({}))
+  const { flow } = await atPreview(save, { ...granted(), grants: { products: ['read'], prices: [] } })
   flow.send({ type: 'apply' })
   await flow.settled()
   expect(flow.states).toEqual(['previewing'])

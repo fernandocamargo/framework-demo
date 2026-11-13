@@ -3,9 +3,6 @@
 
 export type Rule = { direction: 'decrease' | 'increase'; percent: number }
 
-/** The largest change a moderator may apply, in percent (acl.ts). */
-export const MODERATOR_LIMIT = 20
-
 /** No price goes below one cent. */
 export const MINIMUM = 0.01
 

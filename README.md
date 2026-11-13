@@ -87,17 +87,21 @@ The same folder shape holds a wizard ([`bulk-price/`](src/components/bulk-price)
 
 ## Rules in different places
 
-The roles are DummyJSON's own: its users are admins, moderators or users, and the sign-in dialog offers one of each (Emily, Olivia, Avery). Who may do what is said where it applies, each time as a function that returns a boolean:
+The app does not own its permissions. A backend sends a snapshot of them (a role, grants by resource and action, limits), and the framework carries it to every file that reads `acl`, with `allowed` on it: the decision of the nearest `acl.ts` above. DummyJSON has no permissions endpoint, so the API client answers `/auth/permissions` from the user's role, as a backend would ([`clients/permissions.ts`](src/clients/permissions.ts)). The sign-in dialog offers one account per role (Emily, admin; Olivia, moderator; Avery, user).
 
-| Where | Rule |
+Each consumer tests the snapshot against what else it knows:
+
+| Where | Test |
 |---|---|
-| [`app/acl.ts`](src/components/app/acl.ts) | Changing the catalogue is for moderators and admins. Every component below inherits it: the catalogue hides its actions, a row its edit link, the editor locks its fields. |
-| [`product/remove-link/acl.ts`](src/components/product/remove-link/acl.ts) | One link, inside every row and the product dialog, narrower: deleting is for admins. |
+| [`app/acl.ts`](src/components/app/acl.ts) | Changing the catalogue needs the grant to update products. Every component below inherits the decision: the catalogue hides its actions, a row its edit link, the editor locks its fields. |
+| [`product/remove-link/acl.ts`](src/components/product/remove-link/acl.ts) | One link, inside every row and the product dialog, narrower: it needs the grant to delete. |
 | [`product/remove/acl.ts`](src/components/product/remove/acl.ts) | The same for the dialog, which an address (`?remove=4`) can open for anyone. |
-| [`bulk-price/acl.ts`](src/components/bulk-price/acl.ts) | Moderators change prices by 20% at most: a rule that reads the form, so it changes as the percentage is typed. |
-| [`bulk-price/state.ts`](src/components/bulk-price/state.ts) | `apply: [{ guard: refused }, …]`: the chart refuses too, whatever sent the event. |
+| [`bulk-price/acl.ts`](src/components/bulk-price/acl.ts) | The backend's limit on a price change, against the percentage in the form: the decision changes as it is typed. |
+| [`product/editor/state.ts`](src/components/product/editor/state.ts) | The chart's declaration: a read-only editor has no `save` at all. Declared again when the decision changes, it keeps its place. |
+| [`bulk-price/state.ts`](src/components/bulk-price/state.ts) | Declared with `apply` only under the grant to update prices; a guard reads the limit's decision when `apply` arrives. |
+| [`session/props.ts`](src/components/session/props.ts) | The role in the header is the snapshot's. |
 
-The role is not in DummyJSON's sign-in answer; it is in the profile (`/auth/me`). So who is signed in is a read of its own, the session and then the profile, that `Root` resolves through the data layer: a sign-in or a sign-out reads it again, every rule is decided again, and only the components whose answer changed render again.
+Each component follows only the parts of the snapshot it reads, so a sign-in renders again only the components whose answer changed.
 
 ## One service, toured
 

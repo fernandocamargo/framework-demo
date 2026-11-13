@@ -1,6 +1,6 @@
 // What the session's render shows: who is signed in, their role and how long the access token
-// has left, and the sign-in dialog when the page asks for it. The role is the profile's (`user`,
-// Root's read), not the session's: DummyJSON's sign-in answers none.
+// has left, and the sign-in dialog when the page asks for it. The role is the one the backend's
+// permissions name (`acl`), not the session's: DummyJSON's sign-in answers none.
 import { DEMOS } from './form'
 
 export type Props = {
@@ -10,7 +10,7 @@ export type Props = {
   reason: string | null
 }
 
-export default ({ asked, reason, state, form, i18n, user }) => {
+export default ({ asked, reason, state, form, i18n, acl }) => {
   const { user: session, expiresAt, now, error } = state.context
   const signedIn = state.signedIn || state.refreshing
   const seconds = Math.max(0, Math.round((expiresAt - now) / 1000))
@@ -22,7 +22,7 @@ export default ({ asked, reason, state, form, i18n, user }) => {
     signedIn,
     name: session ? `${session.firstName} ${session.lastName}` : '',
     picture: session?.image ?? '',
-    role: user && signedIn ? i18n.role({ role: user.role }) : null,
+    role: signedIn && acl.role !== 'guest' ? i18n.role({ role: acl.role }) : null,
     token: state.refreshing ? i18n.token.refreshing : i18n.token.left({ seconds }),
     refreshing: state.refreshing,
     dialogOpen: asked && (state.signedOut || state.signingIn || state.expired),
