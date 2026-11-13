@@ -1,0 +1,7 @@
+{
+  "name": "framework-typescript-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The framework's tsserver plugin: types the arguments the framework injects.",
+  "main": "index.cjs"
+}
