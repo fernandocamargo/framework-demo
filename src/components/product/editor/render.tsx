@@ -1,6 +1,6 @@
 import { Button, Dialog, FieldError, Form, Group, Heading, Input, Label, ListBox, ListBoxItem, Modal, ModalOverlay, NumberField, Popover, Select, SelectValue, TextArea, TextField } from 'react-aria-components'
 
-export default ({ className, i18n, send, values, set, categories, currency, heading, saveText, problems, loading, unavailable, formShown, locked, busy, conflict, failed, confirmingDiscard, error }) => (
+export default ({ className, i18n, send, values, set, categories, currency, heading, saveText, problems, loading, unavailable, formShown, locked, readOnly, busy, conflict, failed, confirmingDiscard, error }) => (
   <ModalOverlay isOpen isDismissable={!busy} isKeyboardDismissDisabled={busy} onOpenChange={(open) => !open && send({ type: 'close' })}>
     <Modal className={`react-aria-Modal ${className}`}>
       <Dialog>
@@ -30,6 +30,13 @@ export default ({ className, i18n, send, values, set, categories, currency, head
               </div>
             </div>
           </div>
+        )}
+
+        {formShown && readOnly && (
+          <p className="notice" data-tone="info" role="note">
+            <span className="icon" data-icon="user" />
+            {i18n.readOnly}
+          </p>
         )}
 
         {formShown && (
@@ -123,7 +130,7 @@ export default ({ className, i18n, send, values, set, categories, currency, head
             <Button isDisabled={busy} onPress={() => send({ type: 'close' })}>
               {i18n.cancel}
             </Button>
-            <Button type="submit" form="product" data-variant="primary" isPending={busy}>
+            <Button type="submit" form="product" data-variant="primary" isPending={busy} isDisabled={readOnly}>
               {busy && <span className="spinner" aria-hidden="true" />}
               {saveText}
             </Button>

@@ -2,7 +2,7 @@ import { Link } from 'react-aria-components'
 import Filters from './components/filters'
 import ProductRow from './components/product-row'
 
-export default ({ className, i18n, filters, categories, items, summary, empty, emptyText, clearHref, createHref, bulkHref, paging }) => (
+export default ({ className, i18n, filters, categories, items, canChange, summary, empty, emptyText, clearHref, createHref, bulkHref, paging }) => (
   <section className={className} aria-labelledby="catalogue-title">
     <div className="top">
       <div>
@@ -11,17 +11,25 @@ export default ({ className, i18n, filters, categories, items, summary, empty, e
           {summary}
         </p>
       </div>
-      <div className="actions">
-        <Link href={bulkHref} data-variant="secondary">
-          <span className="icon" data-icon="tag" />
-          {i18n.actions.bulk}
-        </Link>
-        <Link href={createHref} data-variant="primary">
-          <span className="icon" data-icon="plus" />
-          {i18n.actions.create}
-        </Link>
-      </div>
+      {canChange && (
+        <div className="actions">
+          <Link href={bulkHref} data-variant="secondary">
+            <span className="icon" data-icon="tag" />
+            {i18n.actions.bulk}
+          </Link>
+          <Link href={createHref} data-variant="primary">
+            <span className="icon" data-icon="plus" />
+            {i18n.actions.create}
+          </Link>
+        </div>
+      )}
     </div>
+    {!canChange && (
+      <p className="notice" data-tone="info" role="note">
+        <span className="icon" data-icon="user" />
+        {i18n.readOnly}
+      </p>
+    )}
     <Filters filters={filters} categories={categories} />
     {empty ? (
       <div className="empty">

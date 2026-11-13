@@ -37,6 +37,15 @@ declare module 'framework' {
     /** Whether the sign-in dialog was asked for. */
     signin: boolean
   }
+  /** Who is signed in, from the profile the session names (`/auth/me`): DummyJSON's own user, with its role. */
+  interface User {
+    id: number
+    username: string
+    firstName: string
+    lastName: string
+    image: string
+    role: 'admin' | 'moderator' | 'user'
+  }
   interface Navigation {
     /** Changes these fields of the address and keeps the others. */
     go(changes: Partial<Route>): void

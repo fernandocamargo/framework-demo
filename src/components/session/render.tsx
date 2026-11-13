@@ -1,14 +1,17 @@
 import { Button, Dialog, Form, Heading, Input, Label, Modal, ModalOverlay, TextField } from 'react-aria-components'
 import { go } from '@/address'
 
-export default ({ className, i18n, hint, send, values, set, signedIn, name, picture, token, refreshing, dialogOpen, signingIn, notice, error }) => (
+export default ({ className, i18n, send, values, set, signedIn, name, picture, role, token, refreshing, dialogOpen, signingIn, notice, accounts, error }) => (
   <div className={className}>
     {signedIn ? (
       <>
         <div className="who">
           {picture ? <img src={picture} alt="" width="30" height="30" /> : <span className="icon" data-icon="user" />}
           <div>
-            <strong>{name}</strong>
+            <strong>
+              {name}
+              {role && <span className="badge" data-tone="accent">{role}</span>}
+            </strong>
             <span className="token" data-refreshing={refreshing || undefined} role="timer" aria-live="off">
               {token}
             </span>
@@ -53,12 +56,16 @@ export default ({ className, i18n, hint, send, values, set, signedIn, name, pict
               <Input />
             </TextField>
           </Form>
-          <p className="hint">
-            {hint((chunks) => <code>{chunks}</code>)}{' '}
-            <Button className="react-aria-Link" onPress={() => send({ type: 'fillDemo' })}>
-              {i18n.dialog.fill}
-            </Button>
-          </p>
+          <div className="hint">
+            <p>{i18n.dialog.hint}</p>
+            <div className="accounts">
+              {accounts.map((account) => (
+                <Button key={account.username} className="react-aria-Link" onPress={() => send({ type: 'fillDemo', username: account.username })}>
+                  {account.label}
+                </Button>
+              ))}
+            </div>
+          </div>
           {error && (
             <div className="notice" data-tone="danger" role="alert">
               <span className="icon" data-icon="alert" />

@@ -7,10 +7,11 @@ export default {
     title: 'Sign in',
     username: 'Username',
     password: 'Password',
-    hint: "DummyJSON's demo account is public: <code>{username}</code> / <code>{password}</code>.",
-    fill: 'Fill it in',
+    hint: "DummyJSON's demo accounts are public. Fill one in:",
+    account: '{name}, {role, select, admin {admin} moderator {moderator} other {user}}',
     cancel: 'Cancel',
     submit: 'Sign in',
   },
   expired: 'Your session has expired. Sign in again to continue.',
+  role: '{role, select, admin {Admin} moderator {Moderator} other {User}}',
 }

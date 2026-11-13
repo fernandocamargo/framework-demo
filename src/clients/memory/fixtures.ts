@@ -49,13 +49,12 @@ export const products: Product[] = Object.entries(CATALOGUE).flatMap(([category,
   }),
 )
 
-/** The memory world's user. DummyJSON's own demo user has the same name and password. */
-export const user = {
-  id: 1,
-  username: 'emilys',
-  password: 'emilyspass',
-  firstName: 'Emily',
-  lastName: 'Johnson',
-  email: 'emily.johnson@x.dummyjson.com',
-  image: picture('Emily Johnson', 330, 45),
-}
+/**
+ * The memory world's users: one per role DummyJSON gives its users, with the same ids, names,
+ * passwords and roles as DummyJSON's own (users 1, 6 and 16).
+ */
+export const users = [
+  { id: 1, username: 'emilys', password: 'emilyspass', firstName: 'Emily', lastName: 'Johnson', email: 'emily.johnson@x.dummyjson.com', role: 'admin', image: picture('Emily Johnson', 330, 45) },
+  { id: 6, username: 'oliviaw', password: 'oliviawpass', firstName: 'Olivia', lastName: 'Wilson', email: 'olivia.wilson@x.dummyjson.com', role: 'moderator', image: picture('Olivia Wilson', 200, 45) },
+  { id: 16, username: 'averyp', password: 'averyppass', firstName: 'Avery', lastName: 'Perez', email: 'avery.perez@x.dummyjson.com', role: 'user', image: picture('Avery Perez', 150, 45) },
+]

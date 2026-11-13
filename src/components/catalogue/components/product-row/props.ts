@@ -6,7 +6,7 @@ import type { Listed } from '@/services/products/types'
 
 export type Props = { product: Listed; filters: Filters }
 
-export default ({ product, filters, i18n, intl }) => {
+export default ({ product, filters, i18n, intl, acl }) => {
   const level = stockLevel(product.stock)
   return {
     title: product.title,
@@ -18,9 +18,9 @@ export default ({ product, filters, i18n, intl }) => {
     stock: { tone: STOCK_TONES[level], label: i18n.stock({ level, count: product.stock }) },
     change: product.local === 'created' ? i18n.change.created : product.local === 'edited' ? i18n.change.edited : null,
     viewHref: href(filters, { view: product.id }),
+    canEdit: acl.allowed,
     editHref: href(filters, { edit: product.id }),
     editLabel: i18n.actions.edit({ title: product.title }),
     removeHref: href(filters, { remove: product.id }),
-    removeLabel: i18n.actions.remove({ title: product.title }),
   }
 }

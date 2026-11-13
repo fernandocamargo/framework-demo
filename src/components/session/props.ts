@@ -1,8 +1,7 @@
-import type { ReactNode } from 'react'
-import { DEMO } from './form'
-
-// What the session's render shows: who is signed in and how long the access token has left,
-// and the sign-in dialog when the page asks for it.
+// What the session's render shows: who is signed in, their role and how long the access token
+// has left, and the sign-in dialog when the page asks for it. The role is the profile's (`user`,
+// Root's read), not the session's: DummyJSON's sign-in answers none.
+import { DEMOS } from './form'
 
 export type Props = {
   /** Whether the page asks for the sign-in dialog: the address did, or a change that needs a session. */
@@ -11,25 +10,25 @@ export type Props = {
   reason: string | null
 }
 
-export default ({ asked, reason, state, form, i18n }) => {
-  const { user, expiresAt, now, error } = state.context
+export default ({ asked, reason, state, form, i18n, user }) => {
+  const { user: session, expiresAt, now, error } = state.context
   const signedIn = state.signedIn || state.refreshing
   const seconds = Math.max(0, Math.round((expiresAt - now) / 1000))
   return {
     i18n,
-    /** The hint, with what a `<code>` becomes: `hint(code)`. */
-    hint: (code: (chunks: ReactNode[]) => ReactNode) => i18n.dialog.hint({ ...DEMO, code }),
     send: state.send,
     values: form.values,
     set: form.set,
     signedIn,
-    name: user ? `${user.firstName} ${user.lastName}` : '',
-    picture: user?.image ?? '',
+    name: session ? `${session.firstName} ${session.lastName}` : '',
+    picture: session?.image ?? '',
+    role: user && signedIn ? i18n.role({ role: user.role }) : null,
     token: state.refreshing ? i18n.token.refreshing : i18n.token.left({ seconds }),
     refreshing: state.refreshing,
     dialogOpen: asked && (state.signedOut || state.signingIn || state.expired),
     signingIn: state.signingIn,
     notice: state.expired ? i18n.expired : reason,
+    accounts: DEMOS.map(({ username, name, role }) => ({ username, label: i18n.dialog.account({ name, role }) })),
     error,
   }
 }

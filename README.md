@@ -26,6 +26,7 @@ What this does not do: it does not decide what to build, and it does not judge w
 |---|---|
 | Component folder | The module. A folder under `components/` with a `render.tsx`. Importing the folder gives the component. Its path (`components/product/editor`) is its identity and its CSS class. |
 | Layer file | A file with a fixed name and job inside a component folder: `render.tsx`, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `i18n.ts`, `placeholder.tsx`, `error.tsx`. |
+| `acl.ts` | Whether what a component offers may be done, as a boolean. The component and everything below it get `acl.allowed`, until a folder below says otherwise. |
 | `props.ts` | The module's interface. `export type Props` says what a parent passes; the default export shapes what the render gets. |
 | Client | A transport: how the app reaches a system. A folder under `clients/`. |
 | Service | The operations on one resource, written against clients. A folder under `services/`. |
@@ -83,6 +84,20 @@ export default ({ services }) => ({
 There are no type annotations in that file, and none are missing. The TypeScript plugin types `form`, `context`, `route`, `event` and `services` from the folder's other files and from the app's clients and services. The render receives `state` with one boolean per state and a `send` that accepts only this chart's events.
 
 The same folder shape holds a wizard ([`bulk-price/`](src/components/bulk-price)), a session with token refresh ([`session/`](src/components/session)), and a list row with no flow at all ([`product-row/`](src/components/catalogue/components/product-row)).
+
+## Rules in different places
+
+The roles are DummyJSON's own: its users are admins, moderators or users, and the sign-in dialog offers one of each (Emily, Olivia, Avery). Who may do what is said where it applies, each time as a function that returns a boolean:
+
+| Where | Rule |
+|---|---|
+| [`app/acl.ts`](src/components/app/acl.ts) | Changing the catalogue is for moderators and admins. Every component below inherits it: the catalogue hides its actions, a row its edit link, the editor locks its fields. |
+| [`product/remove-link/acl.ts`](src/components/product/remove-link/acl.ts) | One link, inside every row and the product dialog, narrower: deleting is for admins. |
+| [`product/remove/acl.ts`](src/components/product/remove/acl.ts) | The same for the dialog, which an address (`?remove=4`) can open for anyone. |
+| [`bulk-price/acl.ts`](src/components/bulk-price/acl.ts) | Moderators change prices by 20% at most: a rule that reads the form, so it changes as the percentage is typed. |
+| [`bulk-price/state.ts`](src/components/bulk-price/state.ts) | `apply: [{ guard: refused }, …]`: the chart refuses too, whatever sent the event. |
+
+The role is not in DummyJSON's sign-in answer; it is in the profile (`/auth/me`). So who is signed in is a read of its own, the session and then the profile, that `Root` resolves through the data layer: a sign-in or a sign-out reads it again, every rule is decided again, and only the components whose answer changed render again.
 
 ## One service, toured
 

@@ -13,5 +13,6 @@
   "components/catalogue/paging/page": "Página {page, number} de {pages, number}",
   "components/catalogue/loading": "Lendo o catálogo…",
   "components/catalogue/failed/message": "Não foi possível ler o catálogo: {message}",
-  "components/catalogue/failed/retry": "Tentar de novo"
+  "components/catalogue/failed/retry": "Tentar de novo",
+  "components/catalogue/readOnly": "Você pode navegar pelo catálogo. Mudá-lo é para moderadores e administradores."
 }

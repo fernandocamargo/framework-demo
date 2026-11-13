@@ -2,7 +2,7 @@
 import { CURRENCY } from '@/format'
 import { problems } from './form'
 
-export default ({ state, form, i18n, async: { default: categories } }) => {
+export default ({ state, form, i18n, acl, async: { default: categories } }) => {
   const { context } = state
   const busy = state.saving || state.creating || state.overwriting
   return {
@@ -19,7 +19,8 @@ export default ({ state, form, i18n, async: { default: categories } }) => {
     unavailable: state.unavailable,
     // The form stays on screen, and locked, while a save runs or a question is open over it.
     formShown: !(state.loading || state.starting || state.unavailable),
-    locked: busy || state.conflict || state.confirmingDiscard,
+    locked: busy || state.conflict || state.confirmingDiscard || !acl.allowed,
+    readOnly: !acl.allowed,
     busy,
     conflict: state.conflict,
     failed: state.failed,

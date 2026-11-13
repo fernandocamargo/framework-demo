@@ -33,6 +33,8 @@ export const context = () => ({
 export const nothingSelected = ({ form }) => form.values.selected.length === 0
 export const invalidRule = ({ form }) => ruleProblem(form.payload()) !== null
 export const isLargeChange = ({ form }) => form.payload().percent > LARGE_CHANGE
+/** The folder's acl.ts says who may apply which change; anyone else's apply goes nowhere. */
+export const refused = ({ acl }) => !acl.allowed
 export const queueLeft = ({ context }) => context.queue.length > 0
 export const hasFailures = ({ context }) => context.results.some((result) => result.error !== null)
 
@@ -107,13 +109,13 @@ export default ({ services }) => ({
     description: 'Step 3: each old price beside its new one.',
     on: {
       back: 'settingRule',
-      apply: [{ guard: isLargeChange, target: 'confirmingLargeChange' }, { target: 'applying', actions: queueSelected }],
+      apply: [{ guard: refused }, { guard: isLargeChange, target: 'confirmingLargeChange' }, { target: 'applying', actions: queueSelected }],
       close: { actions: close },
     },
   },
   confirmingLargeChange: {
     description: 'The rule moves prices by more than 50%. The person confirms it a second time, or goes back to the preview.',
-    on: { confirm: { target: 'applying', actions: queueSelected }, back: 'previewing' },
+    on: { confirm: [{ guard: refused }, { target: 'applying', actions: queueSelected }], back: 'previewing' },
   },
   applying: {
     description: 'Step 4: one save per product, in order. A failure is kept and the rest go on.',

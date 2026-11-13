@@ -6,20 +6,21 @@ import { sleep } from '../storage'
 import type { Wire } from '../dummyjson/http'
 import * as fixtures from './fixtures'
 
-type Data = { products: Product[]; categories: { slug: string; name: string }[]; user: typeof fixtures.user }
+type Data = { products: Product[]; categories: { slug: string; name: string }[]; users: typeof fixtures.users }
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 
 export function createServer({ data = fixtures as Data, now = Date.now }: { data?: Data; now?: () => number } = {}): Wire {
   let issued = 0
-  const tokens = (minutes: number) => ({
-    accessToken: `access.${data.user.id}.${now() + minutes * 60_000}`,
-    refreshToken: `refresh.${data.user.id}.${(issued += 1)}`,
+  const tokens = (id: number, minutes: number) => ({
+    accessToken: `access.${id}.${now() + minutes * 60_000}`,
+    refreshToken: `refresh.${id}.${(issued += 1)}`,
   })
+  /** The user a request's access token names, while it is good; null otherwise. */
   const signedIn = (init: RequestInit) => {
     const [, token = ''] = /^Bearer (.+)$/.exec(new Headers(init.headers).get('authorization') ?? '') ?? []
-    const [kind, , expiresAt, extra] = token.split('.')
-    return kind === 'access' && extra === undefined && Number(expiresAt) > now()
+    const [kind, id, expiresAt, extra] = token.split('.')
+    return kind === 'access' && extra === undefined && Number(expiresAt) > now() ? (data.users.find((user) => user.id === Number(id)) ?? null) : null
   }
 
   const page = (items: Product[], query: URLSearchParams) => {
@@ -45,18 +46,21 @@ export function createServer({ data = fixtures as Data, now = Date.now }: { data
     if (status) return json(Number(status[1]), { status: status[1], title: 'Forced by the network lab', message: `The server answered ${status[1]}.` })
 
     if (path === '/auth/login' && method === 'POST') {
-      if (body['username'] !== data.user.username || body['password'] !== data.user.password) return json(400, { message: 'Invalid credentials' })
-      const { password: _, ...user } = data.user
-      return json(200, { ...user, ...tokens(Number(body['expiresInMins'] ?? 60)) })
+      const found = data.users.find((user) => user.username === body['username'] && user.password === body['password'])
+      if (!found) return json(400, { message: 'Invalid credentials' })
+      // DummyJSON's login answers no role; /auth/me does.
+      const { password: _, role: __, ...user } = found
+      return json(200, { ...user, ...tokens(found.id, Number(body['expiresInMins'] ?? 60)) })
     }
     if (path === '/auth/refresh' && method === 'POST') {
-      if (!/^refresh\.\d+\.\d+$/.test(String(body['refreshToken']))) return json(403, { message: 'Invalid refresh token' })
-      return json(200, tokens(Number(body['expiresInMins'] ?? 60)))
+      const refresh = /^refresh\.(\d+)\.\d+$/.exec(String(body['refreshToken']))
+      if (!refresh) return json(403, { message: 'Invalid refresh token' })
+      return json(200, tokens(Number(refresh[1]), Number(body['expiresInMins'] ?? 60)))
     }
     const needsToken = path.startsWith('/auth/')
     if (needsToken && !signedIn(init)) return json(401, { message: 'Invalid/Expired Token!' })
     if (path === '/auth/me' && method === 'GET') {
-      const { password: _, ...user } = data.user
+      const { password: _, ...user } = signedIn(init)!
       return json(200, user)
     }
     const resource = needsToken ? path.slice('/auth'.length) : path

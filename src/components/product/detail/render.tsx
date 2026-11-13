@@ -1,8 +1,9 @@
 import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components'
 import { go } from '@/address'
+import RemoveLink from '@/components/product/remove-link'
 import Reviews from './components/reviews'
 
-export default ({ className, i18n, id, title, description, origin, price, stock, images, change }) => (
+export default ({ className, i18n, id, title, description, origin, price, stock, images, change, canEdit, removeHref }) => (
   <ModalOverlay isOpen isDismissable onOpenChange={(open) => !open && go({ view: null })}>
     <Modal className={`react-aria-Modal ${className}`} data-size="large">
       <Dialog>
@@ -38,10 +39,12 @@ export default ({ className, i18n, id, title, description, origin, price, stock,
         <p>{description}</p>
         <Reviews />
         <footer>
-          <Button onPress={() => go({ view: null, remove: id })}>{i18n.actions.remove}</Button>
-          <Button data-variant="primary" onPress={() => go({ view: null, edit: id })}>
-            {i18n.actions.edit}
-          </Button>
+          <RemoveLink href={removeHref} title={title} variant="text" />
+          {canEdit && (
+            <Button data-variant="primary" onPress={() => go({ view: null, edit: id })}>
+              {i18n.actions.edit}
+            </Button>
+          )}
         </footer>
       </Dialog>
     </Modal>

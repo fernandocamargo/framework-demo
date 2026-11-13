@@ -7,11 +7,11 @@ import * as wizard from './state'
 const item = (id: number, price: number): Listed => ({ id, title: `Product ${id}`, description: '', category: 'desks', price, stock: 1, rating: 4, thumbnail: '', version: 1 })
 const items = [item(1, 100), item(2, 50), item(3, 10)]
 
-async function atPreview(save: (input: { id: number }) => Promise<unknown>) {
+async function atPreview(save: (input: { id: number }) => Promise<unknown>, acl = { allowed: true }) {
   const fields = formOf(form)
   const go = vi.fn()
   const search = vi.fn(async () => ({ items, total: 3, page: 1, pages: 1 }))
-  const flow = startFlow(wizard, { services: { products: { search, save } }, form: fields, navigation: { go } })
+  const flow = startFlow(wizard, { services: { products: { search, save } }, form: fields, navigation: { go }, acl })
   await flow.settled()
   flow.send({ type: 'next' })
   fields.set('percent', 20)
@@ -114,4 +114,13 @@ test('a change above 50% is applied only after a second confirmation', async () 
   await flow.settled()
   expect(save).toHaveBeenCalledTimes(3)
   expect(flow.states).toEqual(['summary'])
+})
+
+test("an apply the folder's acl.ts refuses goes nowhere, whatever sent it", async () => {
+  const save = vi.fn(async () => ({}))
+  const { flow } = await atPreview(save, { allowed: false })
+  flow.send({ type: 'apply' })
+  await flow.settled()
+  expect(flow.states).toEqual(['previewing'])
+  expect(save).not.toHaveBeenCalled()
 })

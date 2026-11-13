@@ -574,6 +574,10 @@ select {
     background: var(--ok-soft);
     color: var(--ok);
   }
+  &[data-tone='info'] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
   .icon {
     margin-block-start: 0.15em;
   }

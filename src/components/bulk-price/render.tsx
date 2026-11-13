@@ -1,6 +1,6 @@
 import { Button, Checkbox, CheckboxGroup, Dialog, Group, Heading, Input, Label, ListBox, ListBoxItem, Modal, ModalOverlay, NumberField, Popover, ProgressBar, Radio, RadioGroup, Select, SelectValue } from 'react-aria-components'
 
-export default ({ className, i18n, state, set, values, step, steps, stepText, categories, items, selectedIds, selectionText, loadError, ruleProblem, applies, largeText, preview, applyText, progress, current, results, summaryText, retryText, failedCount }) => (
+export default ({ className, i18n, state, set, values, step, steps, stepText, categories, items, selectedIds, selectionText, loadError, ruleProblem, applies, largeText, preview, applyText, canApply, limitText, progress, current, results, summaryText, retryText, failedCount }) => (
   <ModalOverlay isOpen isDismissable={!state.applying} isKeyboardDismissDisabled={state.applying} onOpenChange={(open) => !open && state.send({ type: 'close' })}>
     <Modal className={`react-aria-Modal ${className}`} data-size="large">
       <Dialog>
@@ -129,9 +129,15 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
                 ))}
               </tbody>
             </table>
+            {limitText && (
+              <p className="notice" data-tone="info" role="note">
+                <span className="icon" data-icon="user" />
+                {limitText}
+              </p>
+            )}
             <footer>
               <Button onPress={() => state.send({ type: 'back' })}>{i18n.back}</Button>
-              <Button data-variant="primary" onPress={() => state.send({ type: 'apply' })}>
+              <Button data-variant="primary" isDisabled={!canApply} onPress={() => state.send({ type: 'apply' })}>
                 {applyText}
               </Button>
             </footer>

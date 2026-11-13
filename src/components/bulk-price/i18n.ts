@@ -22,6 +22,10 @@ export default {
     text: '{direction, select, increase {Increase} other {Decrease}} by {percent, number}%',
     next: 'Next: preview',
   },
+  limits: {
+    moderator: 'Moderators change prices by {limit, number}% at most. An admin can apply this one.',
+    user: 'Only moderators and admins change prices.',
+  },
   problems: {
     none: 'The change must be more than 0%.',
     decreaseTooLarge: 'A decrease must be less than 100%.',

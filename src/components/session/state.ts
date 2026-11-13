@@ -6,7 +6,10 @@
 // so a refresh can be watched. While signed in, the chart looks at the clock once a second.
 import type { Session } from '@/clients/dummyjson/http'
 import { CLOSED } from '@/address'
-import { DEMO } from './form'
+import { DEMOS } from './form'
+
+/** The payloads of the events that carry one. */
+export type Events = { fillDemo: { username?: string } }
 
 export const description = 'Sign in and out, and keep the access token fresh.'
 
@@ -41,9 +44,11 @@ export const remember = ({ event }) => {
 export const forget = () => ({ user: null, expiresAt: 0, notBefore: 0 })
 export const rememberError = ({ event }) => ({ error: event.error instanceof Error ? event.error.message : String(event.error) })
 export const postpone = ({ context }) => ({ notBefore: context.now + RETRY_AFTER })
-export const fillDemo = ({ form }) => {
-  form.set('username', DEMO.username)
-  form.set('password', DEMO.password)
+/** Fills in one of the demo accounts: the one the event names, or the first. */
+export const fillDemo = ({ form, event }) => {
+  const account = DEMOS.find(({ username }) => username === event.username) ?? DEMOS[0]
+  form.set('username', account.username)
+  form.set('password', account.password)
 }
 export const clearForm = ({ form }) => form.seed(undefined)
 export const closeSignIn = ({ navigation }) => navigation.go({ signin: false })

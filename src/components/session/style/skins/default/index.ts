@@ -23,6 +23,9 @@ export default css`
     }
     strong {
       font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
     }
   }
   .token {
@@ -36,6 +39,12 @@ export default css`
   form {
     display: grid;
     gap: 0.75rem;
+  }
+  .accounts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.9rem;
+    margin-block-start: 0.25rem;
   }
   .hint {
     color: var(--muted);

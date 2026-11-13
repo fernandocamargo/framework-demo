@@ -40,5 +40,7 @@
   "components/bulk-price/retryFailed": "Tentar de novo os {count, number} que falharam",
   "components/bulk-price/back": "Voltar",
   "components/bulk-price/cancel": "Cancelar",
-  "components/bulk-price/done": "Concluir"
+  "components/bulk-price/done": "Concluir",
+  "components/bulk-price/limits/moderator": "Moderadores mudam preços em no máximo {limit, number}%. Um administrador pode aplicar esta.",
+  "components/bulk-price/limits/user": "Só moderadores e administradores mudam preços."
 }

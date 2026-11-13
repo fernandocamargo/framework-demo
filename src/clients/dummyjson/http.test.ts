@@ -1,11 +1,13 @@
 // The API client on a bad network. The wire is the memory world's server, wrapped to count
 // calls and to fail on demand, so each rule is tested without a network or a clock.
 import { createServer } from '../memory/server'
-import { user } from '../memory/fixtures'
+import { users } from '../memory/fixtures'
+
+const [user] = users
 import { memoryStorage } from '../storage'
 import { createHttp, type Wire } from './http'
 
-const credentials = { username: user.username, password: user.password }
+const credentials = { username: user!.username, password: user!.password }
 
 function client(intercept?: (url: URL, init: RequestInit, calls: number) => Response | undefined) {
   const server = createServer()

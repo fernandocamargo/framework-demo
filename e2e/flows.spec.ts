@@ -27,9 +27,9 @@ const visible = (locator: Locator) => locator.isVisible()
 /** react-aria keeps a radio's or a checkbox's real input visually hidden inside its label, so the label is what a person clicks. */
 const choose = (locator: Locator) => locator.locator('xpath=ancestor::label').click()
 
-async function signIn(page: Page) {
+async function signIn(page: Page, account = 'Emily') {
   const form = dialog(page, 'Sign in')
-  await act(page, () => form.getByRole('button', { name: 'Fill it in' }).click())
+  await act(page, () => form.getByRole('button', { name: new RegExp(`^${account},`) }).click())
   await act(page, () => form.getByRole('button', { name: 'Sign in' }).click())
 }
 
@@ -251,4 +251,70 @@ test('the page speaks Brazilian Portuguese, and changes language in place', asyn
   expect(await page.locator('html').getAttribute('lang')).toBe('en')
   expect(await summary(page)).toBe('37 products')
   expect(await rows(page).first().innerText()).toContain('$273.99')
+})
+
+test("each role sees what it may do: users browse, moderators edit and change prices by 20% at most, admins also delete", async ({ page }) => {
+  const actions = page.getByRole('link', { name: 'New product' })
+  const editLinks = rows(page).getByRole('link', { name: /^Edit / })
+  const deleteLinks = rows(page).getByRole('link', { name: /^Delete / })
+  const switchTo = async (account: string) => {
+    if (await page.getByRole('button', { name: 'Sign out' }).count()) await act(page, () => page.getByRole('button', { name: 'Sign out' }).click())
+    await act(page, () => page.getByRole('button', { name: 'Sign in' }).click())
+    await signIn(page, account)
+  }
+
+  await open(page)
+  // Nobody signed in may try: the actions show, and lead to signing in.
+  expect(await actions.count()).toBe(1)
+
+  await switchTo('Avery')
+  expect(await page.getByRole('banner').innerText()).toContain('User')
+  expect(await actions.count()).toBe(0)
+  expect(await editLinks.count()).toBe(0)
+  expect(await deleteLinks.count()).toBe(0)
+  expect(await page.getByRole('note').first().innerText()).toContain('Changing it is for moderators and admins.')
+  // An address that opens the editor anyway shows it read-only, with nothing to save.
+  await open(page, '#/products?edit=4')
+  const editor = dialog(page, 'Edit Audio Interface')
+  expect(await editor.getByRole('note').innerText()).toContain('Changing it is for moderators and admins.')
+  expect(await editor.getByRole('button', { name: 'Save changes' }).isDisabled()).toBe(true)
+  await act(page, () => page.keyboard.press('Escape'))
+
+  await switchTo('Olivia')
+  expect(await page.getByRole('banner').innerText()).toContain('Moderator')
+  expect(await editLinks.count()).toBe(12)
+  expect(await deleteLinks.count()).toBe(0)
+  // The bulk change's rule reads the form: up to 20% applies, more does not.
+  await act(page, () => page.getByRole('link', { name: 'Bulk price change' }).click())
+  const wizard = dialog(page, 'Bulk price change')
+  await act(page, () => wizard.getByRole('button', { name: 'Next: the rule' }).click())
+  // The field commits its value when it loses focus, as a person leaves it.
+  await act(page, async () => {
+    await wizard.getByRole('textbox', { name: 'By' }).fill('30')
+    await page.keyboard.press('Tab')
+  })
+  await act(page, () => wizard.getByRole('button', { name: 'Next: preview' }).click())
+  expect(await wizard.getByRole('button', { name: /^Apply to/ }).isDisabled()).toBe(true)
+  expect(await wizard.getByRole('note').innerText()).toContain('Moderators change prices by 20% at most.')
+  await act(page, () => wizard.getByRole('button', { name: 'Back' }).click())
+  await act(page, async () => {
+    await wizard.getByRole('textbox', { name: 'By' }).fill('20')
+    await page.keyboard.press('Tab')
+  })
+  await act(page, () => wizard.getByRole('button', { name: 'Next: preview' }).click())
+  expect(await wizard.getByRole('button', { name: /^Apply to/ }).isDisabled()).toBe(false)
+  await act(page, () => page.keyboard.press('Escape'))
+  // A deletion asked for by the address is shown, and refused.
+  await open(page, '#/products?remove=4')
+  const question = dialog(page, /^Delete/)
+  expect(await question.getByRole('note').innerText()).toContain('Only admins delete products.')
+  expect(await question.getByRole('button', { name: 'Delete' }).isDisabled()).toBe(true)
+  await act(page, () => question.getByRole('button', { name: 'Cancel' }).click())
+
+  await switchTo('Emily')
+  expect(await page.getByRole('banner').innerText()).toContain('Admin')
+  expect(await deleteLinks.count()).toBe(12)
+  // Every rule decided without failing: a rule that throws refuses, and would be reported.
+  const failures = page.getByRole('region', { name: /Failures/ })
+  expect((await failures.count()) ? await failures.innerText() : '').toBe('')
 })

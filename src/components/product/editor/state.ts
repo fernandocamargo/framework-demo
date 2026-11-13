@@ -25,6 +25,8 @@ export const context = ({ route }) => ({
 export const creating = ({ context }) => context.creating
 export const unsaved = ({ form }) => form.unsaved
 export const invalid = ({ form }) => problems(form.values).length > 0
+/** The page's acl.ts says who may change the catalogue; a save from anyone else goes nowhere. */
+export const refused = ({ acl }) => !acl.allowed
 export const isConflict = ({ event }) => event.error instanceof Error && event.error.name === 'ConflictError'
 
 // ---- Changes ---------------------------------------------------------------------------------
@@ -67,7 +69,7 @@ export default ({ services }) => ({
   editing: {
     description: 'The person changes the fields.',
     on: {
-      save: [{ guard: invalid, actions: showProblems }, { guard: creating, target: 'creating' }, { target: 'saving' }],
+      save: [{ guard: refused }, { guard: invalid, actions: showProblems }, { guard: creating, target: 'creating' }, { target: 'saving' }],
       close: [{ guard: unsaved, target: 'confirmingDiscard' }, { actions: close }],
     },
   },

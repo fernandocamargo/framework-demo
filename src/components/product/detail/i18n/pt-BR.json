@@ -5,7 +5,6 @@
   "components/product/detail/stock": "{level, select, out {Esgotado} low {Restam {count, number}} other {{count, number} em estoque}}",
   "components/product/detail/change/created": "Criado neste navegador",
   "components/product/detail/change/edited": "Editado neste navegador",
-  "components/product/detail/actions/remove": "Excluir",
   "components/product/detail/actions/edit": "Editar",
   "components/product/detail/loading": "Lendo o produto",
   "components/product/detail/failed/title": "Não foi possível ler o produto",

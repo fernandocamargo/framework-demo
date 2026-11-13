@@ -4,5 +4,6 @@ export default {
   text: 'It leaves the catalogue. The deletion is kept in this browser only, since DummyJSON keeps no writes.',
   failed: 'It was not deleted: {message}',
   cancel: 'Cancel',
+  refused: 'Only admins delete products.',
   confirm: { remove: 'Delete', retry: 'Try again' },
 }

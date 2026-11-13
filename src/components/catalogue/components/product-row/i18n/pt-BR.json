@@ -3,6 +3,5 @@
   "components/catalogue/components/product-row/change/created": "Novo",
   "components/catalogue/components/product-row/change/edited": "Editado",
   "components/catalogue/components/product-row/rated": "Avaliação",
-  "components/catalogue/components/product-row/actions/edit": "Editar {title}",
-  "components/catalogue/components/product-row/actions/remove": "Excluir {title}"
+  "components/catalogue/components/product-row/actions/edit": "Editar {title}"
 }
