@@ -8,6 +8,13 @@
  * - **Writes.** `meta.ts` names, by reference, the operations a write makes stale:
  *   `save: { invalidates: [services.products.search] }`. After the write succeeds,
  *   those reads refetch, and so does every component whose `async.ts` default export used them.
+ * - **Optimistic writes.** `meta.ts` may also say how a write changes the answers of some reads
+ *   (`optimistic: [update(products.get, (product, change) => …)]`). Those answers change when the
+ *   write is sent, and so do the components that showed them. Each write sent and not yet settled
+ *   is kept, in order, over the server's last answer: an answer that arrives meanwhile gets them
+ *   again, and a write that fails is taken out, the others staying (a rebase, not a restore).
+ * - **Other tabs.** With a channel open (`Root`'s `sync`), a write that succeeds tells the other
+ *   tabs of the app which reads it made stale, by path, and they read them again.
  * - **Components.** A component's `async.ts` default export runs as a query of its own. The
  *   framework records the reads it calls and the route parameters it reads, so nobody declares
  *   what a component depends on.
@@ -25,6 +32,22 @@ export type ServiceRule = {
   freshFor?: number
   /** The operations this one makes stale when it succeeds, by reference. */
   invalidates?: unknown[]
+  /** The reads this write changes when it is sent, before the server confirms it, each with how. */
+  optimistic?: readonly Update[]
+}
+
+/** One read a write changes when it is sent, and how: `update(products.get, (product, change) => …)`. */
+export type Update<Args extends unknown[] = never[]> = { readonly read: unknown; readonly change: (answer: never, ...args: Args) => unknown }
+
+/**
+ * Pairs a read with how a write changes its answers, for a `meta.ts`'s `optimistic`. The answer
+ * is typed by the read, the arguments by the write.
+ */
+export function update<Read extends (...args: never[]) => Promise<unknown>, Args extends unknown[]>(
+  read: Read,
+  change: (answer: Awaited<ReturnType<Read>>, ...args: Args) => Awaited<ReturnType<Read>>,
+): Update<Args> {
+  return { read, change: change as Update<Args>['change'] }
 }
 
 type Operation = (...args: unknown[]) => unknown
@@ -35,11 +58,25 @@ const paths = new WeakMap<object, string>()
 export const name = (operation: object, path: string) => paths.set(operation, path)
 export const pathOf = (operation: unknown) => (operation && (typeof operation === 'object' || typeof operation === 'function') ? paths.get(operation) : undefined)
 
+/** A read's answer from the cache, without asking: what a component's answer is worked out from again. */
+export type Peek = (path: string, args: unknown[]) => { data: unknown } | undefined
+
+/** A write sent and not settled, with the reads it changes. */
+type Sent = { changes: { path: string; change: (answer: unknown, ...args: unknown[]) => unknown }[]; args: unknown[] }
+
 type Tracking = {
   /** What each component query read, by query hash: service paths, and route parameters with their values. */
   dependencies: Map<string, { services: Set<string>; route: Map<string, unknown> }>
   /** The route parameters each component's default export reads, by component path. */
   routeKeys: Map<string, Set<string>>
+  /** The optimistic writes sent and not settled, in the order they were sent. */
+  sent: Sent[]
+  /** The server's last answer, by query hash, for each read a write in `sent` changes. */
+  confirmed: Map<string, unknown>
+  /** How to work out each component query's answer again from the cache alone, by query hash. */
+  derivers: Map<string, (peek: Peek) => Promise<unknown>>
+  /** The channel to the app's other tabs, while one is open. */
+  channel: BroadcastChannel | null
 }
 
 /**
@@ -50,9 +87,12 @@ const trackings = new WeakMap<QueryClient, Tracking>()
 function trackingOf(client: QueryClient): Tracking {
   let tracking = trackings.get(client)
   if (!tracking) {
-    const created: Tracking = { dependencies: new Map(), routeKeys: new Map() }
+    const created: Tracking = { dependencies: new Map(), routeKeys: new Map(), sent: [], confirmed: new Map(), derivers: new Map(), channel: null }
     client.getQueryCache().subscribe((event) => {
-      if (event.type === 'removed') created.dependencies.delete(event.query.queryHash)
+      if (event.type !== 'removed') return
+      created.dependencies.delete(event.query.queryHash)
+      created.derivers.delete(event.query.queryHash)
+      created.confirmed.delete(event.query.queryHash)
     })
     trackings.set(client, (tracking = created))
   }
@@ -138,10 +178,65 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
   const rules = new Map<string, ServiceRule>()
   // Per client, not per data layer: a change of entity makes a new data layer over the same cache,
   // and the queries of the entity before must still be made stale by the writes after.
-  const { dependencies, routeKeys } = trackingOf(client)
+  const tracking = trackingOf(client)
+  const { dependencies, routeKeys, sent, confirmed, derivers } = tracking
+  const paths = (operations: readonly unknown[]) => new Set(operations.map(pathOf).filter((path): path is string => Boolean(path)))
 
-  const invalidate = (operations: unknown[]) => {
-    const targets = new Set(operations.map(pathOf).filter((path): path is string => Boolean(path)))
+  /** An answer of the read at `path` with every write sent that changes it laid over it, in order. */
+  const laidOver = (path: string, answer: unknown, writes: readonly Sent[] = sent) =>
+    writes.reduce((data, write) => write.changes.reduce((each, { path: read, change }) => (read === path ? change(each, ...write.args) : each), data), answer)
+  const changes = (write: Sent, path: string) => write.changes.some((change) => change.path === path)
+
+  /**
+   * What a read shows when the server answers it: the answer, with the writes sent and not settled
+   * laid over it. The answer itself is kept, for when one of them fails.
+   */
+  const shownOf = (hash: string, path: string, answer: unknown) => {
+    if (!sent.some((write) => changes(write, path))) {
+      confirmed.delete(hash)
+      return answer
+    }
+    confirmed.set(hash, answer)
+    return laidOver(path, answer)
+  }
+
+  const peek: Peek = (path, args) => {
+    const data = client.getQueryData([path, entity.id, ...args])
+    return data === undefined ? undefined : { data }
+  }
+  const latest = new Map<string, number>()
+  /** Works the components' answers out again from the cache, for those that read one of these. */
+  const rederive = (targets: Set<string>) => {
+    for (const query of client.getQueryCache().getAll()) {
+      if (query.queryKey[0] !== 'component' || query.state.data === undefined) continue
+      const read = dependencies.get(query.queryHash)?.services
+      const derive = derivers.get(query.queryHash)
+      if (!read || !derive || ![...read].some((path) => targets.has(path))) continue
+      const turn = (latest.get(query.queryHash) ?? 0) + 1
+      latest.set(query.queryHash, turn)
+      void hold(
+        derive(peek).then(
+          (data) => {
+            // Only the last of several, for one that was worked out again meanwhile.
+            if (latest.get(query.queryHash) === turn) client.setQueryData(query.queryKey, data)
+          },
+          () => undefined,
+        ),
+      )
+    }
+  }
+  /** Shows the reads at these paths as the server's last answers, with the writes sent laid over them, and the components that read them. */
+  const reshow = (targets: Set<string>) => {
+    for (const query of client.getQueryCache().getAll()) {
+      const [path] = query.queryKey
+      if (typeof path !== 'string' || !targets.has(path) || query.state.data === undefined) continue
+      const base = confirmed.has(query.queryHash) ? confirmed.get(query.queryHash) : query.state.data
+      client.setQueryData(query.queryKey, shownOf(query.queryHash, path, base))
+    }
+    rederive(targets)
+  }
+
+  const invalidatePaths = (targets: Set<string>) => {
     if (!targets.size) return Promise.resolve()
     const stale = (query: Query) => {
       const [first] = query.queryKey
@@ -159,6 +254,23 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
 
   return {
     client,
+    /**
+     * Opens the channel to the app's other tabs: a write that succeeds here makes the same reads
+     * stale there, and theirs here. Returns what closes it.
+     */
+    share(name: string) {
+      if (typeof BroadcastChannel === 'undefined') return () => undefined
+      const channel = new BroadcastChannel(name)
+      tracking.channel = channel
+      channel.onmessage = (event: MessageEvent<{ invalidate?: unknown }>) => {
+        const stale = event.data?.invalidate
+        if (Array.isArray(stale)) void hold(invalidatePaths(new Set(stale.filter((path): path is string => typeof path === 'string'))))
+      }
+      return () => {
+        channel.close()
+        if (tracking.channel === channel) tracking.channel = null
+      }
+    },
     /** Records what a service folder's `meta.ts` says, keyed by operation path. */
     rule(path: string, rule: ServiceRule) {
       rules.set(path, rule)
@@ -167,12 +279,27 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
     call(path: string, operation: Operation, args: unknown[]): Promise<unknown> {
       const rule = rules.get(path)
       if (rule?.reads) {
+        const queryKey = [path, entity.id, ...args]
         return client.fetchQuery({
-          queryKey: [path, entity.id, ...args],
-          queryFn: () => operation(...args),
+          queryKey,
+          // The answer with the writes sent laid over it, so a read that lands while a write is
+          // on its way does not undo what the write shows.
+          queryFn: async () => shownOf(hashKey(queryKey), path, await operation(...args)),
           meta: { service: path },
           ...(rule.freshFor ? { staleTime: rule.freshFor } : {}),
         })
+      }
+      // An optimistic write shows its changes now, over every answer of the reads it changes.
+      const write: Sent | null = rule?.optimistic?.length
+        ? { changes: rule.optimistic.flatMap(({ read, change }) => (pathOf(read) ? [{ path: pathOf(read)!, change: change as Sent['changes'][number]['change'] }] : [])), args }
+        : null
+      const changed = new Set(write?.changes.map((change) => change.path))
+      if (write) {
+        sent.push(write)
+        reshow(changed)
+      }
+      const settle = () => {
+        if (write) sent.splice(sent.indexOf(write), 1)
       }
       // A write is pending until it and the reads it makes stale have settled.
       return hold(
@@ -180,10 +307,26 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
           .then(() => operation(...args))
           .then(
             async (result) => {
-              if (rule?.invalidates) await invalidate(rule.invalidates)
+              // The server took it: the answers kept for a rollback take it too, until the reads
+              // it changed and those it makes stale are read again.
+              if (write) {
+                for (const query of client.getQueryCache().getAll()) {
+                  const [read] = query.queryKey
+                  if (typeof read === 'string' && changed.has(read) && confirmed.has(query.queryHash)) confirmed.set(query.queryHash, laidOver(read, confirmed.get(query.queryHash), [write]))
+                }
+                settle()
+              }
+              const stale = new Set([...paths(rule?.invalidates ?? []), ...changed])
+              tracking.channel?.postMessage({ invalidate: [...stale] })
+              if (stale.size) await invalidatePaths(stale)
               return result
             },
             (error: unknown) => {
+              // A rebase: the server's answers again, with the writes still on their way over them.
+              if (write) {
+                settle()
+                reshow(changed)
+              }
               throw report(error, { layer: 'service', path })
             },
           ),
@@ -200,7 +343,8 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
       path: string,
       route: Record<string, unknown>,
       // `signal` is TanStack's: it aborts when nothing shows the read any more.
-      run: (record: { service: (path: string) => void; route: (key: string, value: unknown) => void }, signal: AbortSignal) => Promise<unknown>,
+      // With `peek`, the reads answer from the cache: the answer is worked out again, not read again.
+      run: (record: { service: (path: string) => void; route: (key: string, value: unknown) => void; peek?: Peek }, signal: AbortSignal) => Promise<unknown>,
       // What else the read depends on, besides the route: the locale or the user it reads.
       sources?: Record<string, unknown>,
     ) {
@@ -214,6 +358,9 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
         queryFn: async ({ signal }: { signal: AbortSignal }) => {
           const read = { services: new Set<string>(), route: new Map<string, unknown>() }
           dependencies.set(hashKey(queryKey), read)
+          // An optimistic write works this answer out again from the cache, with what it changed.
+          const derive = (peek: Peek) => run({ service: () => undefined, route: () => undefined, peek }, new AbortController().signal)
+          derivers.set(hashKey(queryKey), derive)
           const data = await run({ service: (service) => read.services.add(service), route: (key, value) => read.route.set(key, value) }, signal)
           // The first run teaches which route parameters matter; its answer is kept under that
           // key too, so the next render finds it there.
@@ -221,6 +368,7 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
             routeKeys.set(path, new Set(read.route.keys()))
             const known = keyOf(read.route.keys())
             dependencies.set(hashKey(known), read)
+            derivers.set(hashKey(known), derive)
             client.setQueryData(known, data)
           }
           return data
@@ -235,7 +383,7 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
  * front of a blank object or function, not the tree itself: the tree's properties are read-only,
  * and a proxy of the tree would have to return them unwrapped.
  */
-export function recording<T>(tree: T, record: (path: string) => void): T {
+export function recording<T>(tree: T, record: (path: string) => void, peek?: Peek): T {
   // One proxy per node, so an operation read twice is the same function both times.
   const proxies = new WeakMap<object, unknown>()
   const wrap = (node: unknown): unknown => {
@@ -254,6 +402,9 @@ export function recording<T>(tree: T, record: (path: string) => void): T {
       apply: (_, self, args) => {
         const path = pathOf(node)
         if (path) record(path)
+        // Worked out again from the cache: a read it holds answers without asking.
+        const cached = path && peek ? peek(path, args) : undefined
+        if (cached) return Promise.resolve(cached.data)
         return Reflect.apply(node as Operation, self, args)
       },
     })

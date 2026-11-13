@@ -16,7 +16,7 @@ const settle = () =>
 const entity = { id: 'shop' } as never
 
 /** A component whose chart is declared from `acl`, its rule from the snapshot; its render shows the states it is in. */
-function setup(declaration: (injection: { acl: { allowed: boolean } }) => Record<string, unknown>, extra: Record<string, unknown> = {}) {
+function setup(declaration: (injection: { acl: { allowed: boolean } }) => Record<string, unknown>, extra: Record<string, unknown> = {}, state: string[] = []) {
   let send: State['send'] = () => undefined
   const Flow = component({
     path: 'components/flow',
@@ -35,7 +35,7 @@ function setup(declaration: (injection: { acl: { allowed: boolean } }) => Record
         children: [],
       }),
     skins: {},
-    reads: { view: [], acl: ['acl'], chart: ['acl'], state: [] },
+    reads: { view: [], acl: ['acl'], chart: ['acl'], state },
   })
   let grants = ['update']
   const acl = (async () => ({ grants })) as never
@@ -119,4 +119,24 @@ test('a chart whose new declaration has no such state starts over', async () => 
   expect(shown.textContent).toBe('special')
   await flow.grant([])
   expect(shown.textContent).toBe('idle')
+})
+
+test('a chart whose file reads a source is told when it changes, by an event of its name', async () => {
+  // The guard reads the snapshot as it is when the event arrives.
+  const refused = ({ acl }: { acl: { grants?: string[] } }) => !acl.grants?.includes('update')
+  const flow = setup(
+    () => ({
+      waiting: { on: { acl: { guard: refused, target: 'refused' } } },
+      refused: {},
+    }),
+    {},
+    ['acl'],
+  )
+  const shown = await show(flow.element)
+  expect(shown.textContent).toBe('waiting')
+
+  await flow.grant(['update', 'delete'])
+  expect(shown.textContent).toBe('waiting')
+  await flow.grant([])
+  expect(shown.textContent).toBe('refused')
 })

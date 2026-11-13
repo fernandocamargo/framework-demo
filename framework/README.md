@@ -103,6 +103,7 @@ The app does not own its permissions: the backend sends a snapshot of them, and 
   })
   ```
 
+- A chart is also told when a source its file reads changes (`user`, `acl`, `flags`, `locale`), by an event of that name, after the component has rendered with the new value, so a guard reads it. The session's chart reads `user`: on `{ type: 'user' }` it reads the session again when someone signed in in another tab, and leaves when they signed out.
 - When a part a declaration read changes, the chart is declared again, and the running flow moves to it at its next rest (no service running, no delay pending): in the same state, with the same context, when the new chart has that state; from the start when it has not. A flow saving when the grant goes sees the save through first.
 - A component follows only the parts of the snapshot its files read (`runtime/reads.ts` records them): one that reads `acl.allowed` alone renders again when the decision changes, not when the snapshot does.
 - A rule that reads only `acl` is the folder's, the same for every instance: it is decided where the snapshot is read, and an instance renders again only when its decision changes. A sign-in decides the delete link in every row again, and renders none whose answer is the same.
@@ -141,6 +142,29 @@ Every service operation goes through it.
 - A component's `async.ts` default export runs as a query of its own. The framework records the reads it calls and the route fields it reads. Its key holds the component's path, the entity, and those fields, so another category is another query, and a dialog's `edit` does not touch the list.
 - A write that makes one of those reads stale reruns the queries on screen that used it, and drops the off-screen ones, so a revisit reads anew.
 - `Root` takes a `client` made with `createQueryClient()`. An app that keeps one for its life keeps a page's reads cached across navigations.
+
+**Optimistic writes.** A write's rule may say how it changes the answers of some reads, by reference, before the server confirms it:
+
+```ts
+import { update } from 'framework'
+
+export default ({ services: { products } }) => ({
+  setStock: {
+    invalidates: [products.search, products.get],
+    optimistic: [
+      update(products.search, (page, { id, stock }) => changed(page, id, { stock })),
+      update(products.get, (product, { id, stock }) => (product.id === id ? edited(product, { stock }) : product)),
+    ],
+  },
+})
+```
+
+- `update` types each change by its read (`page` is a `Page`) and by the write (`{ id, stock }` is what `setStock` takes): a mistyped field is an error.
+- When the write is sent, every cached answer of those reads shows the change, and every component whose default read used one is worked out again from the cache, without asking the server. A count in a row moves the moment it is pressed.
+- The writes sent and not settled are kept in order over the server's last answer, a rebase: an answer that lands meanwhile gets them laid over it again, and a write that fails is taken out while the others stay. Three presses where the first is refused still show the third's count, which is where the server ends.
+- A write that succeeds makes the reads it changed stale too, so the server has the last word. A change that predicts the server's answer exactly (the version it will bump) renders nothing when that answer arrives.
+
+**Other tabs.** `Root`'s `sync` names a channel the app's tabs share (`BroadcastChannel`). A write that succeeds in one tab tells the others which reads it made stale, by path, and they read them again: a save, a count, a sign-in or a sign-out in one tab reaches the others, and with them who is signed in, the snapshot of what they may do, and every component that read any of it. Only confirmed writes cross; optimistic changes stay in their tab. Work that one tab must do for all, such as refreshing a session they share, is the client's: the demo's takes a Web Lock (`clients/dummyjson/http.ts`).
 
 ### The idle signal
 

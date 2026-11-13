@@ -6,6 +6,7 @@
 import type { ReactNode } from 'react'
 import type { I18n, Intl } from './i18n-types'
 import type { Allowed, Entity, Env, Flags, Navigation, Route, User } from './index'
+import type { Update } from './data'
 import type { Keyboard } from './shortcuts'
 
 /** The page's URL, read when an operation runs. */
@@ -165,8 +166,15 @@ export type ServiceMeta<Module> = {
     freshFor?: number
     /** The operations this one makes stale when it succeeds, by reference. */
     invalidates?: unknown[]
+    /**
+     * The reads this write changes when it is sent, before the server confirms it, each with how:
+     * `[update(products.get, (product, change) => …)]`. Shown at once; taken out if the write fails.
+     */
+    optimistic?: readonly Update<ArgsOf<Module[Name]>>[]
   }
 }
+
+type ArgsOf<Export> = Created<Export> extends (...args: infer Args) => unknown ? Args : never
 
 // ---- The form stand-in (form.ts) ------------------------------------------------------------
 

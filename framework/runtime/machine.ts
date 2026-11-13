@@ -21,6 +21,10 @@
  * editor has no `save`). When what it read changes, the chart is declared again, and the running
  * flow moves to the new chart at its next rest (no service running, no delay pending), keeping its
  * state and context when the new chart has that state, starting over when it has not.
+ *
+ * A chart whose file reads one of those sources is also told when it changes, by an event named
+ * after it (`{ type: 'user' }`), once the component has rendered with the new value, so its guards
+ * read it: a session chart that reads `user` follows a sign-in made in another tab.
  */
 import { createActor, enqueueActions, fromPromise, setup, type AnyActorRef, type AnyStateMachine, type SnapshotFrom } from 'xstate'
 import { useSelector } from '@xstate/react'
@@ -226,7 +230,7 @@ function useChart(declared: Declared) {
  * holds the sources the declaration may read; `sources`, what guards and actions read when
  * they run.
  */
-export function useStateLayer(path: string, module: StateModule, injection: Sources, declared: Sources, sources: Sources, rendering?: () => unknown) {
+export function useStateLayer(path: string, module: StateModule, injection: Sources, declared: Sources, sources: Sources, rendering?: () => unknown, told: Sources = {}) {
   // The sources read the committed route. A chart is created in its component's first render,
   // and reads the route at once: for its context, and for the input of the service its first
   // state runs. A component mounted by a change of route is rendered before that route is
@@ -251,6 +255,14 @@ export function useStateLayer(path: string, module: StateModule, injection: Sour
     const subscription = actor.subscribe({ error: (error) => report(error, { layer: 'state', path }) })
     return () => subscription.unsubscribe()
   }, [actor, path])
+
+  // The sources the chart's file reads: when one changes, the chart is told, after the commit.
+  const before = useRef(told)
+  useEffect(() => {
+    const previous = before.current
+    before.current = told
+    for (const source of Object.keys(told)) if (!Object.is(previous[source], told[source])) actor.send({ type: source })
+  })
 
   return useMemo(
     () => ({

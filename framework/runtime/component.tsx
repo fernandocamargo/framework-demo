@@ -245,7 +245,7 @@ export function component(spec: Spec) {
               spec.path,
               readRoute,
               (record, signal) =>
-                execute(exported, { ...injected, signal, services: recording(injection.services, record.service), route: recordingRoute(readRoute, record.route) }, []),
+                execute(exported, { ...injected, signal, services: recording(injection.services, record.service, record.peek), route: recordingRoute(readRoute, record.route) }, []),
               keyedByLocale || keyedByUser || keyedByAcl
                 ? defined({ locale: keyedByLocale ? locale : undefined, user: keyedByUser ? userId : undefined, acl: keyedByAcl ? snapshot : undefined })
                 : undefined,
@@ -379,7 +379,14 @@ export function component(spec: Spec) {
     })
     // The route being rendered, for the chart's first reads (machine.ts), read only until the
     // component's first commit: after it, a change of route does not render the component again.
-    const state = useStateLayer(spec.path, module.state as StateModule, layers.injection, declared, layers.withForm, readRendering)
+    // The sources state.ts reads, each told to the chart by an event of its name when it changes.
+    const told = defined({
+      user: inState.has('user') ? access.user : undefined,
+      acl: inState.has('acl') ? access.snapshot : undefined,
+      flags: inState.has('flags') ? sources.flags : undefined,
+      locale: inState.has('locale') ? language.locale : undefined,
+    })
+    const state = useStateLayer(spec.path, module.state as StateModule, layers.injection, declared, layers.withForm, readRendering, told)
     return show(props, layers, state, early)
   }
   function StatelessView(props: Props) {

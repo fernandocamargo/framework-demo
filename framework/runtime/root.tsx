@@ -79,6 +79,12 @@ export type RootProps = {
    * again. Keep the function stable.
    */
   acl?: (injection: Injection & { signal: AbortSignal }) => Promise<Acl>
+  /**
+   * The name of the channel the app's tabs share (`stockroom`). With one, a write that succeeds in
+   * a tab makes the same reads stale in the others, so they read them again: a save, a sign-in or
+   * a sign-out in one tab reaches every tab. Leave it out, and each tab is on its own.
+   */
+  sync?: string
   /** How components move between routes. A stand-in until the routing layer is designed. */
   navigation?: Navigation
   /** The skin of the whole page. */
@@ -103,7 +109,7 @@ export type RootProps = {
   children?: ReactNode
 }
 
-export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, navigation = NONE, skin = 'default', locale = SOURCE_LOCALE, user, acl, location, client: given, children }: RootProps) {
+export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, navigation = NONE, skin = 'default', locale = SOURCE_LOCALE, user, acl, sync, location, client: given, children }: RootProps) {
   // Services were created once and read the entity when they run, so the entity they see is live.
   const current = useRef(entity)
   current.current = entity
@@ -115,6 +121,8 @@ export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, na
   useEffect(() => watch(client), [client])
   const data = useMemo(() => createDataLayer(client, live as { readonly id: string }), [client, live])
   const injection = useMemo(() => createInjection(env, live, data), [env, live, data])
+  // The other tabs of the app, through one channel per client.
+  useEffect(() => (sync ? data.share(sync) : undefined), [data, sync])
   // After the commit and before the paint, so a render React throws away changes nothing. The
   // sheets added before it are set again here, before anyone sees them.
   useLayoutEffect(() => activateSkin(skin), [skin])
@@ -150,11 +158,11 @@ export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, na
   }, [locale, shown])
   useCommitted(shown)
   const userRead = useMemo(
-    () => (user ? data.component('framework/user', {}, (record, signal) => user({ ...injection, signal, services: recording(injection.services, record.service) })) : null),
+    () => (user ? data.component('framework/user', {}, (record, signal) => user({ ...injection, signal, services: recording(injection.services, record.service, record.peek) })) : null),
     [data, injection, user],
   )
   const aclRead = useMemo(
-    () => (acl ? data.component('framework/acl', {}, (record, signal) => acl({ ...injection, signal, services: recording(injection.services, record.service) })) : null),
+    () => (acl ? data.component('framework/acl', {}, (record, signal) => acl({ ...injection, signal, services: recording(injection.services, record.service, record.peek) })) : null),
     [data, injection, acl],
   )
   const framework = useMemo(() => ({ injection, skin, sources, data, user: userRead, acl: aclRead }), [injection, skin, sources, data, userRead, aclRead])

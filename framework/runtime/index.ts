@@ -35,7 +35,7 @@ export type Allowed = Acl & { readonly allowed: boolean }
 export interface Navigation {}
 
 export { Root, type RootProps } from './root'
-export { createQueryClient } from './data'
+export { createQueryClient, update } from './data'
 export { whenIdle } from './activity'
 export { component, type Spec } from './component'
 export type { I18n, Intl, Message } from './i18n-types'
