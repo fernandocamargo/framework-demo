@@ -2,6 +2,8 @@
 
 A small back office (a product catalogue over [DummyJSON](https://dummyjson.com)) built on a small React framework. The app is the example. The framework is the point: it is an attempt to make the mechanical part of building software checkable, so that people and agents who hand work to each other have something firmer than prose to agree on.
 
+It runs at https://fernandocamargo.github.io/framework-demo/. An explainer of the idea, written for a team and already outdated in places, is at [explainer/](https://fernandocamargo.github.io/framework-demo/explainer/) (its source is [`public/explainer/index.html`](public/explainer/index.html)).
+
 It is meant to be read in an evening. The framework is about 3,000 lines in [`framework/`](framework/README.md); the app is about 4,000 in [`src/`](src), a third of it CSS and fixtures.
 
 ## The idea

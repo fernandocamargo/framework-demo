@@ -1,0 +1,477 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Fragments, Not Plumbing</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: one reading column with wide bands for the specimen, the flow and the diff; cool drafting paper, ink teal, one warm signal for what drifts today. */
+  :root {
+    --bg: #f4f6f8;
+    --surface: #ffffff;
+    --sunk: #eaeef2;
+    --ink: #12202c;
+    --muted: #586676;
+    --line: #d8dfe6;
+    --accent: #0b6b67;
+    --accent-soft: #d8efed;
+    --signal: #b9461a;
+    --signal-soft: #f8e4da;
+    --add: #1d6b3a;
+    --add-soft: #dff1e5;
+    --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+    --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --step: 1.25rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d141a; --surface: #141d25; --sunk: #101820; --ink: #e5ecf2; --muted: #93a2b1; --line: #24313c;
+      --accent: #46c2b8; --accent-soft: #123532; --signal: #f0915c; --signal-soft: #3a2116; --add: #6fd394; --add-soft: #13301f;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d141a; --surface: #141d25; --sunk: #101820; --ink: #e5ecf2; --muted: #93a2b1; --line: #24313c;
+    --accent: #46c2b8; --accent-soft: #123532; --signal: #f0915c; --signal-soft: #3a2116; --add: #6fd394; --add-soft: #13301f;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font: 400 1rem/1.6 var(--body); }
+  .page { max-width: 1120px; margin: 0 auto; padding-block: 56px 96px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 88px; }
+  h1, h2, h3 { font-family: var(--display); line-height: 1.08; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+  h1 { font-size: clamp(2.4rem, 5.6vw, 4.4rem); font-weight: 700; }
+  h2 { font-size: clamp(1.7rem, 3.4vw, 2.5rem); font-weight: 600; }
+  h3 { font-size: 1.2rem; font-weight: 600; }
+  p { margin: 0; max-width: 65ch; }
+  code, pre, .mono { font-family: var(--mono); font-size: 0.86rem; }
+  .eyebrow { font: 500 0.78rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+  .lede { font-size: 1.15rem; color: var(--muted); }
+  section { display: grid; gap: 28px; }
+  .head { display: grid; gap: 12px; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* Hero */
+  .hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 48px; align-items: center; }
+  .hero-text { display: grid; gap: 22px; min-width: 0; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .tree { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px 22px 18px; font: 0.88rem/1.5 var(--mono); min-width: 0; overflow-x: auto; }
+  .tree ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+  .tree li { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: 14px; align-items: baseline; }
+  .tree .file { color: var(--ink); white-space: nowrap; }
+  .tree .file b { color: var(--accent); font-weight: 500; }
+  .tree .says { font-family: var(--body); color: var(--muted); font-size: 0.88rem; }
+  .tree .root { color: var(--muted); margin-bottom: 12px; display: block; }
+  .tree .indent { padding-left: 1.2rem; }
+
+  /* Facts */
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .fact { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px; display: grid; gap: 8px; align-content: start; }
+  .fact .n { font: 700 2.6rem/1 var(--display); color: var(--signal); font-variant-numeric: tabular-nums; }
+  .fact p { color: var(--muted); }
+  .compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .code { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: grid; min-width: 0; }
+  .code header { display: flex; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); font: 500 0.78rem/1.4 var(--mono); color: var(--muted); }
+  .code header .tag { color: var(--signal); }
+  .code header .tag.good { color: var(--accent); }
+  .code pre { margin: 0; padding: 16px; overflow-x: auto; line-height: 1.55; }
+  .code .bad { background: var(--signal-soft); display: inline-block; width: 100%; }
+  .code .note { padding: 12px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.92rem; }
+
+  /* Flow */
+  .flow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; counter-reset: step; list-style: none; margin: 0; padding: 0; }
+  .flow li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 14px 16px; display: grid; gap: 6px; align-content: start; transition: border-color .25s, background .25s, transform .25s; min-width: 0; }
+  .flow li::before { counter-increment: step; content: counter(step); font: 600 0.8rem/1 var(--mono); color: var(--muted); }
+  .flow li b { font: 600 1rem/1.25 var(--display); }
+  .flow li span { color: var(--muted); font-size: 0.86rem; line-height: 1.45; }
+  .flow li code { font-size: 0.74rem; color: var(--accent); word-break: break-word; }
+  .flow li.on { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-3px); }
+  .flow li.on::before { color: var(--accent); }
+  .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  button { font: 600 0.92rem/1 var(--body); color: var(--surface); background: var(--accent); border: 0; border-radius: 8px; padding: 11px 16px; cursor: pointer; }
+  button.ghost { color: var(--accent); background: transparent; border: 1px solid var(--line); }
+  .caption { color: var(--muted); font-size: 0.92rem; }
+
+  /* Rails */
+  .rails { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .rail { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .rail p { color: var(--muted); }
+  .rail pre { margin: 0; background: var(--sunk); border-radius: 8px; padding: 12px 14px; overflow-x: auto; line-height: 1.5; }
+  .err { color: var(--signal); }
+
+  /* Diff */
+  .review { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .diff pre { padding: 0; }
+  .diff .l { display: block; padding: 0 16px; white-space: pre; }
+  .diff .l.add { background: var(--add-soft); color: var(--add); }
+  .diff .l.ctx { color: var(--muted); }
+  .reads { display: grid; gap: 14px; }
+  .reads .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 8px; }
+  .reads ul { margin: 0; padding-left: 1.1rem; color: var(--muted); display: grid; gap: 4px; }
+  .quote { font: 500 1.05rem/1.5 var(--body); border-left: 3px solid var(--accent); padding-left: 14px; }
+
+  /* Principles */
+  .principles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .principle { background: var(--surface); padding: 18px 20px; display: grid; gap: 6px; align-content: start; }
+  .principle h3 { font-size: 1.05rem; }
+  .principle p { color: var(--muted); font-size: 0.93rem; }
+
+  /* Proof and asks */
+  .proof { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .proof .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px; display: grid; gap: 12px; }
+  .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .checks li { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr); gap: 8px; }
+  .checks li::before { content: "✓"; color: var(--accent); font-weight: 700; }
+  .asks { margin: 0; padding-left: 1.2rem; display: grid; gap: 8px; }
+  .screenshot { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); margin: 0; }
+  .screenshot img { display: block; width: 100%; height: auto; }
+
+  /* History */
+  .timeline { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 2px solid var(--line); }
+  .timeline li { position: relative; display: grid; gap: 6px; align-content: start; padding: 20px 18px 0 0; min-width: 0; }
+  .timeline li::before { content: ""; position: absolute; top: -7px; left: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); border: 2px solid var(--muted); }
+  .timeline li:last-child::before { background: var(--accent); border-color: var(--accent); }
+  .timeline .when { font: 500 0.78rem/1 var(--mono); color: var(--muted); }
+  .timeline li:last-child .when { color: var(--accent); }
+  .timeline b { font: 600 1.05rem/1.25 var(--display); }
+  .timeline .what { color: var(--muted); font-size: 0.9rem; line-height: 1.45; }
+
+  /* How it works */
+  .machine { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .machine li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+  .machine .term { font: 500 0.74rem/1.3 var(--mono); color: var(--accent); }
+  .machine p { color: var(--muted); font-size: 0.93rem; }
+  .subhead { display: grid; gap: 8px; margin-top: 12px; }
+  .compare.rewrite { align-items: start; }
+  .kin { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .kin > div { background: var(--surface); padding: 16px 18px; display: grid; gap: 4px; align-content: start; }
+  .kin dt { font: 600 1.05rem/1.25 var(--display); }
+  .kin dt span { font: 500 0.74rem/1 var(--mono); color: var(--muted); margin-left: 6px; }
+  .kin dd { margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+  /* Code browser */
+  .browser { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 16px; align-items: start; }
+  .files { list-style: none; margin: 0; padding: 12px; display: grid; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+  .files .folder { font: 500 0.74rem/1.3 var(--mono); color: var(--muted); padding: 10px 8px 4px; }
+  .files .folder:first-child { padding-top: 2px; }
+  .files button { width: 100%; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; text-align: left; padding: 7px 8px 7px 16px; border-radius: 6px; color: var(--ink); background: transparent; font: 500 0.86rem/1.2 var(--mono); }
+  .files button .role { font: 400 0.76rem/1 var(--body); color: var(--muted); }
+  .files button:hover { background: var(--sunk); }
+  .files button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
+  .files button[aria-selected="true"] .role { color: var(--accent); }
+  .panels { min-width: 0; }
+  .source { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .source header { display: flex; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); font: 500 0.78rem/1.4 var(--mono); color: var(--muted); }
+  .source pre { margin: 0; padding: 16px; overflow: auto; max-height: 34rem; line-height: 1.55; font-size: 0.8rem; tab-size: 2; }
+  .t-comment { color: var(--muted); font-style: italic; }
+  .t-string { color: var(--add); }
+  .t-keyword { color: var(--signal); }
+  .t-tag { color: var(--accent); }
+
+  @media (max-width: 920px) {
+    .hero, .compare, .rails, .review, .proof, .browser { grid-template-columns: minmax(0, 1fr); }
+    .files { position: static; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); }
+    .files .folder { grid-column: 1 / -1; }
+    .facts, .principles, .kin { grid-template-columns: minmax(0, 1fr); }
+    .flow, .machine { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .timeline { grid-template-columns: minmax(0, 1fr); gap: 22px; border-top: 0; border-left: 2px solid var(--line); margin-left: 6px; }
+    .timeline li { padding: 0 0 0 22px; }
+    .timeline li::before { top: 1px; left: -7px; }
+    .page { gap: 64px; padding-block: 36px 72px; }
+  }
+  @media (max-width: 480px) {
+    .flow, .machine { grid-template-columns: minmax(0, 1fr); }
+    .tree li { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .flow li { transition: none; }
+    .flow li.on { transform: none; }
+  }
+</style>
+
+<main class="page">
+
+  <header class="hero">
+    <div class="hero-text">
+      <span class="eyebrow">A React framework · November 2026</span>
+      <h1>Agents write <em>fragments</em>. The framework writes the plumbing.</h1>
+      <p class="lede">A screen is a folder of small files, each declaring one thing. Fetching, caching, invalidation, tracking, error reporting and types come from the framework, the same way every time.</p>
+    </div>
+    <div class="tree" aria-label="A product editor, one file per concern">
+      <span class="root">components/products/editor/</span>
+      <ol>
+        <li><span class="file"><b>render</b>.tsx</span><span class="says">What the person sees. Receives everything as props.</span></li>
+        <li><span class="file"><b>state</b>.ts</span><span class="says">The flow, as a statechart that reads like prose.</span></li>
+        <li><span class="file"><b>form</b>.ts</span><span class="says">Server data in, request out.</span></li>
+        <li><span class="file"><b>async</b>.ts</span><span class="says">What to load before it shows.</span></li>
+        <li><span class="file"><b>style</b>/skins/</span><span class="says">How it looks. Swappable.</span></li>
+      </ol>
+      <span class="root" style="margin-top:16px">services/products/</span>
+      <ol>
+        <li><span class="file"><b>index</b>.ts</span><span class="says">The endpoints. Four functions.</span></li>
+        <li><span class="file"><b>meta</b>.ts</span><span class="says">What is cached, and what a save makes stale.</span></li>
+      </ol>
+    </div>
+  </header>
+
+  <section aria-labelledby="today">
+    <div class="head">
+      <span class="eyebrow">Today</span>
+      <h2 id="today">Every screen re-implements the plumbing</h2>
+      <p class="lede">In a typical React codebase nothing says how a screen should load, cache, track or fail, so every feature decides again. Now agents write features too, faster than anyone can review those decisions.</p>
+    </div>
+    <div class="compare">
+      <div class="code">
+        <header><span>a typical editor · on save</span><span class="tag">today</span></header>
+        <pre>const onSubmitSuccess = (data) =&gt; {
+  navigateToList();
+  showSuccessToast(…);
+
+  queryClient.invalidateQueries({ queryKey: ['products'] });
+<span class="bad">  queryClient.invalidateQueries({ queryKey: ['product-filter'] });</span>
+};</pre>
+        <div class="note">The highlighted key matches no query: the list reads <code>['product-filters']</code>. Nothing can tell, because it is a string.</div>
+      </div>
+      <div class="code">
+        <header><span>services/products/meta.ts</span><span class="tag good">new</span></header>
+        <pre>export default ({ services }) =&gt; ({
+  search: { reads: true },
+  get: { reads: true },
+  filters: { reads: true },
+  save: {
+    invalidates: [
+      services.products.search,
+      services.products.get,
+      services.products.filters,
+    ],
+  },
+})</pre>
+        <div class="note">References, not strings. A misspelled service fails the type check. Every screen that read the list refreshes by itself.</div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="flow">
+    <div class="head">
+      <span class="eyebrow">Running today, in the prototype</span>
+      <h2 id="flow">One save, end to end</h2>
+      <p class="lede">A product list and its editor. This is what happens when someone renames a product and saves.</p>
+    </div>
+    <ol class="flow" id="steps">
+      <li><b>Route</b><span>The address says edit product 42.</span><code>#/products/42/edit</code></li>
+      <li><b>Flow</b><span>The statechart enters “loading the product”.</span><code>state.ts</code></li>
+      <li><b>Service</b><span>It calls a referenced service. The client is injected.</span><code>GET /products/42</code></li>
+      <li><b>Form</b><span>The answer seeds the form, once.</span><code>form.ts</code></li>
+      <li><b>Tracking</b><span>Each keystroke and click is tracked with where it happened.</span><code>editor#input.onChange@28:70</code></li>
+      <li><b>Save</b><span>The flow saves and goes back to the list.</span><code>PUT /products/42</code></li>
+      <li><b>Refresh</b><span>The list read what the save made stale, so it reads again.</span><code>GET /products?…</code></li>
+    </ol>
+    <div class="controls">
+      <button type="button" id="play">Play the save</button>
+      <span class="caption">No step above is written in the screen's code. The screen declares; the framework does.</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="how">
+    <div class="head">
+      <span class="eyebrow">How it works</span>
+      <h2 id="how">The build writes what the screen leaves out</h2>
+      <p class="lede">React libraries usually work while the app runs. This one also works before: the build reads every file as a tree of meaning, as a compiler does, and edits the tree before the browser sees it.</p>
+    </div>
+    <ol class="machine">
+      <li><span class="term">Vite plugin</span><h3>Reads the folders</h3><p>File names are the wiring. A folder with a <code>render</code> file becomes a component. Every service and client is found and connected.</p></li>
+      <li><span class="term">AST rewrite · compile-time macro</span><h3>Rewrites the code</h3><p>Every <code>on…</code> handler is wrapped to report where it was written. The file people read stays as they wrote it.</p></li>
+      <li><span class="term">TypeScript plugin</span><h3>Teaches the editor</h3><p>The editor sees what the build adds, so autocomplete, hovers and errors work as if everything were written by hand.</p></li>
+      <li><span class="term">Convention check</span><h3>Names the mistakes</h3><p>A misnamed or misplaced file fails the type check, with its path and the rule it breaks.</p></li>
+    </ol>
+    <div class="compare rewrite">
+      <div class="code">
+        <header><span>products/editor/render.tsx · line 85</span><span class="tag good">written</span></header>
+        <pre>&lt;Button onClick={() =&gt; send({ type: 'save' })}&gt;</pre>
+      </div>
+      <div class="code">
+        <header><span>the same line, as the browser receives it</span><span class="tag good">built</span></header>
+        <pre>onClick: __track(() =&gt; send({ type: "save" }), __site_4)
+
+const __site_4 = {
+  id: "components/products/editor#Button.onClick@85:85",
+  …
+}</pre>
+      </div>
+    </div>
+    <div class="subhead">
+      <h3>Has this been done before?</h3>
+      <p>The approach, yes. For ten years, frameworks have been moving into the build and rewriting code with macros. That is what makes this a safe bet.</p>
+    </div>
+    <dl class="kin">
+      <div><dt>Svelte<span>2016</span></dt><dd>The framework is a compiler and mostly disappears before the app runs. Its launch post: “Frameworks without the framework”.</dd></div>
+      <div><dt>Vue and Nuxt</dt><dd>Call their build-time functions macros, such as <code>defineProps</code> and <code>definePageMeta</code>. Their editor tooling types what the build rewrites.</dd></div>
+      <div><dt>Vite-plugin frameworks</dt><dd>SvelteKit, React Router, TanStack Start and Qwik each ship as a Vite plugin, as this one does.</dd></div>
+      <div><dt>Angular<span>Google</span></dt><dd>An architectural framework with a compiler: its decorators, such as <code>@Injectable</code>, are compiled away ahead of time.</dd></div>
+      <div><dt>RedwoodJS<span>React</span></dt><dd>The closest relative on React. A build plugin turns a cell’s exports (Loading, Failure, Success) into a component. Service files are wired by folder.</dd></div>
+      <div><dt>React Compiler<span>Meta</span></dt><dd>Rewrites React code at build time. Stable since 2025.</dd></div>
+    </dl>
+    <p class="quote">What is new is how much the build carries, and how little the code shows. The layers, what each screen receives, what a save makes stale, what is tracked and where failures go all come from the build. No macro appears in the code: the folder and file names are the macros. We found no framework on React that goes this far.</p>
+  </section>
+
+  <section aria-labelledby="rails">
+    <div class="head">
+      <span class="eyebrow">Keeping agents in check</span>
+      <h2 id="rails">Less room to drift</h2>
+      <p class="lede">An agent asked to build a screen here fills in declarations. It has no fetching, caching, tracking or error handling to invent, so it has nowhere to invent them differently.</p>
+    </div>
+    <div class="rails">
+      <div class="rail">
+        <h3>The folder is the API</h3>
+        <p>A file’s name says what it is for. <code>state.ts</code> is the flow, <code>meta.ts</code> is the cache rules. The plugin wires them; nothing is registered by hand.</p>
+        <pre>editor/
+  render.tsx
+  state.ts
+  form.ts</pre>
+      </div>
+      <div class="rail">
+        <h3>Types appear on their own</h3>
+        <p>A compiler plugin types everything the framework injects. Mistakes are caught where they are typed, in the editor and in CI:</p>
+        <pre><span class="err">Property 'pendng' does not exist on type 'Operation&lt;Saved&gt;'. Did you mean 'pending'?</span>
+
+<span class="err">Type '"sav"' is not assignable to type '"save" | "leave" | "comment.save" | …'</span></pre>
+      </div>
+      <div class="rail">
+        <h3>One path for each concern</h3>
+        <p>One data layer, one flow engine, one event bus for analytics, one for failures. A failure is reported once, tagged with where it happened:</p>
+        <pre>[service] products.save:
+A product with this title already exists</pre>
+      </div>
+      <div class="rail">
+        <h3>Small, pure, testable pieces</h3>
+        <p>Every check and change in a flow is an exported function of its inputs. Services are injected, so tests swap them without mocking modules.</p>
+        <pre>export const asksForComment =
+  ({ route, flags }) =&gt;
+    route.action !== 'edit' &amp;&amp; flags.commentModal</pre>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="review">
+    <div class="head">
+      <span class="eyebrow">Reviewing an agent’s work</span>
+      <h2 id="review">The diff is the decision</h2>
+      <p class="lede">Ask for a comment before a new product is saved. The whole change is the flow, in words a product manager can read, and it can be drawn as a diagram.</p>
+    </div>
+    <div class="review">
+      <div class="code diff">
+        <header><span>components/products/editor/state.ts</span><span class="tag good">+7 lines</span></header>
+        <pre><span class="l add">+export const asksForComment = ({ route, flags }) =&gt;
++  route.action !== 'edit' &amp;&amp; flags.commentModal</span><span class="l ctx">
+   editing: {
+     on: {
+       save: [</span><span class="l add">+        { guard: asksForComment, target: 'addingComment' },</span><span class="l ctx">         { target: 'saving' },
+       ],</span><span class="l ctx">   …</span><span class="l add">+  addingComment: {
++    description: 'Before a new product is saved, the person may add a comment.',
++    on: { 'comment.save': 'saving', 'comment.cancel': 'editing' },
++  },</span></pre>
+      </div>
+      <div class="reads">
+        <div class="card">
+          <h3>What the reviewer reads</h3>
+          <p class="quote">Before a new product is saved, the person may add a comment.</p>
+        </div>
+        <div class="card">
+          <h3>What the reviewer no longer reads</h3>
+          <ul>
+            <li>request code and its error handling</li>
+            <li>cache keys and invalidations</li>
+            <li>analytics calls</li>
+            <li>loading and error flags wired by hand</li>
+            <li>effects that keep state in sync</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="principles">
+    <div class="head">
+      <span class="eyebrow">Engineering principles</span>
+      <h2 id="principles">What the structure enforces</h2>
+    </div>
+    <div class="principles">
+      <div class="principle"><h3>Separation of concerns</h3><p>One file per concern. A flow change never touches markup.</p></div>
+      <div class="principle"><h3>Single source of truth</h3><p>The flow lives in its chart. Cache rules live in <code>meta.ts</code>.</p></div>
+      <div class="principle"><h3>Don’t repeat yourself</h3><p>Fetching, caching, tracking and reporting are written once, in the framework.</p></div>
+      <div class="principle"><h3>Convention over configuration</h3><p>Folder and file names are the wiring. No registries.</p></div>
+      <div class="principle"><h3>Explicit over implicit</h3><p>Flows are statecharts, not effects. Services are referenced, not named by strings.</p></div>
+      <div class="principle"><h3>Dependency injection</h3><p>Screens receive services, clients and the selected account. They never import or build them.</p></div>
+      <div class="principle"><h3>Fail fast</h3><p>Wrong names, events and fields are type errors before anything runs.</p></div>
+      <div class="principle"><h3>Observability by default</h3><p>Every interaction is tracked and every failure reported, without code in the screen.</p></div>
+      <div class="principle"><h3>Testability</h3><p>Checks and changes are pure functions. Services are swapped by injection.</p></div>
+      <div class="principle"><h3>Open for extension</h3><p>A new concern is a new file beside the others. Existing files stay untouched.</p></div>
+      <div class="principle"><h3>Platform first</h3><p>Native events, native CSS, the browser’s own APIs before libraries that imitate them.</p></div>
+      <div class="principle"><h3>Simplicity</h3><p>Each file has one job a newcomer can name. Small enough to review in one sitting.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="code">
+    <div class="head">
+      <span class="eyebrow">The code</span>
+      <h2 id="code">Every layer, in a public demo</h2>
+      <p class="lede">The <a href="https://fernandocamargo.github.io/framework-demo/">demo</a> runs on the framework, with every layer above: services and clients injected, flows as statecharts, rules as pure functions with their tests, and the checks that name a misplaced file. Its source is <a href="https://github.com/fernandocamargo/framework-demo">on GitHub</a>.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="proof">
+    <div class="head">
+      <span class="eyebrow">Where it stands</span>
+      <h2 id="proof">Where it stood in November 2026</h2>
+    </div>
+    <div class="proof">
+      <div class="card">
+        <h3>Checked in Chromium and WebKit</h3>
+        <ul class="checks">
+          <li>Edit, save, and the list refreshes without remounting</li>
+          <li>A rejected save keeps the person’s changes</li>
+          <li>Changing the selected account loads that account’s data</li>
+          <li>A failed load shows its error and recovers</li>
+          <li>Typos in events, states, fields and services are caught</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Not designed yet</h3>
+        <ol class="asks">
+          <li>The routing layer.</li>
+          <li>The form manager.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  (() => {
+    const steps = [...document.querySelectorAll('#steps li')];
+    const play = document.getElementById('play');
+    let timer = null;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    play.addEventListener('click', () => {
+      clearInterval(timer);
+      steps.forEach((step) => step.classList.remove('on'));
+      let index = 0;
+      const next = () => {
+        steps.forEach((step, at) => step.classList.toggle('on', at === index));
+        index += 1;
+        if (index > steps.length) {
+          clearInterval(timer);
+          steps.forEach((step) => step.classList.remove('on'));
+          play.textContent = 'Play again';
+        }
+      };
+      next();
+      timer = setInterval(next, reduce ? 1600 : 1100);
+    });
+  })();
+</script>
+
+</body></html>
