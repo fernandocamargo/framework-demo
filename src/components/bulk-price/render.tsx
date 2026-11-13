@@ -185,6 +185,25 @@ export default ({ className, state, set, values, step, steps, stepText, categori
           </>
         )}
       </Dialog>
+
+      <ModalOverlay isOpen={state.confirmingLargeChange} onOpenChange={(open) => !open && state.send({ type: 'back' })}>
+        <Modal data-size="small">
+          <Dialog role="alertdialog">
+            <Heading slot="title">Change these prices by more than half?</Heading>
+            <p>
+              <strong>{ruleText}</strong> is a large change. It will be applied to {preview.length} products.
+            </p>
+            <footer>
+              <Button autoFocus onPress={() => state.send({ type: 'back' })}>
+                Back to the preview
+              </Button>
+              <Button data-variant="danger" onPress={() => state.send({ type: 'confirm' })}>
+                Yes, apply it
+              </Button>
+            </footer>
+          </Dialog>
+        </Modal>
+      </ModalOverlay>
     </Modal>
   </ModalOverlay>
 )

@@ -92,3 +92,26 @@ test('the failed ones are sent again, and only those', async () => {
   expect(wizard.hasFailures({ context: flow.context } as never)).toBe(false)
   expect(flow.context['results']).toHaveLength(3)
 })
+
+test('a change above 50% is applied only after a second confirmation', async () => {
+  const save = vi.fn(async () => ({}))
+  const { flow, fields } = await atPreview(save)
+  expect(wizard.isLargeChange({ form: fields } as never)).toBe(false)
+
+  flow.send({ type: 'back' })
+  fields.set('percent', 51)
+  flow.send({ type: 'next' })
+  expect(wizard.isLargeChange({ form: fields } as never)).toBe(true)
+
+  flow.send({ type: 'apply' })
+  expect(flow.states).toEqual(['confirmingLargeChange'])
+  expect(save).not.toHaveBeenCalled()
+  flow.send({ type: 'back' })
+  expect(flow.states).toEqual(['previewing'])
+
+  flow.send({ type: 'apply' })
+  flow.send({ type: 'confirm' })
+  await flow.settled()
+  expect(save).toHaveBeenCalledTimes(3)
+  expect(flow.states).toEqual(['summary'])
+})

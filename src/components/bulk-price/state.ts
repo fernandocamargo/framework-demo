@@ -11,7 +11,10 @@ export const description = 'Change the price of several products by one rule.'
 export type Result = { id: number; title: string; from: number; to: number; error: string | null }
 
 /** The step of the wizard each state belongs to. */
-export const STEP = { loadingProducts: 1, choosing: 1, settingRule: 2, previewing: 3, applying: 4, advancing: 4, summary: 5 } as const
+export const STEP = { loadingProducts: 1, choosing: 1, settingRule: 2, previewing: 3, confirmingLargeChange: 3, applying: 4, advancing: 4, summary: 5 } as const
+
+/** A rule that moves prices by more than this percentage is applied only after a second confirmation. */
+export const LARGE_CHANGE = 50
 
 /** What the events carry beside their type. */
 export type Events = { categoryChanged: { category: string } }
@@ -29,6 +32,7 @@ export const context = () => ({
 
 export const nothingSelected = ({ form }) => form.values.selected.length === 0
 export const invalidRule = ({ form }) => ruleProblem(form.payload()) !== null
+export const isLargeChange = ({ form }) => form.payload().percent > LARGE_CHANGE
 export const queueLeft = ({ context }) => context.queue.length > 0
 export const hasFailures = ({ context }) => context.results.some((result) => result.error !== null)
 
@@ -103,9 +107,13 @@ export default ({ services }) => ({
     description: 'Step 3: each old price beside its new one.',
     on: {
       back: 'settingRule',
-      apply: { target: 'applying', actions: queueSelected },
+      apply: [{ guard: isLargeChange, target: 'confirmingLargeChange' }, { target: 'applying', actions: queueSelected }],
       close: { actions: close },
     },
+  },
+  confirmingLargeChange: {
+    description: 'The rule moves prices by more than 50%. The person confirms it a second time, or goes back to the preview.',
+    on: { confirm: { target: 'applying', actions: queueSelected }, back: 'previewing' },
   },
   applying: {
     description: 'Step 4: one save per product, in order. A failure is kept and the rest go on.',
