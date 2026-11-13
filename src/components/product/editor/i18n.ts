@@ -21,4 +21,5 @@ export default {
   cancel: 'Cancel',
   save: { create: 'Create product', edit: 'Save changes' },
   discard: { title: 'Discard your changes?', text: 'What you changed in this product has not been saved.', keep: 'Keep editing', discard: 'Discard' },
+  keys: { save: 'Save the product' },
 }

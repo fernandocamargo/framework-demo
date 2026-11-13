@@ -25,7 +25,8 @@ What this does not do: it does not decide what to build, and it does not judge w
 | Word | Meaning |
 |---|---|
 | Component folder | The module. A folder under `components/` with a `render.tsx`. Importing the folder gives the component. Its path (`components/product/editor`) is its identity and its CSS class. |
-| Layer file | A file with a fixed name and job inside a component folder: `render.tsx`, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `i18n.ts`, `placeholder.tsx`, `error.tsx`. |
+| Layer file | A file with a fixed name and job inside a component folder: `render.tsx`, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `i18n.ts`, `acl.ts`, `shortcuts.ts`, `placeholder.tsx`, `error.tsx`. |
+| `shortcuts.ts` | The keys a component answers while it is on screen, translated, each sending a chart's event, focusing an element or running a function, and working only while the chart takes the event or its `when` holds. `?` lists them. |
 | `acl.ts` | Whether what a component offers may be done, as a boolean. The component and everything below it get `acl.allowed`, until a folder below says otherwise. |
 | `props.ts` | The module's interface. `export type Props` says what a parent passes; the default export shapes what the render gets. |
 | Client | A transport: how the app reaches a system. A folder under `clients/`. |

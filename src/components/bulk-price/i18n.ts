@@ -51,4 +51,5 @@ export default {
   back: 'Back',
   cancel: 'Cancel',
   done: 'Done',
+  keys: { next: 'Next step', apply: 'Apply the change' },
 }

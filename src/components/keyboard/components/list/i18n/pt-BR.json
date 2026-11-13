@@ -1,0 +1,7 @@
+{
+  "components/keyboard/components/list/title": "Atalhos de teclado",
+  "components/keyboard/components/list/intro": "As teclas do que está na tela, pelo componente que as declara.",
+  "components/keyboard/components/list/close": "Fechar",
+  "components/keyboard/components/list/unavailable": "Agora não",
+  "components/keyboard/components/list/none": "Nada na tela declara uma tecla."
+}

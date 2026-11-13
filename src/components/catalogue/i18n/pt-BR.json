@@ -14,5 +14,10 @@
   "components/catalogue/loading": "Lendo o catálogo…",
   "components/catalogue/failed/message": "Não foi possível ler o catálogo: {message}",
   "components/catalogue/failed/retry": "Tentar de novo",
-  "components/catalogue/readOnly": "Você pode navegar pelo catálogo. Mudá-lo pede uma permissão que você não tem."
+  "components/catalogue/readOnly": "Você pode navegar pelo catálogo. Mudá-lo pede uma permissão que você não tem.",
+  "components/catalogue/keys/search": "Buscar no catálogo",
+  "components/catalogue/keys/create": "Novo produto",
+  "components/catalogue/keys/bulk": "Mudar preços em lote",
+  "components/catalogue/keys/previous": "Página anterior",
+  "components/catalogue/keys/next": "Próxima página"
 }

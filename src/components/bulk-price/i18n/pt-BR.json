@@ -42,5 +42,7 @@
   "components/bulk-price/cancel": "Cancelar",
   "components/bulk-price/done": "Concluir",
   "components/bulk-price/limits/over": "Você muda preços em no máximo {limit, number}%. Alguém com um limite maior pode aplicar esta.",
-  "components/bulk-price/limits/none": "Você não tem permissão para mudar preços."
+  "components/bulk-price/limits/none": "Você não tem permissão para mudar preços.",
+  "components/bulk-price/keys/next": "Próximo passo",
+  "components/bulk-price/keys/apply": "Aplicar a mudança"
 }

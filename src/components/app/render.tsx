@@ -1,6 +1,7 @@
 import { Button } from 'react-aria-components'
 import BulkPrice from '@/components/bulk-price'
 import Catalogue from '@/components/catalogue'
+import Keyboard from '@/components/keyboard'
 import Lab from '@/components/lab'
 import Language from '@/components/language'
 import Detail from '@/components/product/detail'
@@ -21,6 +22,7 @@ export default ({ className, navigating, dialogs, brand, skip, world, askToSignI
       </div>
       <Lab />
       <Language />
+      <Keyboard />
       <Session asked={askToSignIn} reason={signInReason} />
     </header>
     <div className="progress" role="presentation" data-active={navigating || undefined} />

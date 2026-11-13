@@ -61,3 +61,14 @@ Every row now holds a delete link of its own (`product/remove-link`), with a rul
 
 The rules test `/auth/permissions`' snapshot instead of role names; the charts of the editor, the delete dialog and the bulk change are declared from it. Chromium, one run, the same 26 steps: 0 misses, 358 render calls, framework components rendered again 220 times (48 changing nothing), render time 136.3 ms (30.3 ms changing nothing). Signing in still renders 5 framework components again: each follows only the parts of the snapshot it reads, and the rules that read only `acl` are decided where the snapshot is read.
 
+## After shortcuts
+
+Every folder may declare its keys; the header holds a `?` button with a chart of its own, and the catalogue, the editor, the product dialog and the bulk change declare keys. Chromium, one run, the same 26 steps: 0 misses, 357 render calls, framework components rendered again 202 times (28 changing nothing), render time 159.4 ms (42.0 ms changing nothing).
+
+The first count with shortcuts was 258 (79). Two things the slice made visible, and fixed:
+
+- A component with a `state.ts` read the route on every render, so it rendered again at every change of address. It needs the route only until its first commit, to create its chart; it reads it only then.
+- The plugin read every exported function of a `props.ts` as one the framework calls. The filter bar's `props.ts` exports a helper with a plain parameter (`sorting(id)`), which counted as reading everything: the person, the snapshot, the route, and now the keys on screen. Only the functions the framework calls are read now.
+
+The recorder now says, for a component that rendered again on its own, which of its hooks hold something new and which contexts it read changed (`DETAIL=1`). What is left is mostly the catalogue and the network lab, whose default reads read the route, rendering again at every change of address and finding the same query.
+

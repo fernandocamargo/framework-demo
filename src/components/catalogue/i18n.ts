@@ -11,4 +11,5 @@ export default {
   paging: { label: 'Pages', previous: 'Previous', next: 'Next', page: 'Page {page, number} of {pages, number}' },
   loading: 'Reading the catalogue…',
   failed: { message: 'The catalogue could not be read: {message}', retry: 'Try again' },
+  keys: { search: 'Search the catalogue', create: 'New product', bulk: 'Bulk price change', previous: 'Previous page', next: 'Next page' },
 }

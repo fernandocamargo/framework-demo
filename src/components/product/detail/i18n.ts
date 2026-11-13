@@ -7,4 +7,5 @@ export default {
   actions: { edit: 'Edit' },
   loading: 'Reading the product',
   failed: { title: 'The product could not be read', close: 'Close', retry: 'Try again' },
+  keys: { edit: 'Edit the product' },
 }

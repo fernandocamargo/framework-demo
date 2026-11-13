@@ -9,5 +9,6 @@
   "components/product/detail/loading": "Lendo o produto",
   "components/product/detail/failed/title": "Não foi possível ler o produto",
   "components/product/detail/failed/close": "Fechar",
-  "components/product/detail/failed/retry": "Tentar de novo"
+  "components/product/detail/failed/retry": "Tentar de novo",
+  "components/product/detail/keys/edit": "Editar o produto"
 }

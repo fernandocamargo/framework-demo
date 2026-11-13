@@ -318,3 +318,57 @@ test("each role sees what it may do: users browse, moderators edit and change pr
   const failures = page.getByRole('region', { name: /Failures/ })
   expect((await failures.count()) ? await failures.innerText() : '').toBe('')
 })
+
+test('keys follow what may be done and where the flow is; `?` lists them, translated', async ({ page }) => {
+  const keys = dialog(page, 'Keyboard shortcuts')
+  const listed = (label: string) => keys.locator('dl > div').filter({ hasText: label }).innerText()
+  const blur = () => page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+
+  await open(page)
+  // `/` goes to the search; typed in it, `n` is a letter, not a key of the app.
+  await act(page, () => page.keyboard.press('/'))
+  const search = page.getByRole('searchbox')
+  expect(await search.evaluate((element) => element === document.activeElement)).toBe(true)
+  await act(page, () => page.keyboard.type('n'))
+  expect(await search.inputValue()).toBe('n')
+  expect(await dialog(page, 'New product').count()).toBe(0)
+  await act(page, async () => {
+    await search.fill('')
+    await blur()
+  })
+
+  // Someone who may only read: creating is listed, as not available now, and the key does nothing.
+  await act(page, () => page.getByRole('button', { name: 'Sign in' }).click())
+  await signIn(page, 'Avery')
+  await act(page, () => page.keyboard.press('?'))
+  expect(await listed('New product')).toContain('Not now')
+  expect(await listed('Next page')).not.toContain('Not now')
+  await act(page, () => page.keyboard.press('Escape'))
+  await act(page, () => page.keyboard.press('n'))
+  expect(await dialog(page, 'New product').count()).toBe(0)
+  // A read-only editor's chart has no `save`: the key does nothing, and the browser does not save the page.
+  await open(page, '#/products?edit=4')
+  const editor = dialog(page, 'Edit Audio Interface')
+  await act(page, () => page.keyboard.press('ControlOrMeta+s'))
+  expect(await editor.getByText('A product needs a title.').count()).toBe(0)
+  await act(page, () => page.keyboard.press('Escape'))
+
+  // An admin: `n` opens the editor, and the editor's key saves.
+  await act(page, () => page.getByRole('button', { name: 'Sign out' }).click())
+  await act(page, () => page.getByRole('button', { name: 'Sign in' }).click())
+  await signIn(page)
+  await act(page, () => page.keyboard.press(']'))
+  expect(page.url()).toContain('page=2')
+  await act(page, () => page.keyboard.press('['))
+  expect(page.url()).not.toContain('page=')
+  await act(page, () => page.getByRole('link', { name: 'Edit Audio Interface' }).click())
+  await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill('Audio Interface Mk III'))
+  await act(page, () => page.keyboard.press('ControlOrMeta+s'))
+  expect(await visible(editor)).toBe(false)
+  expect(await rows(page).nth(1).innerText()).toContain('Audio Interface Mk III')
+
+  // The list speaks the page's language.
+  await act(page, () => page.goto('./?world=memory&lang=pt-BR#/products'))
+  await act(page, () => page.keyboard.press('?'))
+  expect(await dialog(page, 'Atalhos de teclado').innerText()).toContain('Buscar no catálogo')
+})
