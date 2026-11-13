@@ -2,7 +2,7 @@
 export default {
   heading: { create: 'New product', edit: 'Edit {title}', untitled: 'Edit product' },
   close: 'Close',
-  readOnly: 'You can see this product. Changing it is for moderators and admins.',
+  readOnly: 'You can see this product. Changing it needs a permission you do not have.',
   loading: 'Reading the product',
   unavailable: { message: 'The product could not be read: {message}', retry: 'Try again' },
   fields: { title: 'Title', description: 'Description', category: 'Category', brand: 'Brand', price: 'Price', stock: 'Stock', choose: 'Choose one' },

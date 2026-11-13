@@ -30,5 +30,5 @@
   "components/product/editor/discard/text": "O que você mudou neste produto não foi salvo.",
   "components/product/editor/discard/keep": "Continuar editando",
   "components/product/editor/discard/discard": "Descartar",
-  "components/product/editor/readOnly": "Você pode ver este produto. Mudá-lo é para moderadores e administradores."
+  "components/product/editor/readOnly": "Você pode ver este produto. Mudá-lo pede uma permissão que você não tem."
 }

@@ -10,6 +10,6 @@
   "components/session/dialog/submit": "Entrar",
   "components/session/expired": "Sua sessão expirou. Entre de novo para continuar.",
   "components/session/dialog/hint": "As contas de demonstração do DummyJSON são públicas. Preencha uma:",
-  "components/session/dialog/account": "{name}, {role, select, admin {administradora} moderator {moderadora} other {usuária}}",
-  "components/session/role": "{role, select, admin {Administradora} moderator {Moderadora} other {Usuária}}"
+  "components/session/dialog/account": "{name}, {role, select, admin {administração} moderator {moderação} other {leitura}}",
+  "components/session/role": "{role, select, admin {Administração} moderator {Moderação} other {Leitura}}"
 }

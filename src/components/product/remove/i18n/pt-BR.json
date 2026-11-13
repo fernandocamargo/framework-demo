@@ -6,5 +6,5 @@
   "components/product/remove/cancel": "Cancelar",
   "components/product/remove/confirm/remove": "Excluir",
   "components/product/remove/confirm/retry": "Tentar de novo",
-  "components/product/remove/refused": "Só administradores excluem produtos."
+  "components/product/remove/refused": "Excluir um produto pede uma permissão que você não tem."
 }

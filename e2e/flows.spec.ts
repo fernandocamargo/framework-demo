@@ -272,11 +272,11 @@ test("each role sees what it may do: users browse, moderators edit and change pr
   expect(await actions.count()).toBe(0)
   expect(await editLinks.count()).toBe(0)
   expect(await deleteLinks.count()).toBe(0)
-  expect(await page.getByRole('note').first().innerText()).toContain('Changing it is for moderators and admins.')
+  expect(await page.getByRole('note').first().innerText()).toContain('Changing it needs a permission you do not have.')
   // An address that opens the editor anyway shows it read-only, with nothing to save.
   await open(page, '#/products?edit=4')
   const editor = dialog(page, 'Edit Audio Interface')
-  expect(await editor.getByRole('note').innerText()).toContain('Changing it is for moderators and admins.')
+  expect(await editor.getByRole('note').innerText()).toContain('Changing it needs a permission you do not have.')
   expect(await editor.getByRole('button', { name: 'Save changes' }).isDisabled()).toBe(true)
   await act(page, () => page.keyboard.press('Escape'))
 
@@ -307,7 +307,7 @@ test("each role sees what it may do: users browse, moderators edit and change pr
   // A deletion asked for by the address is shown, and refused.
   await open(page, '#/products?remove=4')
   const question = dialog(page, /^Delete/)
-  expect(await question.getByRole('note').innerText()).toContain('Only admins delete products.')
+  expect(await question.getByRole('note').innerText()).toContain('Deleting a product needs a permission you do not have.')
   expect(await question.getByRole('button', { name: 'Delete' }).isDisabled()).toBe(true)
   await act(page, () => question.getByRole('button', { name: 'Cancel' }).click())
 
