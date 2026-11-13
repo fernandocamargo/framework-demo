@@ -1,6 +1,7 @@
 // What the wizard's render shows at each step, worked out from the flow and the form.
 import { money, plural } from '@/format'
 import { newPrice, ruleProblem } from './rule'
+import { STEP } from './state'
 
 const STEPS = ['Products', 'Rule', 'Preview', 'Apply', 'Summary']
 
@@ -9,15 +10,17 @@ export default ({ state, form, async: { default: categories } }) => {
   const { values } = form
   const rule = form.payload()
   const selected = context.items.filter((item) => values.selected.includes(item.id))
-  const step = state.loadingProducts || state.choosing ? 0 : state.settingRule ? 1 : state.previewing ? 2 : state.applying || state.advancing ? 3 : 4
+  // The flow says which step each of its states belongs to (state.ts).
+  const step = Math.max(...(Object.keys(STEP) as (keyof typeof STEP)[]).filter((name) => state[name]).map((name) => STEP[name]))
   const failed = context.results.filter((result) => result.error !== null)
   const total = context.results.length + context.queue.length
   return {
     state,
     set: form.set,
     values,
-    steps: STEPS.map((label, index) => ({ label, current: index === step, done: index < step })),
-    stepText: `Step ${step + 1} of ${STEPS.length}: ${STEPS[step]}`,
+    step,
+    steps: STEPS.map((label, index) => ({ label, current: index + 1 === step, done: index + 1 < step })),
+    stepText: `Step ${step} of ${STEPS.length}: ${STEPS[step - 1]}`,
     categories: [{ slug: '', name: 'All categories (first page)' }, ...categories],
     items: context.items.map((item) => ({ id: item.id, title: item.title, price: money(item.price) })),
     selectedIds: values.selected.map(String),

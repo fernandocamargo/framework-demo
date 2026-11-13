@@ -10,6 +10,9 @@ export const description = 'Change the price of several products by one rule.'
 
 export type Result = { id: number; title: string; from: number; to: number; error: string | null }
 
+/** The step of the wizard each state belongs to. */
+export const STEP = { loadingProducts: 1, choosing: 1, settingRule: 2, previewing: 3, applying: 4, advancing: 4, summary: 5 } as const
+
 /** What the events carry beside their type. */
 export type Events = { categoryChanged: { category: string } }
 

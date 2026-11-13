@@ -1,6 +1,6 @@
 import { Button, Checkbox, CheckboxGroup, Dialog, Group, Heading, Input, Label, ListBox, ListBoxItem, Modal, ModalOverlay, NumberField, Popover, ProgressBar, Radio, RadioGroup, Select, SelectValue } from 'react-aria-components'
 
-export default ({ className, state, set, values, steps, stepText, categories, items, selectedIds, selectionText, loadError, ruleProblem, ruleText, preview, progress, current, results, summaryText, failedCount }) => (
+export default ({ className, state, set, values, step, steps, stepText, categories, items, selectedIds, selectionText, loadError, ruleProblem, ruleText, preview, progress, current, results, summaryText, failedCount }) => (
   <ModalOverlay isOpen isDismissable={!state.applying} isKeyboardDismissDisabled={state.applying} onOpenChange={(open) => !open && state.send({ type: 'close' })}>
     <Modal className={`react-aria-Modal ${className}`} data-size="large">
       <Dialog>
@@ -21,7 +21,7 @@ export default ({ className, state, set, values, steps, stepText, categories, it
           ))}
         </ol>
 
-        {(state.loadingProducts || state.choosing) && (
+        {step === 1 && (
           <>
             <Select
               selectedKey={values.category}
@@ -73,7 +73,7 @@ export default ({ className, state, set, values, steps, stepText, categories, it
           </>
         )}
 
-        {state.settingRule && (
+        {step === 2 && (
           <>
             <div className="rule">
               <RadioGroup value={values.direction} onChange={(value) => set('direction', value as 'decrease' | 'increase')}>
@@ -106,7 +106,7 @@ export default ({ className, state, set, values, steps, stepText, categories, it
           </>
         )}
 
-        {state.previewing && (
+        {step === 3 && (
           <>
             <p>
               <strong>{ruleText}</strong>, for {selectionText.replace(' selected', '')}.
@@ -140,7 +140,7 @@ export default ({ className, state, set, values, steps, stepText, categories, it
           </>
         )}
 
-        {(state.applying || state.advancing || state.summary) && (
+        {step >= 4 && (
           <>
             {state.summary ? (
               <div className="notice" data-tone={failedCount ? 'warn' : 'ok'} role="status">
