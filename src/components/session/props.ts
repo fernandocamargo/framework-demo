@@ -1,3 +1,6 @@
+import type { ReactNode } from 'react'
+import { DEMO } from './form'
+
 // What the session's render shows: who is signed in and how long the access token has left,
 // and the sign-in dialog when the page asks for it.
 
@@ -8,22 +11,25 @@ export type Props = {
   reason: string | null
 }
 
-export default ({ asked, reason, state, form }) => {
+export default ({ asked, reason, state, form, i18n }) => {
   const { user, expiresAt, now, error } = state.context
   const signedIn = state.signedIn || state.refreshing
   const seconds = Math.max(0, Math.round((expiresAt - now) / 1000))
   return {
+    i18n,
+    /** The hint, with what a `<code>` becomes: `hint(code)`. */
+    hint: (code: (chunks: ReactNode[]) => ReactNode) => i18n.dialog.hint({ ...DEMO, code }),
     send: state.send,
     values: form.values,
     set: form.set,
     signedIn,
     name: user ? `${user.firstName} ${user.lastName}` : '',
     picture: user?.image ?? '',
-    token: state.refreshing ? 'Refreshing the access token…' : `Access token: ${seconds}s left`,
+    token: state.refreshing ? i18n.token.refreshing : i18n.token.left({ seconds }),
     refreshing: state.refreshing,
     dialogOpen: asked && (state.signedOut || state.signingIn || state.expired),
     signingIn: state.signingIn,
-    notice: state.expired ? 'Your session has expired. Sign in again to continue.' : reason,
+    notice: state.expired ? i18n.expired : reason,
     error,
   }
 }

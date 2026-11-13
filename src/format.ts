@@ -1,23 +1,17 @@
-// How values read on screen. Pure functions, shared by the components' props.ts files.
-
-const dollars = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-export const money = (amount: number) => dollars.format(amount)
+// What the components share about how values read. The words are each component's own
+// (its i18n.ts), and numbers, prices and dates are formatted for the locale on screen (`intl`).
 
 /** Below this many units, a product is running low. */
 export const LOW_STOCK = 5
 
-export type StockLevel = { tone: 'danger' | 'warn' | 'ok'; label: string }
+/** Prices are in dollars, as DummyJSON keeps them, whatever the locale. */
+export const CURRENCY = 'USD'
 
-export const stockLevel = (stock: number): StockLevel =>
-  stock <= 0 ? { tone: 'danger', label: 'Out of stock' } : stock <= LOW_STOCK ? { tone: 'warn', label: `Low: ${stock} left` } : { tone: 'ok', label: `${stock} in stock` }
+/** How a stock level reads: out, low or in stock. Each component words it in its messages. */
+export const stockLevel = (stock: number) => (stock <= 0 ? 'out' : stock <= LOW_STOCK ? 'low' : 'in')
 
-export const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`
-
-const day = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
-export const date = (iso: string) => day.format(new Date(iso))
-
-const clock = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-export const time = (at: number) => clock.format(at)
+/** The tone a stock level is shown in. */
+export const STOCK_TONES = { out: 'danger', low: 'warn', in: 'ok' } as const
 
 /** A failure's message, whatever was thrown. */
 export const message = (thrown: unknown) => (thrown instanceof Error ? thrown.message : String(thrown))

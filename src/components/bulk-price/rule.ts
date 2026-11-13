@@ -11,6 +11,6 @@ export const newPrice = (price: number, { direction, percent }: Rule) => {
   return Math.max(MINIMUM, Math.round(price * factor * 100) / 100)
 }
 
-/** What stops a rule from being applied; null when nothing does. */
+/** What stops a rule from being applied, worded by i18n.ts's `problems`; null when nothing does. */
 export const ruleProblem = ({ direction, percent }: Rule) =>
-  !(percent > 0) ? 'The change must be more than 0%.' : direction === 'decrease' && percent >= 100 ? 'A decrease must be less than 100%.' : percent > 500 ? 'An increase cannot be more than 500%.' : null
+  !(percent > 0) ? 'none' : direction === 'decrease' && percent >= 100 ? 'decreaseTooLarge' : percent > 500 ? 'increaseTooLarge' : null

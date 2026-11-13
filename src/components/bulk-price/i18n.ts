@@ -1,0 +1,50 @@
+// The wizard's words, in English. Translations: i18n/<locale>.json. Rich text (`<b>`) is
+// placed by the render, which says what a tag becomes.
+export default {
+  title: 'Bulk price change',
+  steps: { products: 'Products', rule: 'Rule', preview: 'Preview', apply: 'Apply', summary: 'Summary' },
+  step: 'Step {step, number} of {count, number}: {label}',
+  close: 'Close',
+  choose: {
+    category: 'Category',
+    all: 'All categories (first page)',
+    loading: 'Reading the products',
+    failed: 'The products could not be read: {message}',
+    retry: 'Try again',
+    selected: '{selected, number} of {count, plural, one {# product} other {# products}} selected',
+    next: 'Next: the rule',
+  },
+  rule: {
+    direction: 'Direction',
+    decrease: 'Decrease',
+    increase: 'Increase',
+    by: 'By',
+    text: '{direction, select, increase {Increase} other {Decrease}} by {percent, number}%',
+    next: 'Next: preview',
+  },
+  problems: {
+    none: 'The change must be more than 0%.',
+    decreaseTooLarge: 'A decrease must be less than 100%.',
+    increaseTooLarge: 'An increase cannot be more than 500%.',
+  },
+  preview: {
+    applies: '<b>{rule}</b>, for {selected, number} of {count, plural, one {# product} other {# products}}.',
+    product: 'Product',
+    now: 'Now',
+    after: 'After',
+    apply: 'Apply to {count, number}',
+  },
+  large: {
+    title: 'Change these prices by more than half?',
+    text: '<b>{rule}</b> is a large change. It will be applied to {count, plural, one {# product} other {# products}}.',
+    back: 'Back to the preview',
+    confirm: 'Yes, apply it',
+  },
+  progress: { label: 'Prices saved', saving: 'Saving {title}…', done: '{done, number} of {total, number} saved or failed' },
+  results: 'Results',
+  summary: '{changed, plural, one {# price} other {# prices}} changed{failed, plural, =0 {} other {, # failed}}.',
+  retryFailed: 'Try the {count, number} failed again',
+  back: 'Back',
+  cancel: 'Cancel',
+  done: 'Done',
+}

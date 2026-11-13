@@ -2,23 +2,25 @@ import { Button } from 'react-aria-components'
 import BulkPrice from '@/components/bulk-price'
 import Catalogue from '@/components/catalogue'
 import Lab from '@/components/lab'
+import Language from '@/components/language'
 import Detail from '@/components/product/detail'
 import Editor from '@/components/product/editor'
 import Remove from '@/components/product/remove'
 import Session from '@/components/session'
 
-export default ({ className, navigating, dialogs, world, askToSignIn, signInReason }) => (
+export default ({ className, navigating, dialogs, brand, skip, world, askToSignIn, signInReason }) => (
   <div className={className} aria-busy={navigating}>
     <Button className="skip" onPress={() => document.getElementById('main')?.focus()}>
-      Skip to the products
+      {skip}
     </Button>
     <header>
       <div className="brand">
         <span className="mark" aria-hidden="true" />
-        <h1>Stockroom</h1>
+        <h1>{brand}</h1>
         <span className="badge">{world}</span>
       </div>
       <Lab />
+      <Language />
       <Session asked={askToSignIn} reason={signInReason} />
     </header>
     <div className="progress" role="presentation" data-active={navigating || undefined} />

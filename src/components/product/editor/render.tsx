@@ -1,18 +1,18 @@
 import { Button, Dialog, FieldError, Form, Group, Heading, Input, Label, ListBox, ListBoxItem, Modal, ModalOverlay, NumberField, Popover, Select, SelectValue, TextArea, TextField } from 'react-aria-components'
 
-export default ({ className, send, values, set, categories, heading, saveText, problems, loading, unavailable, formShown, locked, busy, conflict, failed, confirmingDiscard, error }) => (
+export default ({ className, i18n, send, values, set, categories, currency, heading, saveText, problems, loading, unavailable, formShown, locked, busy, conflict, failed, confirmingDiscard, error }) => (
   <ModalOverlay isOpen isDismissable={!busy} isKeyboardDismissDisabled={busy} onOpenChange={(open) => !open && send({ type: 'close' })}>
     <Modal className={`react-aria-Modal ${className}`}>
       <Dialog>
         <header>
           <Heading slot="title">{heading}</Heading>
-          <Button data-variant="icon" aria-label="Close" isDisabled={busy} onPress={() => send({ type: 'close' })}>
+          <Button data-variant="icon" aria-label={i18n.close} isDisabled={busy} onPress={() => send({ type: 'close' })}>
             <span className="icon" data-icon="close" />
           </Button>
         </header>
 
         {loading && (
-          <div aria-busy="true" aria-label="Reading the product" className="fields">
+          <div aria-busy="true" aria-label={i18n.loading} className="fields">
             <div className="skeleton wide" style={{ blockSize: '2.4rem' }} />
             <div className="skeleton wide" style={{ blockSize: '5.5rem' }} />
             <div className="skeleton" style={{ blockSize: '2.4rem' }} />
@@ -24,9 +24,9 @@ export default ({ className, send, values, set, categories, heading, saveText, p
           <div className="notice" data-tone="danger" role="alert">
             <span className="icon" data-icon="alert" />
             <div>
-              <p>The product could not be read: {error}</p>
+              <p>{i18n.unavailable.message({ message: error })}</p>
               <div className="actions">
-                <Button onPress={() => send({ type: 'retry' })}>Try again</Button>
+                <Button onPress={() => send({ type: 'retry' })}>{i18n.unavailable.retry}</Button>
               </div>
             </div>
           </div>
@@ -43,16 +43,16 @@ export default ({ className, send, values, set, categories, heading, saveText, p
           >
             <div className="fields">
               <TextField className="react-aria-TextField wide" name="title" value={values.title} onChange={(value) => set('title', value)} isReadOnly={locked} autoFocus>
-                <Label>Title</Label>
+                <Label>{i18n.fields.title}</Label>
                 <Input />
                 <FieldError />
               </TextField>
               <TextField className="react-aria-TextField wide" name="description" value={values.description} onChange={(value) => set('description', value)} isReadOnly={locked}>
-                <Label>Description</Label>
+                <Label>{i18n.fields.description}</Label>
                 <TextArea />
               </TextField>
-              <Select name="category" selectedKey={values.category || null} onSelectionChange={(key) => set('category', String(key))} isDisabled={locked} placeholder="Choose one">
-                <Label>Category</Label>
+              <Select name="category" selectedKey={values.category || null} onSelectionChange={(key) => set('category', String(key))} isDisabled={locked} placeholder={i18n.fields.choose}>
+                <Label>{i18n.fields.category}</Label>
                 <Button>
                   <SelectValue />
                   <span className="icon" data-icon="chevron" />
@@ -63,11 +63,11 @@ export default ({ className, send, values, set, categories, heading, saveText, p
                 </Popover>
               </Select>
               <TextField name="brand" value={values.brand} onChange={(value) => set('brand', value)} isReadOnly={locked}>
-                <Label>Brand</Label>
+                <Label>{i18n.fields.brand}</Label>
                 <Input />
               </TextField>
-              <NumberField name="price" value={values.price} onChange={(value) => set('price', value)} minValue={0} step={0.01} formatOptions={{ style: 'currency', currency: 'USD' }} isReadOnly={locked}>
-                <Label>Price</Label>
+              <NumberField name="price" value={values.price} onChange={(value) => set('price', value)} minValue={0} step={0.01} formatOptions={currency} isReadOnly={locked}>
+                <Label>{i18n.fields.price}</Label>
                 <Group>
                   <Input />
                   <Button slot="decrement">−</Button>
@@ -76,7 +76,7 @@ export default ({ className, send, values, set, categories, heading, saveText, p
                 <FieldError />
               </NumberField>
               <NumberField name="stock" value={values.stock} onChange={(value) => set('stock', value)} minValue={0} step={1} isReadOnly={locked}>
-                <Label>Stock</Label>
+                <Label>{i18n.fields.stock}</Label>
                 <Group>
                   <Input />
                   <Button slot="decrement">−</Button>
@@ -92,11 +92,11 @@ export default ({ className, send, values, set, categories, heading, saveText, p
           <div className="notice" data-tone="warn" role="alert">
             <span className="icon" data-icon="alert" />
             <div>
-              <p>Somebody else changed this product while you were editing it. Your changes are still here.</p>
+              <p>{i18n.conflict.message}</p>
               <div className="actions">
-                <Button onPress={() => send({ type: 'takeTheirs' })}>Discard mine and reload</Button>
+                <Button onPress={() => send({ type: 'takeTheirs' })}>{i18n.conflict.theirs}</Button>
                 <Button data-variant="primary" onPress={() => send({ type: 'keepMine' })}>
-                  Save mine anyway
+                  {i18n.conflict.mine}
                 </Button>
               </div>
             </div>
@@ -107,11 +107,11 @@ export default ({ className, send, values, set, categories, heading, saveText, p
           <div className="notice" data-tone="danger" role="alert">
             <span className="icon" data-icon="alert" />
             <div>
-              <p>It was not saved: {error}</p>
+              <p>{i18n.failed.message({ message: error })}</p>
               <div className="actions">
-                <Button onPress={() => send({ type: 'edit' })}>Back to the form</Button>
+                <Button onPress={() => send({ type: 'edit' })}>{i18n.failed.back}</Button>
                 <Button data-variant="primary" onPress={() => send({ type: 'retry' })}>
-                  Try again
+                  {i18n.failed.retry}
                 </Button>
               </div>
             </div>
@@ -121,7 +121,7 @@ export default ({ className, send, values, set, categories, heading, saveText, p
         {formShown && !conflict && !failed && (
           <footer>
             <Button isDisabled={busy} onPress={() => send({ type: 'close' })}>
-              Cancel
+              {i18n.cancel}
             </Button>
             <Button type="submit" form="product" data-variant="primary" isPending={busy}>
               {busy && <span className="spinner" aria-hidden="true" />}
@@ -134,14 +134,14 @@ export default ({ className, send, values, set, categories, heading, saveText, p
       <ModalOverlay isOpen={confirmingDiscard} onOpenChange={(open) => !open && send({ type: 'keepEditing' })}>
         <Modal data-size="small">
           <Dialog role="alertdialog">
-            <Heading slot="title">Discard your changes?</Heading>
-            <p>What you changed in this product has not been saved.</p>
+            <Heading slot="title">{i18n.discard.title}</Heading>
+            <p>{i18n.discard.text}</p>
             <footer>
               <Button autoFocus onPress={() => send({ type: 'keepEditing' })}>
-                Keep editing
+                {i18n.discard.keep}
               </Button>
               <Button data-variant="danger" onPress={() => send({ type: 'discard' })}>
-                Discard
+                {i18n.discard.discard}
               </Button>
             </footer>
           </Dialog>

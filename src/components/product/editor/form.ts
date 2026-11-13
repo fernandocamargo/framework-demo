@@ -22,12 +22,12 @@ export const payload = (values: Values): Changes => ({
   stock: Math.trunc(values.stock),
 })
 
-/** What stops these values from being saved, by field. Empty when nothing does. */
+/** The fields whose values stop a save. Empty when nothing does. Each is worded by i18n.ts's `problems`. */
 export const problems = (values: Values) => {
-  const found: Partial<Record<keyof Values, string>> = {}
-  if (!values.title.trim()) found.title = 'A product needs a title.'
-  if (!values.category) found.category = 'Choose a category.'
-  if (!(values.price > 0)) found.price = 'The price must be more than zero.'
-  if (!(values.stock >= 0)) found.stock = 'The stock cannot be negative.'
+  const found: ('title' | 'category' | 'price' | 'stock')[] = []
+  if (!values.title.trim()) found.push('title')
+  if (!values.category) found.push('category')
+  if (!(values.price > 0)) found.push('price')
+  if (!(values.stock >= 0)) found.push('stock')
   return found
 }

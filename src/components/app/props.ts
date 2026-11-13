@@ -5,14 +5,16 @@ export type Props = {
   navigating: boolean
 }
 
-export default ({ navigating, async: { default: page } }) => {
+export default ({ navigating, i18n, async: { default: page } }) => {
   const { dialogs, session } = page
   const changing = dialogs.edit !== null || dialogs.create || dialogs.remove !== null || dialogs.bulk
   return {
     navigating,
     dialogs,
-    world: page.world === 'memory' ? 'Memory world' : 'DummyJSON',
+    brand: i18n.brand,
+    skip: i18n.skip,
+    world: page.world === 'memory' ? i18n.world.memory : i18n.world.dummyjson,
     askToSignIn: !session && (page.signin || changing),
-    signInReason: !session && changing ? 'Sign in to change the catalogue.' : null,
+    signInReason: !session && changing ? i18n.signIn.reason : null,
   }
 }

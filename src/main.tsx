@@ -3,9 +3,10 @@
 // failure pipeline carries. The app itself starts at components/app.
 import { StrictMode, useEffect, useMemo, useState, useTransition } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Button, Text, UNSTABLE_Toast as Toast, UNSTABLE_ToastContent as ToastContent, UNSTABLE_ToastQueue as ToastQueue, UNSTABLE_ToastRegion as ToastRegion } from 'react-aria-components'
+import { Button, I18nProvider, Text, UNSTABLE_Toast as Toast, UNSTABLE_ToastContent as ToastContent, UNSTABLE_ToastQueue as ToastQueue, UNSTABLE_ToastRegion as ToastRegion } from 'react-aria-components'
 import { createQueryClient, onFailure, Root, type Env, type Navigation } from 'framework'
 import { go, parse } from './address'
+import { currentLocale, type Locale } from './locales'
 import App from './components/app'
 import './base.css'
 
@@ -41,11 +42,34 @@ function useRoute() {
   return [useMemo(() => parse(hash), [hash]), navigating] as const
 }
 
+// The locale is part of the address too (`?lang=pt-BR`, src/locales.ts). A change shows in a
+// transition: the page keeps the old locale on screen until every component on it has its new
+// messages, then shows the new one at once. react-aria formats its own fields (a price field, a
+// percentage) in the same locale.
+function useLocale() {
+  const [locale, setLocale] = useState<Locale>(currentLocale)
+  const [, startSwitch] = useTransition()
+  useEffect(() => {
+    const follow = () => startSwitch(() => setLocale(currentLocale()))
+    window.addEventListener('localechange', follow)
+    window.addEventListener('popstate', follow)
+    return () => {
+      window.removeEventListener('localechange', follow)
+      window.removeEventListener('popstate', follow)
+    }
+  }, [])
+  useEffect(() => {
+    document.documentElement.lang = locale
+  }, [locale])
+  return locale
+}
+
 function Shell() {
   const [route, navigating] = useRoute()
+  const locale = useLocale()
   return (
-    <>
-      <Root env={env} entity={entity} route={route} navigation={navigation} client={client}>
+    <I18nProvider locale={locale}>
+      <Root env={env} entity={entity} route={route} navigation={navigation} client={client} locale={locale}>
         <App navigating={navigating} />
       </Root>
       <ToastRegion queue={toasts} aria-label="Failures">
@@ -61,7 +85,7 @@ function Shell() {
           </Toast>
         )}
       </ToastRegion>
-    </>
+    </I18nProvider>
   )
 }
 

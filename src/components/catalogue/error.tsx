@@ -1,16 +1,16 @@
 import { Button } from 'react-aria-components'
 
-export default ({ className, error, resetErrorBoundary }) => (
+export default ({ className, i18n, error, resetErrorBoundary }) => (
   <section className={className}>
     <div className="top">
-      <h2>Products</h2>
+      <h2>{i18n.title}</h2>
     </div>
     <div className="notice" data-tone="danger" role="alert">
       <span className="icon" data-icon="alert" />
       <div>
-        <p>The catalogue could not be read: {error.message}</p>
+        <p>{i18n.failed.message({ message: error.message })}</p>
         <div className="actions">
-          <Button onPress={resetErrorBoundary}>Try again</Button>
+          <Button onPress={resetErrorBoundary}>{i18n.failed.retry}</Button>
         </div>
       </div>
     </div>

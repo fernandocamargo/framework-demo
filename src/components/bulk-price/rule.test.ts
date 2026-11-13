@@ -10,7 +10,7 @@ test('no price goes below one cent', () => {
 })
 
 test('a rule that cannot be applied says why', () => {
-  expect(ruleProblem({ direction: 'decrease', percent: 0 })).toBe('The change must be more than 0%.')
-  expect(ruleProblem({ direction: 'decrease', percent: 100 })).toBe('A decrease must be less than 100%.')
+  expect(ruleProblem({ direction: 'decrease', percent: 0 })).toBe('none')
+  expect(ruleProblem({ direction: 'decrease', percent: 100 })).toBe('decreaseTooLarge')
   expect(ruleProblem({ direction: 'increase', percent: 100 })).toBeNull()
 })

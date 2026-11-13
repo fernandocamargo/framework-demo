@@ -1,16 +1,16 @@
 import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components'
 import { go } from '@/address'
 
-export default ({ className, error, resetErrorBoundary }) => (
+export default ({ className, i18n, error, resetErrorBoundary }) => (
   <ModalOverlay isOpen isDismissable onOpenChange={(open) => !open && go({ view: null })}>
     <Modal className={`react-aria-Modal ${className}`} data-size="small">
       <Dialog role="alertdialog">
-        <Heading slot="title">The product could not be read</Heading>
+        <Heading slot="title">{i18n.failed.title}</Heading>
         <p>{error.message}</p>
         <footer>
-          <Button onPress={() => go({ view: null })}>Close</Button>
+          <Button onPress={() => go({ view: null })}>{i18n.failed.close}</Button>
           <Button data-variant="primary" onPress={resetErrorBoundary}>
-            Try again
+            {i18n.failed.retry}
           </Button>
         </footer>
       </Dialog>

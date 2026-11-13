@@ -1,6 +1,6 @@
 import { Link } from 'react-aria-components'
 
-export default ({ className, title, thumbnail, origin, price, rating, stock, change, viewHref, editHref, removeHref }) => (
+export default ({ className, title, thumbnail, origin, price, rated, rating, stock, change, viewHref, editHref, editLabel, removeHref, removeLabel }) => (
   <li className={className}>
     {thumbnail ? <img src={thumbnail} alt="" width="56" height="56" loading="lazy" /> : <span className="no-picture" aria-hidden="true" />}
     <div className="name">
@@ -19,17 +19,17 @@ export default ({ className, title, thumbnail, origin, price, rating, stock, cha
       {rating && (
         <>
           <span className="icon" data-icon="star" />
-          <span className="visually-hidden">Rated </span>
+          <span className="visually-hidden">{rated} </span>
           {rating}
         </>
       )}
     </span>
     <strong className="price">{price}</strong>
     <div className="actions">
-      <Link href={editHref} data-variant="icon" aria-label={`Edit ${title}`}>
+      <Link href={editHref} data-variant="icon" aria-label={editLabel}>
         <span className="icon" data-icon="edit" />
       </Link>
-      <Link href={removeHref} data-variant="icon" aria-label={`Delete ${title}`}>
+      <Link href={removeHref} data-variant="icon" aria-label={removeLabel}>
         <span className="icon" data-icon="trash" />
       </Link>
     </div>

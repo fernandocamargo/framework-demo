@@ -1,8 +1,7 @@
 import { Button, Dialog, Form, Heading, Input, Label, Modal, ModalOverlay, TextField } from 'react-aria-components'
 import { go } from '@/address'
-import { DEMO } from './form'
 
-export default ({ className, send, values, set, signedIn, name, picture, token, refreshing, dialogOpen, signingIn, notice, error }) => (
+export default ({ className, i18n, hint, send, values, set, signedIn, name, picture, token, refreshing, dialogOpen, signingIn, notice, error }) => (
   <div className={className}>
     {signedIn ? (
       <>
@@ -16,13 +15,13 @@ export default ({ className, send, values, set, signedIn, name, picture, token, 
           </div>
         </div>
         <Button data-variant="quiet" onPress={() => send({ type: 'signOut' })}>
-          Sign out
+          {i18n.signOut}
         </Button>
       </>
     ) : (
       <Button onPress={() => go({ signin: true })}>
         <span className="icon" data-icon="user" />
-        Sign in
+        {i18n.signIn}
       </Button>
     )}
 
@@ -31,7 +30,7 @@ export default ({ className, send, values, set, signedIn, name, picture, token, 
     <ModalOverlay className="react-aria-ModalOverlay above" data-react-aria-top-layer="true" isOpen={dialogOpen} isDismissable={!signingIn} onOpenChange={(open) => !open && send({ type: 'cancel' })}>
       <Modal className={`react-aria-Modal ${className} dialog`} data-size="small">
         <Dialog>
-          <Heading slot="title">Sign in</Heading>
+          <Heading slot="title">{i18n.dialog.title}</Heading>
           {notice && (
             <div className="notice" data-tone="warn">
               <span className="icon" data-icon="alert" />
@@ -46,18 +45,18 @@ export default ({ className, send, values, set, signedIn, name, picture, token, 
             }}
           >
             <TextField name="username" value={values.username} onChange={(value) => set('username', value)} isRequired autoFocus autoComplete="username">
-              <Label>Username</Label>
+              <Label>{i18n.dialog.username}</Label>
               <Input />
             </TextField>
             <TextField name="password" type="password" value={values.password} onChange={(value) => set('password', value)} isRequired autoComplete="current-password">
-              <Label>Password</Label>
+              <Label>{i18n.dialog.password}</Label>
               <Input />
             </TextField>
           </Form>
           <p className="hint">
-            DummyJSON's demo account is public: <code>{DEMO.username}</code> / <code>{DEMO.password}</code>.{' '}
+            {hint((chunks) => <code>{chunks}</code>)}{' '}
             <Button className="react-aria-Link" onPress={() => send({ type: 'fillDemo' })}>
-              Fill it in
+              {i18n.dialog.fill}
             </Button>
           </p>
           {error && (
@@ -68,11 +67,11 @@ export default ({ className, send, values, set, signedIn, name, picture, token, 
           )}
           <footer>
             <Button isDisabled={signingIn} onPress={() => send({ type: 'cancel' })}>
-              Cancel
+              {i18n.dialog.cancel}
             </Button>
             <Button type="submit" form="sign-in" data-variant="primary" isPending={signingIn}>
               {signingIn && <span className="spinner" aria-hidden="true" />}
-              Sign in
+              {i18n.dialog.submit}
             </Button>
           </footer>
         </Dialog>

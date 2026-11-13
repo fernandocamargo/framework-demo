@@ -1,0 +1,14 @@
+{
+  "components/session/signIn": "Entrar",
+  "components/session/signOut": "Sair",
+  "components/session/token/left": "Token de acesso: faltam {seconds, number}s",
+  "components/session/token/refreshing": "Renovando o token de acesso…",
+  "components/session/dialog/title": "Entrar",
+  "components/session/dialog/username": "Usuário",
+  "components/session/dialog/password": "Senha",
+  "components/session/dialog/hint": "A conta de demonstração do DummyJSON é pública: <code>{username}</code> / <code>{password}</code>.",
+  "components/session/dialog/fill": "Preencher",
+  "components/session/dialog/cancel": "Cancelar",
+  "components/session/dialog/submit": "Entrar",
+  "components/session/expired": "Sua sessão expirou. Entre de novo para continuar."
+}

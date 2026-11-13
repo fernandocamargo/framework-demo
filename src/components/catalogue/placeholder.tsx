@@ -1,9 +1,9 @@
-export default ({ className }) => (
+export default ({ className, i18n }) => (
   <section className={className} aria-busy="true">
     <div className="top">
       <div>
-        <h2>Products</h2>
-        <p className="summary">Reading the catalogue…</p>
+        <h2>{i18n.title}</h2>
+        <p className="summary">{i18n.loading}</p>
       </div>
     </div>
     <ul className="rows" aria-hidden="true">

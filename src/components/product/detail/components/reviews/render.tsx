@@ -1,5 +1,5 @@
-export default ({ className, heading, reviews }) => (
-  <section className={className} aria-label="Reviews">
+export default ({ className, label, heading, reviews }) => (
+  <section className={className} aria-label={label}>
     <h3>{heading}</h3>
     <ul>
       {reviews.map((review) => (
@@ -10,9 +10,7 @@ export default ({ className, heading, reviews }) => (
             ))}
           </span>
           <p>{review.comment}</p>
-          <p className="by">
-            {review.by}, {review.on}
-          </p>
+          <p className="by">{review.by}</p>
         </li>
       ))}
     </ul>

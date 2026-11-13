@@ -19,7 +19,7 @@ async function act(page: Page, action: () => Promise<unknown>) {
 }
 
 const open = (page: Page, hash = '#/products') => act(page, () => page.goto(`./?world=memory${hash}`))
-const rows = (page: Page) => page.getByRole('list', { name: 'Products' }).getByRole('listitem')
+const rows = (page: Page, name = 'Products') => page.getByRole('list', { name }).getByRole('listitem')
 const titles = (page: Page) => rows(page).getByRole('link').filter({ hasNotText: /^$/ }).allInnerTexts()
 const summary = (page: Page) => page.getByRole('status').first().innerText()
 const dialog = (page: Page, name: string | RegExp) => page.getByRole('dialog', { name }).or(page.getByRole('alertdialog', { name }))
@@ -226,4 +226,29 @@ test('an expired access token is refreshed once, under the save that met it', as
   await act(page, () => editor.getByRole('textbox', { name: 'Brand' }).fill('Northlight'))
   await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click())
   expect(await editor.innerText()).toContain('Your session has expired')
+})
+
+test('the page speaks Brazilian Portuguese, and changes language in place', async ({ page }) => {
+  await act(page, () => page.goto('./?world=memory&lang=pt-BR#/products'))
+  expect(await page.locator('html').getAttribute('lang')).toBe('pt-BR')
+  expect(await summary(page)).toBe('37 produtos')
+  // Prices and ratings are written the Brazilian way; DummyJSON's product names are not translated.
+  expect(await rows(page, 'Produtos').first().innerText()).toMatch(/US\$\s273,99/)
+  expect(await rows(page, 'Produtos').first().innerText()).toContain('4,2')
+
+  // A dialog's messages, its reviews' plural and average, and a date the Brazilian way.
+  await act(page, () => page.getByRole('link', { name: 'Audio Interface', exact: true }).click())
+  const reviews = dialog(page, 'Audio Interface').getByRole('region', { name: 'Avaliações' })
+  expect(await reviews.getByRole('heading').innerText()).toMatch(/^3 avaliações, média de \d,\d$/)
+  expect(await dialog(page, 'Audio Interface').getByRole('button', { name: 'Editar' }).count()).toBe(1)
+  await act(page, () => page.keyboard.press('Escape'))
+
+  await act(page, async () => {
+    await page.getByRole('button', { name: 'Idioma' }).click()
+    await page.getByRole('option', { name: 'English' }).click()
+  })
+  expect(page.url()).toContain('lang=en')
+  expect(await page.locator('html').getAttribute('lang')).toBe('en')
+  expect(await summary(page)).toBe('37 products')
+  expect(await rows(page).first().innerText()).toContain('$273.99')
 })

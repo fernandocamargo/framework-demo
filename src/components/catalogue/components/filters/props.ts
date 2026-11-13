@@ -5,13 +5,14 @@ import type { Category, SortKey } from '@/services/products/types'
 
 export type Props = { filters: Filters; categories: Category[] }
 
-export const SORTS: { id: `${SortKey}:${'asc' | 'desc'}`; label: string }[] = [
-  { id: 'title:asc', label: 'Title, A to Z' },
-  { id: 'price:asc', label: 'Price, low to high' },
-  { id: 'price:desc', label: 'Price, high to low' },
-  { id: 'rating:desc', label: 'Rating, best first' },
-  { id: 'stock:asc', label: 'Stock, lowest first' },
-]
+/** The sorts offered, as the address's two fields. */
+export const SORTS = [
+  ['title', 'asc'],
+  ['price', 'asc'],
+  ['price', 'desc'],
+  ['rating', 'desc'],
+  ['stock', 'asc'],
+] as const satisfies readonly (readonly [SortKey, 'asc' | 'desc'])[]
 
 /** A sort option's id, as the address's two fields. */
 export const sorting = (id: string) => {
@@ -19,10 +20,11 @@ export const sorting = (id: string) => {
   return { sort, order }
 }
 
-export default ({ filters, categories }) => ({
+export default ({ i18n, filters, categories }) => ({
+  i18n,
   q: filters.q,
   category: filters.category || 'all',
-  categories: [{ slug: 'all', name: 'All categories' }, ...categories],
+  categories: [{ slug: 'all', name: i18n.category.all }, ...categories],
   sort: `${filters.sort}:${filters.order}`,
-  sorts: SORTS,
+  sorts: SORTS.map(([field, order]) => ({ id: `${field}:${order}`, label: (i18n.sort[field] as Record<string, string>)[order] })),
 })

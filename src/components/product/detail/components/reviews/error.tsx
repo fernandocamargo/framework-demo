@@ -1,13 +1,13 @@
 import { Button } from 'react-aria-components'
 
-export default ({ className, error, resetErrorBoundary }) => (
-  <section className={className} aria-label="Reviews">
+export default ({ className, i18n, error, resetErrorBoundary }) => (
+  <section className={className} aria-label={i18n.label}>
     <div className="notice" data-tone="warn" role="alert">
       <span className="icon" data-icon="alert" />
       <div>
-        <p>The reviews could not be read: {error.message}</p>
+        <p>{i18n.failed.message({ message: error.message })}</p>
         <div className="actions">
-          <Button onPress={resetErrorBoundary}>Try again</Button>
+          <Button onPress={resetErrorBoundary}>{i18n.failed.retry}</Button>
         </div>
       </div>
     </div>

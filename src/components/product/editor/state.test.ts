@@ -26,7 +26,7 @@ test('the checks are plain functions of what they are given', () => {
   expect(editor.unsaved({ form: { unsaved: true } } as never)).toBe(true)
   expect(editor.isConflict({ event: { error: conflict } } as never)).toBe(true)
   expect(editor.isConflict({ event: { error: new Error('offline') } } as never)).toBe(false)
-  expect(form.problems({ ...form.seed(product), title: ' ', price: 0 })).toEqual({ title: 'A product needs a title.', price: 'The price must be more than zero.' })
+  expect(form.problems({ ...form.seed(product), title: ' ', price: 0 })).toEqual(['title', 'price'])
 })
 
 test('the product seeds the form once, and a save sends the changes for the version read', async () => {

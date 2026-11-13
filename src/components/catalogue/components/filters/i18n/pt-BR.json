@@ -1,0 +1,13 @@
+{
+  "components/catalogue/components/filters/search/label": "Buscar produtos",
+  "components/catalogue/components/filters/search/placeholder": "Busque produtos e tecle Enter",
+  "components/catalogue/components/filters/search/clear": "Limpar a busca",
+  "components/catalogue/components/filters/category/label": "Categoria",
+  "components/catalogue/components/filters/category/all": "Todas as categorias",
+  "components/catalogue/components/filters/sort/label": "Ordenar",
+  "components/catalogue/components/filters/sort/title/asc": "Título, de A a Z",
+  "components/catalogue/components/filters/sort/price/asc": "Preço, do menor para o maior",
+  "components/catalogue/components/filters/sort/price/desc": "Preço, do maior para o menor",
+  "components/catalogue/components/filters/sort/rating/desc": "Avaliação, as melhores primeiro",
+  "components/catalogue/components/filters/sort/stock/asc": "Estoque, o menor primeiro"
+}

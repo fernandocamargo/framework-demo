@@ -24,7 +24,7 @@ export const context = ({ route }) => ({
 
 export const creating = ({ context }) => context.creating
 export const unsaved = ({ form }) => form.unsaved
-export const invalid = ({ form }) => Object.keys(problems(form.values)).length > 0
+export const invalid = ({ form }) => problems(form.values).length > 0
 export const isConflict = ({ event }) => event.error instanceof Error && event.error.name === 'ConflictError'
 
 // ---- Changes ---------------------------------------------------------------------------------

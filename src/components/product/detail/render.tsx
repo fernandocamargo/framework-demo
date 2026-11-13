@@ -2,7 +2,7 @@ import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-compone
 import { go } from '@/address'
 import Reviews from './components/reviews'
 
-export default ({ className, id, title, description, origin, price, stock, images, change }) => (
+export default ({ className, i18n, id, title, description, origin, price, stock, images, change }) => (
   <ModalOverlay isOpen isDismissable onOpenChange={(open) => !open && go({ view: null })}>
     <Modal className={`react-aria-Modal ${className}`} data-size="large">
       <Dialog>
@@ -11,15 +11,15 @@ export default ({ className, id, title, description, origin, price, stock, image
             <Heading slot="title">{title}</Heading>
             <p className="origin">{origin}</p>
           </div>
-          <Button data-variant="icon" aria-label="Close" onPress={() => go({ view: null })}>
+          <Button data-variant="icon" aria-label={i18n.close} onPress={() => go({ view: null })}>
             <span className="icon" data-icon="close" />
           </Button>
         </header>
         {images.length > 0 && (
-          <ul className="pictures" aria-label="Pictures" tabIndex={0}>
-            {images.map((image, index) => (
-              <li key={image}>
-                <img src={image} alt={`${title}, picture ${index + 1}`} loading="lazy" />
+          <ul className="pictures" aria-label={i18n.pictures.label} tabIndex={0}>
+            {images.map((image) => (
+              <li key={image.src}>
+                <img src={image.src} alt={image.alt} loading="lazy" />
               </li>
             ))}
           </ul>
@@ -38,9 +38,9 @@ export default ({ className, id, title, description, origin, price, stock, image
         <p>{description}</p>
         <Reviews />
         <footer>
-          <Button onPress={() => go({ view: null, remove: id })}>Delete</Button>
+          <Button onPress={() => go({ view: null, remove: id })}>{i18n.actions.remove}</Button>
           <Button data-variant="primary" onPress={() => go({ view: null, edit: id })}>
-            Edit
+            {i18n.actions.edit}
           </Button>
         </footer>
       </Dialog>

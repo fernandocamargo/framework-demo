@@ -25,11 +25,12 @@ What this does not do: it does not decide what to build, and it does not judge w
 | Word | Meaning |
 |---|---|
 | Component folder | The module. A folder under `components/` with a `render.tsx`. Importing the folder gives the component. Its path (`components/product/editor`) is its identity and its CSS class. |
-| Layer file | A file with a fixed name and job inside a component folder: `render.tsx`, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `placeholder.tsx`, `error.tsx`. |
+| Layer file | A file with a fixed name and job inside a component folder: `render.tsx`, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `i18n.ts`, `placeholder.tsx`, `error.tsx`. |
 | `props.ts` | The module's interface. `export type Props` says what a parent passes; the default export shapes what the render gets. |
 | Client | A transport: how the app reaches a system. A folder under `clients/`. |
 | Service | The operations on one resource, written against clients. A folder under `services/`. |
-| Injection | What the framework hands to a layer file's functions: `clients`, `services`, `route`, `navigation`, `form`. Components never import a client or a service. |
+| Injection | What the framework hands to a layer file's functions: `clients`, `services`, `route`, `navigation`, `form`, `i18n`, `intl`, `locale`. Components never import a client or a service. A component follows only what its files read: one that does not read the locale never renders for a change of it. |
+| Messages | A component's words, in its `i18n.ts`, as an object of any shape; translations beside it in `i18n/<locale>.json`, loaded when a component of the folder first shows in that locale. |
 | Skin | A component's plain CSS, nested under its class: `style/skins/<name>/index.ts`. |
 
 ## One component, toured
@@ -43,6 +44,8 @@ editor/
   state.ts      The flow, as a statechart. Its checks and changes are exported pure functions.
   form.ts       Server data to fields (seed), fields to a request (payload), and what is wrong with them.
   async.ts      What to read before the first render: the categories.
+  i18n.ts       Its words, in English, namespaced as the dialog is: heading, fields, problems, conflict…
+  i18n/pt-BR.json  The same words in Brazilian Portuguese, checked against i18n.ts key by key.
   state.test.ts The editor's rules, tested without React.
   style/skins/default/index.ts   Plain CSS.
 ```
@@ -167,6 +170,18 @@ one component per file, so give it a folder of its own, with a render.tsx
 
 The last one is not a type error. It is a convention check, and it fails the same command.
 
+A message called without a value its ICU needs, and a translation that drops it:
+
+```
+src/components/catalogue/props.ts:21:30 - error TS2345: Argument of type '{ page: number; }' is not assignable to parameter of
+type '{ page: number; pages: number; }'.
+  Property 'pages' is missing in type '{ page: number; }' but required in type '{ page: number; pages: number; }'.
+
+src/components/catalogue/i18n/pt-BR.json: "components/catalogue/paging/page" loses {pages}
+```
+
+Nobody wrote the type `{ page: number; pages: number }`: it is read from `'Page {page, number} of {pages, number}'` in the folder's `i18n.ts`.
+
 ## Tests at the seams
 
 `npm test` runs about 90 tests in about a second. A few of them, by what they pin down:
@@ -260,7 +275,8 @@ The mechanism differs. The idea carries: give each kind of decision one place, t
 ```
 framework/          The framework: plugin/, runtime/, typescript/, shared/. See its README.
 src/
-  main.tsx          The shell: which world, the router's stand-in, Root, failures as toasts.
+  main.tsx          The shell: which world and locale, the router's stand-in, Root, failures as toasts.
+  locales.ts        The locales the app speaks, and `?lang=` in the address.
   env.d.ts          What this app injects: Env, Route, Navigation.
   address.ts        The address, as the route and back.
   base.css          Design tokens and the look of the controls.
@@ -268,4 +284,5 @@ src/
   services/         Operations, and what makes what stale.
   components/       Component folders.
 e2e/                The end-to-end flows.
+perf/               Render cycles, step by step, against a baseline.
 ```
