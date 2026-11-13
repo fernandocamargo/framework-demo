@@ -1,0 +1,35 @@
+{
+  // The app's project. The framework's TypeScript plugin types every argument the framework
+  // injects: editors load it when they run this project's TypeScript, and `npm run typecheck`
+  // runs it through framework/typescript/check.cjs. Plain `tsc -p .` does not load plugins, so
+  // it would report those arguments as implicit `any`.
+  // `rootDirs` merges the declarations the Vite plugin writes for component folders
+  // (.framework-types/, written by `npm run types`) with the sources.
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["vite/client", "vitest/globals"],
+    "rootDirs": [".", "./.framework-types"],
+    "paths": {
+      "framework": ["./framework/runtime"],
+      "framework/testing": ["./framework/runtime/testing"],
+      "@/*": ["./src/*", "./.framework-types/src/*"]
+    },
+    "plugins": [{ "name": "framework-typescript-plugin", "root": "./src" }]
+  },
+  "include": ["src", "framework/runtime"]
+}
