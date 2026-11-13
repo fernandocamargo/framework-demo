@@ -26,3 +26,19 @@ Before the i18n, ACL and other layers (`a54f01e`), Chromium, one run:
 | render time | 128.8 ms, 32.1 ms of it changing nothing |
 
 The costliest step is typing six keys in the editor's title: 602 react-aria components render again, 366 of them changing nothing, because the editor's render is one function of every value of the form.
+
+## After i18n
+
+The flow gains two steps, a switch to Brazilian Portuguese and back. Chromium, one run:
+
+| | baseline | i18n |
+|---|---|---|
+| steps, misses | 24, 0 | 26, 0 |
+| render calls | 200 | 235 |
+| framework components rendered again (changing nothing) | 135 (38) | 171 (40) |
+| other components rendered again (changing nothing) | 4,389 (2,201) | 5,594 (2,568) |
+| render time (changing nothing) | 128.8 ms (32.1 ms) | 150.9 ms (36.0 ms) |
+
+- Each switch of locale renders the 18 framework components on screen that read the locale, every one of them changing the page, in one commit; the components that read none of it do not render.
+- Without the two new steps, the other components render again 4,310 times (2,034 changing nothing), fewer than the baseline's 4,389 (2,201): what the render gets now keeps the identity of every part that did not change, and a render that would get the same is not called.
+

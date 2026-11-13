@@ -21,7 +21,7 @@ import MagicString from 'magic-string'
 import { parseAst } from 'vite'
 import folders from '../shared/folders.cjs'
 
-const { CODE, posix, isDirectory, findLayer, listComponentFolders, declaredProps, componentPath, selector, listClients, listServices, listSkins, problems } = folders
+const { CODE, posix, isDirectory, findLayer, listComponentFolders, declaredProps, componentPath, selector, listClients, listServices, listSkins, listTranslations, readsOf, problems } = folders
 
 const CLIENTS = 'virtual:framework/clients'
 const SERVICES = 'virtual:framework/services'
@@ -184,6 +184,8 @@ export default function framework(userOptions) {
     return null
   }
   let isBuild = false
+  /** The sources each component folder's files read, as last written into its module. */
+  const readsSeen = new Map()
 
   return {
     name: 'framework',
@@ -222,8 +224,19 @@ export default function framework(userOptions) {
       server.watcher.add(options.root)
       for (const event of ['add', 'unlink', 'addDir', 'unlinkDir']) server.watcher.on(event, refresh)
       // What a parent passes is declared from props.ts, so its changes rewrite the declarations.
+      // What a component's files read decides what it subscribes to, so a change to it rewrites
+      // the folder's module, and the page reloads.
       server.watcher.on('change', (file) => {
-        if (isInside(file) && path.basename(file).replace(CODE, '') === 'props') writeTypes(options)
+        if (!isInside(file)) return
+        if (path.basename(file).replace(CODE, '') === 'props') writeTypes(options)
+        const dir = path.dirname(file)
+        if (!readsSeen.has(dir) || !CODE.test(file)) return
+        if (JSON.stringify(readsOf(options.root, dir)) === readsSeen.get(dir)) return
+        for (const environment of Object.values(server.environments)) {
+          const mod = environment.moduleGraph.getModuleById(COMPONENT + dir)
+          if (mod) environment.moduleGraph.invalidateModule(mod)
+        }
+        refresh(file)
       })
     },
 
@@ -270,23 +283,36 @@ export default function framework(userOptions) {
       }
 
       if (id.startsWith(COMPONENT)) {
-        // The folder itself: the lazy view, its skins, and the eager placeholder and error
-        // fallback.
+        // The folder itself: the lazy view, its skins, the eager placeholder and error
+        // fallback, its messages (eager, since the placeholder shows them too) with each
+        // translation loaded on demand, and the sources its files read.
         const dir = id.slice(COMPONENT.length)
         if (isBuild) this.addWatchFile(dir)
         const placeholder = findLayer(dir, 'placeholder')
         const error = findLayer(dir, 'error')
+        const i18n = findLayer(dir, 'i18n')
         const skins = listSkins(dir)
+        const reads = readsOf(options.root, dir)
+        readsSeen.set(dir, JSON.stringify(reads))
         return [
           `import { component } from ${runtime};`,
           ...(placeholder ? [`import placeholder from ${JSON.stringify(placeholder)};`] : []),
           ...(error ? [`import error from ${JSON.stringify(error)};`] : []),
+          ...(i18n ? [`import * as i18n from ${JSON.stringify(i18n)};`] : []),
           'export default component({',
           `  path: ${JSON.stringify(componentPath(options.root, dir))},`,
           `  view: () => import(${JSON.stringify(VIEW + dir)}),`,
           `  skins: { ${skins.map((skin) => `${JSON.stringify(skin.name)}: () => import(${JSON.stringify(skin.file)})`).join(', ')} },`,
           ...(placeholder ? ['  placeholder,'] : []),
           ...(error ? ['  error,'] : []),
+          ...(i18n
+            ? [
+                '  i18n,',
+                `  translations: { ${listTranslations(dir).map(({ locale, file }) => `${JSON.stringify(locale)}: () => import(${JSON.stringify(file)})`).join(', ')} },`,
+              ]
+            : []),
+          `  reads: ${JSON.stringify(reads.all)},`,
+          `  readsInAsync: ${JSON.stringify(reads.byLayer.async ?? [])},`,
           '});',
         ].join('\n')
       }

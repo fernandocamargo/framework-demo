@@ -146,6 +146,22 @@ export const STEPS = [
     check: (page) => shown(page.getByRole('complementary', { name: 'Network lab' })),
   },
   {
+    name: 'switch to Português (Brasil)',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Language' }).click()
+      await page.getByRole('option', { name: 'Português (Brasil)' }).click()
+    },
+    check: async (page) => (await status(page)) === '37 produtos',
+  },
+  {
+    name: 'back to English',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Idioma' }).click()
+      await page.getByRole('option', { name: 'English' }).click()
+    },
+    check: async (page) => (await status(page)) === '37 products',
+  },
+  {
     name: 'sign out',
     act: (page) => page.getByRole('button', { name: 'Sign out' }).click(),
     check: (page) => shown(page.getByRole('button', { name: 'Sign in' })),

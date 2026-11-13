@@ -10,7 +10,23 @@
  *   expect(flow.states).toEqual(['saved'])
  */
 import { createActor } from 'xstate'
+import type { I18n } from './i18n-types'
+import { build, intlFor } from './i18n'
 import { buildMachine, type StateModule } from './machine'
+
+/**
+ * For tests of a `props.ts` or a `state.ts`: a folder's `i18n` as the component gets it, in the
+ * source language, or in a locale with the translations given (`{ "components/x/title": "…" }`).
+ *
+ *   const i18n = messagesOf(catalogueI18n)
+ *   shape({ i18n, intl: intlOf('en'), async: { default: answer } })
+ */
+export function messagesOf<Module extends { default: object }>(module: Module, locale = 'en', translated: Record<string, string> = {}, path = 'test') {
+  return build({ path, i18n: module }, translated, intlFor(locale)) as unknown as I18n<Module>
+}
+
+/** react-intl's `intl` for a locale, as components get it. */
+export const intlOf = (locale = 'en') => intlFor(locale)
 
 type Sources = Record<string, unknown>
 

@@ -16,6 +16,7 @@
 // | `services/**/index`                    | the default and every named export    | `Injection<…>`             |
 // | `services/**/meta`                     | the default export, and what it returns | `Injection<…>`, `ServiceMeta<…>` |
 // | `clients/*/index`                      | the default export                    | `ClientInjection`          |
+// | `components/…/i18n`                    | its default export is read `as const`, so each message is its literal text, typed from its ICU |
 //
 // `Injection` and `AsyncInjection` carry this app's clients and services, written as a type
 // from the folders: `{ rest: ReturnType<typeof import("…/clients/rest/index").default> }`, and
@@ -23,7 +24,7 @@
 const path = require('node:path')
 const folders = require('../shared/folders.cjs')
 
-const LAYERS = new Set(['render', 'props', 'async', 'placeholder', 'error', 'state'])
+const LAYERS = new Set(['render', 'props', 'async', 'placeholder', 'error', 'state', 'i18n'])
 
 /**
  * @param {typeof import('typescript')} ts
@@ -102,6 +103,8 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
         if (async) layers.push(`async: ${moduleType(async)}`)
         if (state) layers.push(`state: ${moduleType(state)}`, `events: ${exportsEvents(state) ? `${typeImport(state)}.Events` : 'object'}`)
         if (form) layers.push(`form: ${moduleType(form)}`)
+        const i18n = folders.findLayer(found.dir, 'i18n')
+        if (i18n) layers.push(`i18n: ${moduleType(i18n)}`)
         // What a parent passes, when props.ts states it (`export type Props`).
         const passed = folders.declaredProps(found.dir)
         if (passed) layers.push(`passed: ${typeImport(passed)}.Props`)
@@ -111,7 +114,8 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
         if (!named) return `${types}.Injection<${clients}, ${services}>`
         const file = folders.findLayer(found.dir, 'state')
         const form = folders.findLayer(found.dir, 'form')
-        return `${types}.StateArgs<${clients}, ${services}, ${moduleType(file)}, ${exportsEvents(file) ? `${typeImport(file)}.Events` : 'object'}, ${form ? moduleType(form) : 'undefined'}>`
+        const i18n = folders.findLayer(found.dir, 'i18n')
+        return `${types}.StateArgs<${clients}, ${services}, ${moduleType(file)}, ${exportsEvents(file) ? `${typeImport(file)}.Events` : 'object'}, ${form ? moduleType(form) : 'undefined'}, ${i18n ? moduleType(i18n) : 'undefined'}>`
       }
       case 'async':
         return `${types}.AsyncInjection<${clients}, ${services}>`
@@ -121,9 +125,10 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
       case 'client':
         return `${types}.ClientInjection`
       case 'placeholder':
-        return `${types}.PlaceholderProps`
-      case 'error':
-        return `${types}.ErrorProps`
+      case 'error': {
+        const i18n = folders.findLayer(found.dir, 'i18n')
+        return `${types}.${found.name === 'error' ? 'ErrorProps' : 'PlaceholderProps'}${i18n ? `<${moduleType(i18n)}>` : ''}`
+      }
       default:
         return null
     }
@@ -192,6 +197,20 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
     return out
   }
 
+  /**
+   * Where an `i18n.ts` gets ` as const`: after its default-exported object, unless it already
+   * says how to read it (`as const`, `satisfies`).
+   */
+  function constPoints(text, fileName) {
+    const source = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true)
+    const exported = source.statements.find((statement) => ts.isExportAssignment(statement) && !statement.isExportEquals)
+    if (!exported) return []
+    let expression = exported.expression
+    while (ts.isParenthesizedExpression(expression)) expression = expression.expression
+    if (!ts.isObjectLiteralExpression(expression)) return []
+    return [{ at: exported.expression.end, constant: true }]
+  }
+
   return {
     /** Whether the framework injects into this file. */
     isLayer: (fileName) => kind(fileName) !== null,
@@ -200,7 +219,7 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
     signature(fileName) {
       const found = kind(fileName)
       if (!found) return ''
-      const layers = found.dir ? ['props', 'async', 'state', 'form'].map((name) => folders.findLayer(found.dir, name) ?? '').join(',') : ''
+      const layers = found.dir ? ['props', 'async', 'state', 'form', 'i18n'].map((name) => folders.findLayer(found.dir, name) ?? '').join(',') : ''
       return `${trees().signature}:${layers}:${found.dir && folders.declaredProps(found.dir) ? 'typed' : ''}`
     },
 
@@ -212,12 +231,18 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
       const found = kind(fileName)
       if (!found) return { text, insertions: [] }
       const named = found.name === 'async' || found.name === 'service' || found.name === 'state'
-      const found_points = [...points(text, fileName, named), ...(found.name === 'serviceMeta' ? returnPoints(text, fileName) : [])].sort((a, b) => a.at - b.at)
+      const found_points = (
+        found.name === 'i18n' ? constPoints(text, fileName) : [...points(text, fileName, named), ...(found.name === 'serviceMeta' ? returnPoints(text, fileName) : [])]
+      ).sort((a, b) => a.at - b.at)
       // What goes where. At one position: the parameter's annotation, then the parenthesis that
       // closes a bare parameter, then the return type.
       const edits = new Map()
       const add = (at, order, inserted) => edits.set(`${at}:${order}`, { at, order, inserted })
       for (const point of found_points) {
+        if (point.constant) {
+          add(point.at, 0, ' as const')
+          continue
+        }
         const index = point.returns ? folders.findLayer(path.dirname(fileName), 'index') : null
         const type = point.returns ? (index ? `${types}.ServiceMeta<${moduleType(index)}>` : null) : annotation(found, point.named)
         if (!type) continue

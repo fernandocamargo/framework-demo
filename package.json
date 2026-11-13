@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "types": "node framework/plugin/write-types.mjs --root src --runtime framework/runtime/index.ts",
     "typecheck": "npm run types && tsc -p tsconfig.node.json && node framework/typescript/check.cjs -p .",
-    "test": "node --test framework/shared/folders.test.cjs framework/typescript/transform.test.cjs && vitest run",
+    "test": "node --test framework/shared/folders.test.cjs framework/shared/i18n.test.cjs framework/typescript/transform.test.cjs && vitest run",
     "e2e": "playwright test",
     "check": "npm run typecheck && npm run test && npm run build",
     "perf": "vite build --config perf/vite.config.ts --logLevel warn && node perf/cycles.mjs"
@@ -22,9 +22,11 @@
     "react-aria-components": "1.22.1",
     "react-dom": "19.3.1",
     "react-error-boundary": "6.1.6",
+    "react-intl": "12.1.7",
     "xstate": "5.33.3"
   },
   "devDependencies": {
+    "@formatjs/icu-messageformat-parser": "3.5.23",
     "@playwright/test": "1.64.1",
     "@testing-library/react": "16.3.3",
     "@types/node": "26.6.5",

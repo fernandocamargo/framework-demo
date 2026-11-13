@@ -61,6 +61,8 @@ function trackingOf(client: QueryClient): Tracking {
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   if (Object.prototype.toString.call(value) !== '[object Object]') return false
+  // A React element is a plain object too, but not one to take apart.
+  if ('$$typeof' in (value as object)) return false
   const prototype = Object.getPrototypeOf(value) as unknown
   return prototype === Object.prototype || prototype === null
 }
@@ -199,10 +201,12 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
       route: Record<string, unknown>,
       // `signal` is TanStack's: it aborts when nothing shows the read any more.
       run: (record: { service: (path: string) => void; route: (key: string, value: unknown) => void }, signal: AbortSignal) => Promise<unknown>,
+      // What else the read depends on, besides the route: the locale or the user it reads.
+      sources?: Record<string, unknown>,
     ) {
       const learned = routeKeys.get(path)
-      const keyOf = (keys: Iterable<string>) => ['component', path, entity.id, Object.fromEntries([...keys].map((key) => [key, route[key]]))]
-      const queryKey = learned ? keyOf(learned) : ['component', path, entity.id, null]
+      const keyOf = (keys: Iterable<string>) => ['component', path, entity.id, Object.fromEntries([...keys].map((key) => [key, route[key]])), ...(sources ? [sources] : [])]
+      const queryKey = learned ? keyOf(learned) : ['component', path, entity.id, null, ...(sources ? [sources] : [])]
       return {
         queryKey,
         meta: { component: path },

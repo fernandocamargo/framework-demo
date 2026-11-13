@@ -6,10 +6,11 @@
  * placeholder.
  */
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
-import { createContext, Suspense, useContext, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react'
-import { Pending, useCommitted, watch } from './activity'
+import { createContext, Suspense, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { hold, Pending, useCommitted, watch } from './activity'
 import { createDataLayer, createQueryClient, type DataLayer } from './data'
 import type { Entity, Env, Flags, Navigation, Route } from './index'
+import { activateLocale, loadShown, LocaleContext, SOURCE_LOCALE } from './i18n'
 import { createInjection, type Injection } from './injection'
 import { report, setLocation } from './pipeline'
 import { activateSkin } from './style'
@@ -61,6 +62,12 @@ export type RootProps = {
   /** The skin of the whole page. */
   skin?: string
   /**
+   * The locale the page shows (`pt-BR`). A component with an `i18n.ts`, or one that reads `intl`
+   * or `locale`, follows it, and no other. When it changes, the page keeps the old locale on
+   * screen until every component on it has its messages in the new one, then shows it at once.
+   */
+  locale?: string
+  /**
    * Where the app is, as its router says (`/products/12?status=low`). Failures and
    * interactions carry it. Leave it out when the address's hash holds the route.
    */
@@ -74,7 +81,7 @@ export type RootProps = {
   children?: ReactNode
 }
 
-export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, navigation = NONE, skin = 'default', location, client: given, children }: RootProps) {
+export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, navigation = NONE, skin = 'default', locale = SOURCE_LOCALE, location, client: given, children }: RootProps) {
   // Services were created once and read the entity when they run, so the entity they see is live.
   const current = useRef(entity)
   current.current = entity
@@ -100,6 +107,26 @@ export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, na
   // A new route counts as pending for `whenIdle()` until React commits it: a navigation in a
   // transition keeps the old page on screen with no placeholder while React renders the new one.
   useCommitted(route)
+  // Loads started outside a render (a view preloading its children's) use the locale asked for,
+  // so a change of locale starts loading the new messages as early as it can.
+  activateLocale(locale)
+  // The locale on screen follows the one asked for once the messages of every component on
+  // screen are loaded in it: one commit, nothing suspending. React loses a change of context
+  // for a component whose sibling suspends in the same update, so the framework never lets a
+  // change of locale suspend.
+  const [shown, setShown] = useState(locale)
+  useEffect(() => {
+    if (shown === locale) return
+    let current = true
+    void hold(loadShown(locale)).then(
+      () => current && setShown(locale),
+      () => current && setShown(locale),
+    )
+    return () => {
+      current = false
+    }
+  }, [locale, shown])
+  useCommitted(shown)
   const framework = useMemo(() => ({ injection, skin, sources, data }), [injection, skin, sources, data])
 
   // Failures and interactions carry where the app is; setLocation returns what unsets it.
@@ -121,7 +148,9 @@ export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, na
     <QueryClientProvider client={client}>
       <FrameworkContext value={framework}>
         <RouteContext value={route}>
-          <Suspense fallback={<Pending />}>{children}</Suspense>
+          <LocaleContext value={shown}>
+            <Suspense fallback={<Pending />}>{children}</Suspense>
+          </LocaleContext>
         </RouteContext>
       </FrameworkContext>
     </QueryClientProvider>

@@ -45,14 +45,37 @@ A folder under `components/` with a `render` file and no `index` is a component.
 | `form.ts` | `seed` (server data to values) and `payload` (values to a request). |
 | `placeholder.tsx` | Shows while the view loads and reads. Adds a `Suspense`. |
 | `error.tsx` | Shows when the view fails. Adds an error boundary around both. |
+| `i18n.ts` | The component's messages, in the source language: an object of any shape whose leaves are ICU messages or functions. |
+| `i18n/<locale>.json` | A translation of them, keyed by the folder's path and the message's path. Loaded on demand. |
 | `style/skins/<name>/index.ts` | The component's CSS for a skin. |
 
 What the framework guarantees about them:
 
 - **The view is lazy.** The render and its layers load together, on demand. Placeholder and error files load eagerly. A view starts loading the views and skins of the components its render imports, so a child does not wait to render before its own code starts loading.
-- **A component renders only when what it shows changes.** Every component is wrapped in `React.memo`. When a re-render leaves the props, `async`, `state` and `form` as they were, the framework returns the render's last output instead of calling it, and React skips everything inside. A new answer keeps every part equal to the last answer the component showed, so a child given an unchanged part of it gets the same object.
+- **A component renders only when what it shows changes.** Every component is wrapped in `React.memo`. When a re-render leaves the props, `async`, `state` and `form` as they were, the framework returns the render's last output instead of calling it, and React skips everything inside. A new answer keeps every part equal to the last answer the component showed, so a child given an unchanged part of it gets the same object. What the render gets (what `props.ts` returns, or the props and layers) is shared the same way with what it got last time: when nothing in it changed, the render is not called, and a part that did not change keeps its identity, so react-aria's collections and memoized children skip it.
+- **A component follows only what its files read.** The plugin reads what the first parameter of each function the framework calls destructures (`({ intl, async }) => …`), file by file. A component re-renders for a change of locale only when one of its files reads `intl`, `locale` or `i18n` (or the folder has an `i18n.ts`); a parameter that is not destructured reads everything. A default read that reads the locale is keyed by it.
 - **Only components that read the route follow the route.** A component with a default read reads the route context, and so does one with a `state.ts` (its chart may read the route when it is created). Other components do not re-render when the address changes. Operations and statecharts read the committed route when they run.
 - **What a parent passes is checked** when the child's `props.ts` exports a type named `Props`: the plugin writes the folder's declaration from it. A folder without one takes any props.
+
+### The i18n layer
+
+A component folder's `i18n.ts` holds its messages in the source language (English here), as an object of any shape: namespaces as deep as the author likes, recurring names such as `title` under each.
+
+```ts
+export default {
+  title: 'Products',
+  summary: '{count, plural, one {# product} other {# products}}{filter, select, q { matching “{q}”} other {}}',
+  empty: { title: 'Nothing matches', actions: { clear: 'Clear the filters' } },
+}
+```
+
+- The component gets `i18n`, the same shape. A message with no arguments is a string. One with arguments or tags is a function of their values, typed from the ICU: `i18n.summary({ count, filter, q })` takes `{ count: number; filter: string; q: string | number }`, and a missing value is a type error. A tag (`<b>…</b>`) takes a function that says what it becomes, and gives React nodes. A function leaf `(values, intl) => …` is called with its values.
+- `intl` is react-intl's, for the locale on screen: `formatNumber`, `formatDate`, `formatList`, `formatRelativeTime`. `locale` is the locale itself.
+- Translations live beside the messages, in `i18n/<locale>.json`, as flat objects keyed by path (`"components/catalogue/empty/title": "Nada encontrado"`), the shape translation tools exchange. Each loads on demand, the first time a component of the folder shows in that locale. A region falls back to its language's file (`pt-PT` reads `pt.json`), and a locale with none shows the source.
+- `Root`'s `locale` says which locale shows. When it changes, the page keeps the old locale on screen until every component on it has its messages in the new one, then shows the new one in one commit; nothing suspends. A component that reads none of `i18n`, `intl` and `locale` does not render again.
+- The messages of a folder in a locale are built once and shared by every instance.
+- The TypeScript plugin reads `i18n.ts` `as const`, so each message's type is its own text, and `runtime/i18n-types.ts` reads the ICU in it. The checks read every translation against `i18n.ts`: see "Mistakes it names".
+- `framework/testing`'s `messagesOf(module, locale?, translations?)` builds a folder's `i18n` for a test of its `props.ts`, and `intlOf(locale)` gives `intl`.
 
 ### The data layer
 
@@ -127,11 +150,12 @@ Nobody writes them. The TypeScript plugin shows TypeScript each layer file with 
 
 | File | Functions annotated | With |
 |---|---|---|
-| `render` | the default export | what `props.ts` returns, or the props with `className`, `async`, `state`, `form` |
-| `props` | the default export | the file's own `Props`, with `className`, `async`, `state`, `form` |
+| `render` | the default export | what `props.ts` returns, or the props with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale` |
+| `props` | the default export | the file's own `Props`, with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale` |
 | `async` | the default and every named export | the injection, the route, a `signal` |
 | `state` | the default export; every exported function | the injection; `context`, `event`, the route, the form… |
-| `placeholder`, `error` | the default export | the props; the `error` and `resetErrorBoundary` |
+| `placeholder`, `error` | the default export | the props, and `i18n`, `intl` and `locale` when the folder has an `i18n.ts`; the `error` and `resetErrorBoundary` |
+| `i18n` | its default export is read `as const` | each message's own text, which `I18n<…>` reads as ICU |
 | `services/**/index` | every export | the injection |
 | `services/**/meta` | the default export, and what it returns | the injection; the service's own operations |
 | `clients/*/index` | the default export | `env` |
@@ -150,6 +174,8 @@ Every convention mistake that would otherwise fail silently, or far from its cau
 - a service `meta.ts` with no `index` beside it, and a client folder with no `index`;
 - JSX outside a component folder's `render.tsx`, `placeholder.tsx` or `error.tsx` under `components/`, `services/` or `clients/`, where the plugin would not track its handlers;
 - a second component in one of those files: JSX outside its default export, or an element whose tag is a component declared in the file.
+- an `i18n.ts` whose default export is not an object literal of strings, functions and objects of them, so its messages cannot be read without running it, and a message that is not valid ICU;
+- a translation that misses a message, names one `i18n.ts` does not have, translates a function, or loses or adds an argument or a tag (`"components/catalogue/paging/page" loses {pages}`), and translations in a folder with no `i18n.ts`.
 
 A service `meta.ts` is also typed by what it returns, so a mistyped operation name reports "Did you mean to write 'search'?" instead of leaving a read uncached. Skins are read with the same parser as renders, so `import X, { y }` from a component is an error that says why, not a function inside CSS.
 

@@ -2,6 +2,7 @@
 // TypeScript plugin (typescript/), so both agree on what is a component, a client or a service.
 // CommonJS, because tsserver loads its plugins with `require`.
 const { existsSync, readdirSync, readFileSync, statSync } = require('node:fs')
+const { createRequire } = require('node:module')
 const path = require('node:path')
 
 const CODE = /\.(?:[cm]?[jt]sx?)$/
@@ -128,7 +129,7 @@ function listSkins(dir) {
     .filter((skin) => skin.file)
 }
 
-const LAYER_NAMES = ['render', 'props', 'async', 'state', 'form', 'placeholder', 'error']
+const LAYER_NAMES = ['render', 'props', 'async', 'state', 'form', 'placeholder', 'error', 'i18n', 'acl', 'shortcuts']
 /** The layer files that render, where the Vite plugin tracks every `on…` handler. */
 const RENDERING_LAYERS = ['render', 'placeholder', 'error']
 const JSX_FILE = /\.[jt]sx$/
@@ -216,6 +217,190 @@ function secondComponents(root, file) {
 
 
 /**
+ * What the framework may give a component beyond its props and its own layers. Each is read by
+ * the component only when one of its files asks for it (`readsOf`), so a change of locale, of
+ * user, of what the person may do or of a flag renders again the components that read it, and
+ * no other.
+ */
+const SOURCES = ['intl', 'locale', 'i18n', 'user', 'acl', 'flags']
+
+/**
+ * The top-level names the first parameter of each function the framework calls in a component's
+ * files destructures: `({ async, intl }) => …` reads `async` and `intl`. A parameter that is not
+ * destructured (`(props) => …`) may read anything, so it reads every source. The render is left
+ * out when a props.ts shapes what it gets, since it then sees props.ts's output, not the sources.
+ * Returns the sources each file reads and all of them, each in SOURCES order:
+ * `{ all: ['intl'], byLayer: { props: ['intl'], async: [] } }`.
+ */
+function readsOf(root, dir) {
+  const ts = typescriptFor(root)
+  const all = new Set()
+  const byLayer = {}
+  let read
+  const shaped = Boolean(findLayer(dir, 'props'))
+  const files = ['props', 'async', 'state', 'acl', 'shortcuts', ...(shaped ? [] : ['render'])]
+  const exported = (node) => ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+  const isFunction = (node) => node && (ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node))
+  const collect = (fn) => {
+    const parameter = fn.parameters[0]
+    if (!parameter) return
+    if (ts.isObjectBindingPattern(parameter.name)) {
+      for (const element of parameter.name.elements) {
+        const name = element.propertyName ?? element.name
+        if (element.dotDotDotToken) SOURCES.forEach((source) => read.add(source))
+        else if (ts.isIdentifier(name) || ts.isStringLiteral(name)) read.add(name.text)
+      }
+    } else SOURCES.forEach((source) => read.add(source))
+  }
+  for (const layer of files) {
+    const file = findLayer(dir, layer)
+    if (!file) continue
+    read = new Set()
+    const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, JSX_FILE.test(file) ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
+    for (const statement of source.statements) {
+      if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
+        let expression = statement.expression
+        while (ts.isParenthesizedExpression(expression)) expression = expression.expression
+        if (isFunction(expression)) collect(expression)
+      } else if (ts.isFunctionDeclaration(statement) && exported(statement)) collect(statement)
+      else if (ts.isVariableStatement(statement) && exported(statement)) {
+        for (const declaration of statement.declarationList.declarations) if (isFunction(declaration.initializer)) collect(declaration.initializer)
+      }
+    }
+    byLayer[layer] = SOURCES.filter((source) => read.has(source))
+    for (const source of read) all.add(source)
+  }
+  return { all: SOURCES.filter((source) => all.has(source)), byLayer }
+}
+
+/**
+ * The messages of a component's `i18n.ts`, read without running it: its default export must be
+ * an object literal whose leaves are strings (ICU messages) or functions, nested in objects as
+ * deep as the author likes. Returns `{ leaves, issues }`: each leaf's path (`empty/actions/clear`)
+ * with its text, or `null` for a function, and what is wrong, by line.
+ */
+function messagesOf(root, file) {
+  const ts = typescriptFor(root)
+  const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true)
+  const line = (node) => source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1
+  const leaves = new Map()
+  const issues = []
+  const unwrap = (node) => {
+    while (node && (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node))) node = node.expression
+    return node
+  }
+  const walk = (object, at) => {
+    for (const property of object.properties) {
+      if (!ts.isPropertyAssignment(property) || !(ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))) {
+        issues.push({ line: line(property), message: 'a message is written as `name: value`, so its path can be read without running the file' })
+        continue
+      }
+      const path = [...at, property.name.text]
+      const value = unwrap(property.initializer)
+      if (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value)) leaves.set(path.join('/'), value.text)
+      else if (ts.isArrowFunction(value) || ts.isFunctionExpression(value)) leaves.set(path.join('/'), null)
+      else if (ts.isObjectLiteralExpression(value)) walk(value, path)
+      else issues.push({ line: line(property), message: `\`${path.join('.')}\` is neither a string, a function nor an object of them` })
+    }
+  }
+  const exported = source.statements.find((statement) => ts.isExportAssignment(statement) && !statement.isExportEquals)
+  const object = exported && unwrap(exported.expression)
+  if (!object || !ts.isObjectLiteralExpression(object)) issues.push({ line: exported ? line(exported) : 1, message: 'default-exports no object literal of messages' })
+  else walk(object, [])
+  return { leaves, issues }
+}
+
+/** A message's ICU arguments and tags, as sorted names; `null` with the reason when it does not parse. */
+function icuNames(message) {
+  // An ES module, which Node loads with `require` from 20.19 on. Required from this file's own
+  // path: Vite bundles its config, this file with it, and a bare `require` there resolves wrongly.
+  const { parse } = createRequire(__filename)('@formatjs/icu-messageformat-parser')
+  const names = new Set()
+  const visit = (elements) => {
+    for (const element of elements) {
+      if (element.type === 0 || element.type === 7) continue
+      names.add(element.type === 8 ? `<${element.value}>` : `{${element.value}}`)
+      if (element.options) for (const option of Object.values(element.options)) visit(option.value)
+      if (element.children) visit(element.children)
+    }
+  }
+  try {
+    visit(parse(message))
+    return { names: [...names].sort() }
+  } catch (error) {
+    return { error: error.message }
+  }
+}
+
+/**
+ * The translation files of a component folder: `i18n/<locale>.json`, each a flat object whose
+ * keys are the folder's path and the message's path (`components/catalogue/empty/title`).
+ */
+function listTranslations(dir) {
+  const folder = path.join(dir, 'i18n')
+  if (!isDirectory(folder)) return []
+  return readdirSync(folder)
+    .sort()
+    .filter((entry) => entry.endsWith('.json'))
+    .map((entry) => ({ locale: entry.slice(0, -'.json'.length), file: path.join(folder, entry) }))
+}
+
+/**
+ * What is wrong with a component's messages and their translations: `i18n.ts` that cannot be read
+ * as data, and translation files that miss a message, name one `i18n.ts` lacks, or change its
+ * ICU arguments or tags. Each as `{ file, message }`.
+ */
+function i18nProblems(root, dir) {
+  const file = findLayer(dir, 'i18n')
+  if (!file) return listTranslations(dir).length ? [{ file: posix(path.relative(root, path.join(dir, 'i18n'))), message: 'holds translations, but the folder has no i18n.ts' }] : []
+  const found = []
+  const relative = (target) => posix(path.relative(root, target))
+  const { leaves, issues } = messagesOf(root, file)
+  for (const issue of issues) found.push({ file: `${relative(file)}:${issue.line}`, message: issue.message })
+  const base = componentPath(root, dir)
+  for (const [key, text] of leaves) {
+    if (text === null) continue
+    const icu = icuNames(text)
+    if (icu.error) found.push({ file: relative(file), message: `\`${key}\` is not an ICU message: ${icu.error}` })
+  }
+  for (const { locale, file: translations } of listTranslations(dir)) {
+    let entries
+    try {
+      entries = JSON.parse(readFileSync(translations, 'utf8'))
+    } catch (error) {
+      found.push({ file: relative(translations), message: `is not JSON: ${error.message}` })
+      continue
+    }
+    if (!entries || typeof entries !== 'object' || Array.isArray(entries)) {
+      found.push({ file: relative(translations), message: 'is not an object of messages' })
+      continue
+    }
+    for (const [key, value] of Object.entries(entries)) {
+      const own = key.startsWith(`${base}/`) ? key.slice(base.length + 1) : null
+      if (own === null) found.push({ file: relative(translations), message: `"${key}" is not a message of ${base}: its keys start with "${base}/"` })
+      else if (!leaves.has(own)) found.push({ file: relative(translations), message: `"${key}" names a message i18n.ts does not have` })
+      else if (leaves.get(own) === null) found.push({ file: relative(translations), message: `"${key}" translates a function, which is not translated` })
+      else if (typeof value !== 'string') found.push({ file: relative(translations), message: `"${key}" is not a string` })
+      else {
+        const source = icuNames(leaves.get(own))
+        const translated = icuNames(value)
+        if (translated.error) found.push({ file: relative(translations), message: `"${key}" is not an ICU message: ${translated.error}` })
+        else if (!source.error) {
+          const lost = source.names.filter((name) => !translated.names.includes(name))
+          const added = translated.names.filter((name) => !source.names.includes(name))
+          if (lost.length) found.push({ file: relative(translations), message: `"${key}" loses ${lost.join(', ')}` })
+          if (added.length) found.push({ file: relative(translations), message: `"${key}" adds ${added.join(', ')}, which i18n.ts does not pass` })
+        }
+      }
+    }
+    for (const [key, text] of leaves) {
+      if (text !== null && !Object.hasOwn(entries, `${base}/${key}`)) found.push({ file: relative(translations), message: `misses "${base}/${key}" (${locale})` })
+    }
+  }
+  return found
+}
+
+/**
  * The convention mistakes that would otherwise fail silently or far from their cause:
  * each names the file and the rule. The Vite plugin shows them as warnings; `npm run typecheck`
  * (typescript/check.cjs) fails on them, since agents run the type check.
@@ -247,6 +432,7 @@ function problems(root) {
     if (render && index) found.push({ file: relative(dir), message: 'has both render and index: a folder with an index is left alone, so its render is not used' })
     const layers = LAYER_NAMES.filter((name) => name !== 'render' && findLayer(dir, name))
     if (!render && !index && layers.length) found.push({ file: relative(dir), message: `has ${layers.map((name) => `${name}.*`).join(', ')} but no render.tsx, so it is not a component` })
+    if (isComponentFolder(root, dir)) found.push(...i18nProblems(root, dir))
   })
 
   visit(path.join(root, 'services'), (dir) => {
@@ -297,6 +483,11 @@ function problems(root) {
 
 module.exports = {
   problems,
+  SOURCES,
+  readsOf,
+  messagesOf,
+  listTranslations,
+  i18nProblems,
   CODE,
   posix,
   isDirectory,

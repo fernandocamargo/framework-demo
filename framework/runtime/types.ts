@@ -4,6 +4,7 @@
  * filling in the app's own clients and services.
  */
 import type { ReactNode } from 'react'
+import type { I18n, Intl } from './i18n-types'
 import type { Entity, Env, Flags, Navigation, Route } from './index'
 
 /** The page's URL, read when an operation runs. */
@@ -35,8 +36,19 @@ export type Sources = {
   navigation: Navigation
 }
 
-/** What an export of a component's `async.ts` receives: the injection, the sources, and a signal that aborts on unmount. */
-export type AsyncInjection<Clients = Tree, Services = Tree> = Injection<Clients, Services> & Sources & { signal: AbortSignal }
+/**
+ * The locale on screen and what follows it: react-intl's `intl`, and the folder's messages when it
+ * has an `i18n.ts`. A component that destructures any of them follows the locale.
+ */
+export type Language<I18nModule = undefined> = {
+  /** The locale on screen, such as `pt-BR`. */
+  locale: string
+  /** react-intl's `intl` for that locale: `formatNumber`, `formatDate`, `formatList`, `formatRelativeTime`… */
+  intl: Intl
+} & ([I18nModule] extends [undefined] ? unknown : { i18n: I18n<I18nModule> })
+
+/** What an export of a component's `async.ts` receives: the injection, the sources, the locale, and a signal that aborts on unmount. */
+export type AsyncInjection<Clients = Tree, Services = Tree> = Injection<Clients, Services> & Sources & Language & { signal: AbortSignal }
 
 /** What a client's factory receives. */
 export type ClientInjection = { env: Env }
@@ -182,8 +194,9 @@ type Merged<Union> = (Union extends unknown ? (value: Union) => void : never) ex
  * sources. The event is any of the chart's: its `type`, the output of a finished service, and
  * the payloads the file's `Events` declares.
  */
-export type StateArgs<Clients = Tree, Services = Tree, Module = unknown, Payloads = object, FormModule = undefined> = Injection<Clients, Services> &
-  Sources & {
+export type StateArgs<Clients = Tree, Services = Tree, Module = unknown, Payloads = object, FormModule = undefined, I18nModule = undefined> = Injection<Clients, Services> &
+  Sources &
+  Language<I18nModule> & {
     context: ContextOf<Module>
     event: StateEvent<Payloads>
     self: unknown
@@ -209,7 +222,7 @@ export type StateProps<Module, Payloads = object> = Shown<
 type Passed = { children?: ReactNode; [prop: string]: unknown }
 
 /** A component folder's layers, as the TypeScript plugin passes them to `RenderProps`. */
-type Layers = { async?: unknown; state?: unknown; events?: unknown; form?: unknown; passed?: unknown }
+type Layers = { async?: unknown; state?: unknown; events?: unknown; form?: unknown; passed?: unknown; i18n?: unknown }
 
 /**
  * What a render receives: the props (as `props.ts` states them with `export type Props`, when it
@@ -218,7 +231,8 @@ type Layers = { async?: unknown; state?: unknown; events?: unknown; form?: unkno
  */
 export type RenderProps<Folder extends Layers = Layers> = ('passed' extends keyof Folder ? Folder['passed'] : Passed) & { className: string } & ('async' extends keyof Folder ? { async: AsyncProps<Folder['async']> } : unknown) &
   ('state' extends keyof Folder ? { state: StateProps<Folder['state'], Folder['events']> } : unknown) &
-  ('form' extends keyof Folder ? { form: FormProps<Folder['form']> } : unknown)
+  ('form' extends keyof Folder ? { form: FormProps<Folder['form']> } : unknown) &
+  Language<'i18n' extends keyof Folder ? Folder['i18n'] : undefined>
 
 /**
  * What a render receives when its folder has a `props.ts`: what that file's default export returns,
@@ -227,11 +241,11 @@ export type RenderProps<Folder extends Layers = Layers> = ('passed' extends keyo
  */
 export type ShapedProps<Module> = Module extends { default: (...args: never[]) => infer Shaped } ? Shaped & { className: string } : { className: string }
 
-/** What a placeholder receives: the component's props and its `className`. */
-export type PlaceholderProps = Passed & { className: string }
+/** What a placeholder receives: the component's props and its `className`, and the folder's messages when it has an `i18n.ts`. */
+export type PlaceholderProps<I18nModule = undefined> = Passed & { className: string } & ([I18nModule] extends [undefined] ? unknown : Language<I18nModule>)
 
 /** What an error fallback receives: the component's props, its `className`, the error and a way to try again. */
-export type ErrorProps = PlaceholderProps & {
+export type ErrorProps<I18nModule = undefined> = PlaceholderProps<I18nModule> & {
   /** What failed, as an `Error` even when something else was thrown. */
   error: Error
   /** Renders the component again; a failed `async.ts` default export runs again. */

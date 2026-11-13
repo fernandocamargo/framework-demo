@@ -27,6 +27,7 @@ export { Root, type RootProps } from './root'
 export { createQueryClient } from './data'
 export { whenIdle } from './activity'
 export { component, type Spec } from './component'
+export type { I18n, Intl, Message } from './i18n-types'
 export { css, selector } from './style'
 export { track } from './track'
 export { connect, consent, onFailure, pipeline, type Destination, type Failure, type Interaction, type Layer, type Site } from './pipeline'
@@ -39,6 +40,7 @@ export type {
   Clients,
   ErrorProps,
   FormProps,
+  Language,
   Injection,
   Operation,
   OperationState,

@@ -102,3 +102,29 @@ test('a render beside a props.ts gets what props.ts returns; props.ts gets what 
   assert.match(plain, /RenderProps<\{  \}>/)
   assert.deepEqual(syntaxErrors(render, 'seen.tsx'), [])
 })
+
+test("an i18n.ts is read as const, so each message is its literal text", () => {
+  const dir = path.join(root, 'components', 'plain')
+  const file = path.join(dir, 'i18n.ts')
+  const text = "export default {\n  title: 'Products',\n  found: '{count, plural, one {# product} other {# products}}',\n}\n"
+  writeFileSync(file, text)
+  const { text: seen, insertions } = transformer.transform(file, text)
+  assert.equal(seen, "export default {\n  title: 'Products',\n  found: '{count, plural, one {# product} other {# products}}',\n} as const\n")
+  assert.equal(insertions.length, 1)
+  // Already read one way: left alone.
+  const typed = "export default { title: 'Products' } as const\n"
+  assert.equal(transformer.transform(file, typed).text, typed)
+  rmSync(file)
+})
+
+test("a folder's messages reach its render, placeholder and error types", () => {
+  const dir = path.join(root, 'components', 'plain')
+  writeFileSync(path.join(dir, 'i18n.ts'), "export default { title: 'Products' }\n")
+  writeFileSync(path.join(dir, 'placeholder.tsx'), 'export default ({ i18n }) => <p>{i18n.title}</p>;\n')
+  const render = transformer.transform(path.join(dir, 'render.tsx'), 'export default ({ className }) => <p className={className} />;\n').text
+  assert.match(render, /RenderProps<\{ i18n: typeof import\(".*components\/plain\/i18n"\) \}>/)
+  const placeholder = transformer.transform(path.join(dir, 'placeholder.tsx'), 'export default ({ i18n }) => <p>{i18n.title}</p>;\n').text
+  assert.match(placeholder, /PlaceholderProps<typeof import\(".*components\/plain\/i18n"\)>/)
+  rmSync(path.join(dir, 'i18n.ts'))
+  rmSync(path.join(dir, 'placeholder.tsx'))
+})
