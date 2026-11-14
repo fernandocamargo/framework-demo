@@ -153,7 +153,7 @@ Clients are injected, never imported by components or by each other's callers. T
 | [`api`](src/clients/api) | What services use. One line chooses between the two above. |
 | [`local`](src/clients/local) | A browser store for what DummyJSON does not keep. It echoes writes and persists nothing, so edits, creations and deletions are kept here as an overlay, with a version per product. |
 | [`tracker`](src/clients/tracker) | A destination for the framework's pipelines: interactions and failures, for the network lab to show. |
-| [`flags`](src/clients/flags) | OpenFeature, on its in-memory provider until GrowthBook's client key is in the build. The flags of [`definitions.ts`](src/clients/flags/definitions.ts), each with the ways it can be served: stock counting to admins first, deletions on or paused, and the bulk change asking again above 10% for moderators. The way each is served is kept in localStorage, so every tab's provider hears a change, as each would hear GrowthBook's stream. |
+| [`flags`](src/clients/flags) | OpenFeature. In the DummyJSON world, with GrowthBook's client key in the build (`VITE_GROWTHBOOK_CLIENT_KEY`), GrowthBook serves the flags and streams every change made in its dashboard to every tab, through a small provider on its SDK ([`growthbook.ts`](src/clients/flags/growthbook.ts)), loaded only then. Otherwise OpenFeature's in-memory provider serves the flags of [`definitions.ts`](src/clients/flags/definitions.ts), each with the ways it can be served: stock counting to admins first, deletions on or paused, and the bulk change asking again above 10% for moderators. In memory, the way each is served is kept in localStorage, so every tab's provider hears a change, as each would hear GrowthBook's stream. |
 
 Add `?world=memory` to the address and the app runs with no network: same services, same flows, same components. The unit tests and the end-to-end tests use that world, so CI does not depend on DummyJSON being up.
 
@@ -253,6 +253,8 @@ npm ci
 npm run dev        # http://localhost:5180, on DummyJSON
                    # http://localhost:5180/?world=memory, with no network
 ```
+
+GrowthBook serves the DummyJSON world's flags when `.env.local` holds its client key, `VITE_GROWTHBOOK_CLIENT_KEY=sdk-…` (GrowthBook's wizard, `npx @growthbook/wizard --language react`, writes it). Without it, the in-memory provider serves them.
 
 | Script | What it does |
 |---|---|

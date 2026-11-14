@@ -14,7 +14,8 @@ import './base.css'
 // `?world=memory` (or a build with VITE_WORLD=memory) swaps the API client for one that answers
 // from fixtures. Nothing else changes: the same services, flows and components run on it.
 const world: Env['world'] = new URLSearchParams(window.location.search).get('world') === 'memory' || import.meta.env['VITE_WORLD'] === 'memory' ? 'memory' : 'dummyjson'
-const env: Env = { world, apiUrl: 'https://dummyjson.com' }
+// GrowthBook serves the real world's flags when its client key is in the build (.env.local).
+const env: Env = { world, apiUrl: 'https://dummyjson.com', flagsKey: import.meta.env['VITE_GROWTHBOOK_CLIENT_KEY'] }
 const entity = { id: world }
 const navigation: Navigation = { go }
 // One cache for the app's life, so a page's reads survive a dialog opening over it.

@@ -8,6 +8,8 @@ declare module 'framework' {
     world: 'dummyjson' | 'memory'
     /** Where DummyJSON answers. */
     apiUrl: string
+    /** GrowthBook's client key, public by design: with it, GrowthBook serves the DummyJSON world's flags. */
+    flagsKey?: string
   }
   /** Reads are cached under the entity's `id`. Here it is the world, so two worlds never share an answer. */
   interface Entity {

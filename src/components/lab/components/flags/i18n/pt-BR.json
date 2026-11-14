@@ -1,6 +1,7 @@
 {
   "components/lab/components/flags/label": "Feature flags",
   "components/lab/components/flags/intro": "Como cada flag é servida, como o painel do GrowthBook escolheria. Enquanto a chave dele não está no build, o provedor em memória do OpenFeature as serve. Uma mudança chega a todas as abas e renderiza só os componentes que leem aquela flag.",
+  "components/lab/components/flags/remote": "Servidas pelo GrowthBook. Mude-as no painel dele: uma mudança chega a todas as abas na hora e renderiza só os componentes que leem aquela flag.",
   "components/lab/components/flags/value": "Para você: {value}",
   "components/lab/components/flags/on": "ligada",
   "components/lab/components/flags/off": "desligada",

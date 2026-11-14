@@ -1,16 +1,18 @@
-// The feature flags, through OpenFeature. Until the GrowthBook client key arrives, the in-memory
-// provider serves the flags of definitions.ts; with the key, GrowthBook's provider takes its place
-// here, and nothing else changes.
+// The feature flags, through OpenFeature. In the DummyJSON world, with GrowthBook's client key in
+// the build (`VITE_GROWTHBOOK_CLIENT_KEY`), GrowthBook serves them, and streams every change made
+// in its dashboard to every tab. Otherwise (the memory world, the tests, a build without the key)
+// OpenFeature's in-memory provider serves the flags of definitions.ts, and nothing else changes.
 //
-// The way each flag is served is kept as GrowthBook's dashboard would keep it: one place every tab
-// of the world reads (localStorage). A change made in one tab reaches the others' providers, as
-// each tab hears GrowthBook's stream, and each provider says its flags changed.
+// In memory, the way each flag is served is kept as GrowthBook's dashboard would keep it: one place
+// every tab of the world reads (localStorage). A change made in one tab reaches the others'
+// providers, as each tab hears GrowthBook's stream, and each provider says its flags changed.
 import { InMemoryProvider, OpenFeature, ProviderEvents } from '@openfeature/web-sdk'
 import type { Flags } from 'framework'
 import { prefixed } from '../storage'
 import { definitions, names, type Name, type Served, type Targeting } from './definitions'
 
 const KEY = 'flags'
+const GROWTHBOOK = 'https://cdn.growthbook.io'
 
 const defaults = Object.fromEntries(names.map((name) => [name, definitions[name].served])) as Served
 
@@ -26,6 +28,7 @@ const configuration = (served: Served) =>
   )
 
 export default ({ env }) => {
+  const remote = env.world === 'dummyjson' ? env.flagsKey : undefined
   const storage = env.world === 'memory' ? prefixed(window.localStorage, 'memory:') : window.localStorage
   const stored = (): Served => {
     try {
@@ -36,13 +39,22 @@ export default ({ env }) => {
       return defaults
     }
   }
-  const provider = new InMemoryProvider(configuration(stored()))
-  void OpenFeature.setProviderAndWait(provider)
+  const memory = remote ? null : new InMemoryProvider(configuration(stored()))
+  // GrowthBook's SDK loads only when it serves the flags. A provider that cannot reach its flags
+  // leaves each at its fallback (definitions.ts).
+  const ready = (
+    remote
+      ? Promise.all([import('@growthbook/growthbook'), import('./growthbook')]).then(([{ GrowthBook }, { growthbookProvider }]) =>
+          OpenFeature.setProviderAndWait(growthbookProvider(new GrowthBook({ apiHost: GROWTHBOOK, clientKey: remote }), { streaming: true })),
+        )
+      : OpenFeature.setProviderAndWait(memory!)
+  ).catch(() => undefined)
   const client = OpenFeature.getClient()
   // Another tab served a flag another way: this tab's provider takes it.
-  window.addEventListener('storage', (event) => {
-    if (event.key === `${env.world === 'memory' ? 'memory:' : ''}${KEY}`) void provider.putConfiguration(configuration(stored()))
-  })
+  if (memory)
+    window.addEventListener('storage', (event) => {
+      if (event.key === `${env.world === 'memory' ? 'memory:' : ''}${KEY}`) void memory.putConfiguration(configuration(stored()))
+    })
   const value = (name: Name) => {
     const { key, fallback } = definitions[name]
     return typeof fallback === 'boolean' ? client.getBooleanValue(key, fallback) : client.getNumberValue(key, fallback)
@@ -50,6 +62,7 @@ export default ({ env }) => {
   return {
     /** The flags this person gets, as the provider serves them. OpenFeature's web SDK keeps one person at a time. */
     async evaluate(who: Targeting): Promise<Flags> {
+      await ready
       await OpenFeature.setContext(who)
       return Object.fromEntries(names.map((name) => [name, value(name)])) as unknown as Flags
     },
@@ -58,13 +71,17 @@ export default ({ env }) => {
       client.addHandler(ProviderEvents.ConfigurationChanged, listener)
       return () => client.removeHandler(ProviderEvents.ConfigurationChanged, listener)
     },
-    /** The dashboard's side, for the network lab: how each flag is served, and serving one another way. */
+    /**
+     * The dashboard's side, for the network lab: how each flag is served, and serving one another
+     * way. With GrowthBook, its dashboard does that: `served` is null.
+     */
     lab: {
-      served: stored,
+      served: (): Served | null => (memory ? stored() : null),
       async serve<Flag extends Name>(name: Flag, way: Served[Flag]) {
+        if (!memory) throw new Error("GrowthBook serves the flags: change them in GrowthBook's dashboard.")
         const next = { ...stored(), [name]: way }
         storage.setItem(KEY, JSON.stringify(next))
-        await provider.putConfiguration(configuration(next))
+        await memory.putConfiguration(configuration(next))
       },
     },
   }

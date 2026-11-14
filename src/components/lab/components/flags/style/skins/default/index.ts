@@ -9,7 +9,8 @@ export default css`
   .value {
     color: var(--muted);
   }
-  .react-aria-RadioGroup {
+  .react-aria-RadioGroup,
+  .flag {
     display: grid;
     gap: 0.3rem;
     padding-block-start: 0.6rem;

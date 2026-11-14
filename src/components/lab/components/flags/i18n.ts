@@ -3,6 +3,8 @@ export default {
   label: 'Feature flags',
   intro:
     "How each flag is served, as GrowthBook's dashboard would choose. Until its key is in the build, OpenFeature's in-memory provider serves them. A change reaches every tab, and renders only the components that read that flag.",
+  remote:
+    "Served by GrowthBook. Change them in its dashboard: a change streams to every tab at once, and renders only the components that read that flag.",
   value: 'For you: {value}',
   on: 'on',
   off: 'off',
