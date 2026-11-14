@@ -21,3 +21,16 @@ declare module 'virtual:framework/services' {
   }>
   export default services
 }
+
+declare module 'virtual:framework/charts' {
+  const charts: Array<{
+    /** The component folder's path, such as `components/product/editor`. */
+    path: string
+    /** The component, as importing its folder gives it. */
+    component: () => Promise<{ default: import('react').ComponentType<Record<string, unknown>> }>
+    /** Its `state.ts`. */
+    state: () => Promise<Record<string, unknown>>
+  }>
+  export default charts
+}
+

@@ -28,7 +28,8 @@
  */
 import { createActor, enqueueActions, fromPromise, setup, type AnyActorRef, type AnyStateMachine, type SnapshotFrom } from 'xstate'
 import { useSelector } from '@xstate/react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { use, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { PinContext, type Pin } from './pin'
 import { report } from './pipeline'
 import { sameParts, tracking } from './reads'
 
@@ -209,19 +210,30 @@ function stopRestartably(actor: AnyActorRef) {
   }
 }
 
-/** The running chart: the declared one, once the flow is at rest; the last one until then. */
-function useChart(declared: Declared) {
-  const [current, setCurrent] = useState(() => ({ declared, actor: createActor(declared.machine) as AnyActorRef }))
+/** A dotted state path as XState's state value: `form.invalid` is `{ form: 'invalid' }`. */
+const valueOf = (path: string): unknown => path.split('.').reduceRight<unknown>((inner, key) => (inner === undefined ? key : { [key]: inner }), undefined)
+
+/** The chart held in one state, with the example's context over its own: never started, so nothing moves. */
+function pinnedActor(machine: AnyStateMachine, pin: Pin) {
+  const start = createActor(machine).getSnapshot() as SnapshotFrom<AnyStateMachine>
+  const snapshot = machine.resolveState({ value: valueOf(pin.state) as never, context: { ...start.context, ...pin.example?.context } })
+  return createActor(machine, { snapshot }) as AnyActorRef
+}
+
+/** The running chart: the declared one, once the flow is at rest; the last one until then. A pinned one is never started. */
+function useChart(declared: Declared, pin: Pin | null) {
+  const [current, setCurrent] = useState(() => ({ declared, actor: pin ? pinnedActor(declared.machine, pin) : (createActor(declared.machine) as AnyActorRef) }))
   let running = current
-  if (declared !== current.declared && atRest(current.actor.getSnapshot())) {
+  if (!pin && declared !== current.declared && atRest(current.actor.getSnapshot())) {
     running = { declared, actor: createActor(declared.machine, carried(declared.machine, current.actor.getSnapshot())) as AnyActorRef }
     setCurrent(running)
   }
   const { actor } = running
   useEffect(() => {
+    if (pin) return
     actor.start()
     return () => stopRestartably(actor)
-  }, [actor])
+  }, [actor, pin])
   return running
 }
 
@@ -244,9 +256,12 @@ export function useStateLayer(path: string, module: StateModule, injection: Sour
     committed.current = true
     live.current = sources
   })
+  // In the states gallery, the component this pin names is held in one state.
+  const pinned = use(PinContext)
+  const pin = pinned?.path === path ? pinned : null
   const chart = useRef<Declared | null>(null)
   if (!chart.current || stale(chart.current, module, injection, declared)) chart.current = declare(path, module, injection, declared, live)
-  const running = useChart(chart.current)
+  const running = useChart(chart.current, pin)
   const { actor } = running
   const { flags } = running.declared
   const snapshot = useSelector(actor, (state: SnapshotFrom<AnyStateMachine>) => state)
@@ -261,6 +276,7 @@ export function useStateLayer(path: string, module: StateModule, injection: Sour
   useEffect(() => {
     const previous = before.current
     before.current = told
+    if (pin) return
     for (const source of Object.keys(told)) if (!Object.is(previous[source], told[source])) actor.send({ type: source })
   })
 

@@ -17,10 +17,11 @@ const same = (a: Record<string, unknown>, b: Record<string, unknown>) => {
   return [...keys].every((key) => Object.is(a[key], b[key]))
 }
 
-export function useFormLayer(module: FormModule) {
+/** `start`: values over the empty ones, for a component held in one state in the states gallery. */
+export function useFormLayer(module: FormModule, start?: Record<string, unknown>) {
   const empty = () => (module.seed ? module.seed(undefined as never) : {})
   const [state, setState] = useState(() => {
-    const values = empty()
+    const values = { ...empty(), ...start }
     return { values, initial: values }
   })
 

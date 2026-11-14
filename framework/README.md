@@ -41,7 +41,7 @@ A folder under `components/` with a `render` file and no `index` is a component.
 | `render.tsx` | Places markup and interpolates. Called as a plain function, with no hooks. Receives what `props.ts` returns, or the props with `className`, `async`, `state` and `form`. |
 | `props.ts` | A plain function from what the render would get to what it gets: derived values, texts, which actions a person may take. `export type Props` states what a parent passes. |
 | `async.ts` | The default export is the read before the first render. Named exports are operations. |
-| `state.ts` | The flow, as a statechart. |
+| `state.ts` | The flow, as a statechart. `examples` says what each state needs on screen in the states gallery. |
 | `form.ts` | `seed` (server data to values) and `payload` (values to a request). |
 | `placeholder.tsx` | Shows while the view loads and reads. Adds a `Suspense`. |
 | `error.tsx` | Shows when the view fails. Adds an error boundary around both. |
@@ -192,6 +192,23 @@ flow.send({ type: 'save' })
 await flow.settled()
 expect(flow.states).toEqual(['saved'])
 ```
+
+### The states gallery
+
+Every component folder with a `state.ts`, in each state of its chart, from the folders alone:
+
+- The plugin lists the folders with a chart (`virtual:framework/charts`). `charts()` declares each chart with a stand-in for the injection that answers anything, so a declaration that branches on what may be done lists every state it can have, and gives each state's path and `description`.
+- `<Pinned path state example>` holds the component at `path`, rendered inside, in one state: its chart is created in that state and never started, so no service runs and no event moves it. `chartAt(path)` loads the component and its examples.
+- A state that needs more on screen than the chart starts with gets it from the `state.ts`'s `examples`, by state: `context` over the chart's own, `values` over the form's empty ones, and `props` a parent would pass.
+
+  ```ts
+  export const examples = {
+    conflict: { context: { title: 'Arc Floor Lamp' }, values: { ...lamp, price: 249.99 } },
+    failed: { context: { title: 'Arc Floor Lamp', error: 'The server answered 500.' }, values: lamp },
+  }
+  ```
+
+The demo's page is `#/states`: one frame per state, each the app alone in the memory world, in the locale on screen, at half its size. A frame per state keeps each one's dialogs to itself. A state's description is its chart's, as `state.ts` writes it.
 
 ### The form stand-in
 

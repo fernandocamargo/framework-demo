@@ -2,6 +2,7 @@ import { act, render } from '@testing-library/react'
 import { createElement, type ReactNode } from 'react'
 import { component } from '../component'
 import { createQueryClient } from '../data'
+import { Pinned } from '../pin'
 import { Root } from '../root'
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }))
@@ -139,4 +140,17 @@ test('a chart whose file reads a source is told when it changes, by an event of 
   expect(shown.textContent).toBe('waiting')
   await flow.grant([])
   expect(shown.textContent).toBe('refused')
+})
+
+test('a pinned component shows the state it is held in, with the example over its context, and its chart does not move', async () => {
+  const flow = setup(() => ({
+    idle: { on: { start: 'editing' } },
+    editing: { on: { save: 'saved' } },
+    saved: {},
+  }))
+  const shown = await show(createElement(Pinned, { path: 'components/flow', state: 'editing', example: { context: { note: 'held' } } }, flow.element))
+  expect(shown.textContent).toBe('editing')
+  await flow.send('save')
+  await settle()
+  expect(shown.textContent).toBe('editing')
 })

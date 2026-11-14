@@ -28,6 +28,7 @@ import { useFormLayer, type FormModule } from './form'
 import { activeLocale, intlFor, LocaleContext, loadMessages, showing, SOURCE_LOCALE } from './i18n'
 import type { Allowed } from './index'
 import { useStateLayer, type StateModule } from './machine'
+import { PinContext } from './pin'
 import { shortcutsOf, useKeyboard, useShortcuts, type Entry, type ShortcutSites } from './shortcuts'
 import { report, toError, type Scope } from './pipeline'
 import { RouteContext, useFramework } from './root'
@@ -265,7 +266,9 @@ export function component(spec: Spec) {
       shown.current = initial
     }, [initial])
 
-    const form = useFormLayer((module.form ?? NO_LAYER) as FormModule)
+    // A component held in one state in the states gallery starts its form with the example's values.
+    const pin = use(PinContext)
+    const form = useFormLayer((module.form ?? NO_LAYER) as FormModule, pin?.path === spec.path ? pin.example?.values : undefined)
     const withForm = useMemo(() => (module.form ? { ...injected, form } : injected), [injected, form, module.form])
     const operations = useOperations(spec.path, module.async, withForm)
     const hasRead = query !== null

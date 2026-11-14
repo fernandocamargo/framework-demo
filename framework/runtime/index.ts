@@ -37,6 +37,8 @@ export interface Navigation {}
 export { Root, type RootProps } from './root'
 export { createQueryClient, update } from './data'
 export { whenIdle } from './activity'
+export { chartAt, charts, type Chart, type ChartState } from './gallery'
+export { Pinned, type Example } from './pin'
 export { component, type Spec } from './component'
 export type { I18n, Intl, Message } from './i18n-types'
 export { css, selector } from './style'
