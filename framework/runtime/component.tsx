@@ -18,15 +18,15 @@
  * everything below it get that as `acl.allowed`, until a folder below says otherwise.
  */
 import { createContext, createElement, memo, Suspense, use, useCallback, useLayoutEffect, useMemo, useRef, type ComponentType, type ReactNode } from 'react'
-import { useQueryErrorResetBoundary, useSuspenseQuery } from '@tanstack/react-query'
+import { useQueryErrorResetBoundary, useSuspenseQueries, useSuspenseQuery, type QueryObserverResult } from '@tanstack/react-query'
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary'
 import { Pending, hold } from './activity'
 import { execute, useOperations, type AsyncModule } from './async'
 import { recording, recordingRoute, shareByIdentity } from './data'
-import { pick, tracking, untracked } from './reads'
+import { sameParts, tracking, untracked } from './reads'
 import { useFormLayer, type FormModule } from './form'
 import { activeLocale, intlFor, LocaleContext, loadMessages, showing, SOURCE_LOCALE } from './i18n'
-import type { Allowed } from './index'
+import type { Allowed, Flags } from './index'
 import { useStateLayer, type StateModule } from './machine'
 import { PinContext } from './pin'
 import { shortcutsOf, useKeyboard, useShortcuts, type Entry, type ShortcutSites } from './shortcuts'
@@ -82,6 +82,17 @@ export const AclContext = createContext<boolean>(true)
 AclContext.displayName = 'Acl'
 
 const NO_SNAPSHOT = Object.freeze({})
+const NO_FLAGS = Object.freeze({}) as Flags
+
+/**
+ * A value as a component last rendered it. A new one stands for a change in a part the component
+ * read; the same one, for none. It is not a plain object, so TanStack compares it by identity.
+ */
+class Seen {
+  constructor(readonly value: unknown) {}
+}
+/** The same `Seen` while the parts under `keys` stay as they were, a new one when one changes. */
+const seenOf = (last: Seen | null, value: unknown, keys: ReadonlySet<string>) => (last && sameParts(last.value, value, keys) ? last : new Seen(value))
 /** Each snapshot with each decision on it, one object per pair, so it keeps its identity. */
 const decisions = new WeakMap<object, [Allowed?, Allowed?]>()
 
@@ -132,14 +143,17 @@ export function component(spec: Spec) {
   const keyedByUser = inAsync.has('user')
   const readsAcl = anywhere('acl')
   const keyedByAcl = inAsync.has('acl')
+  const readsFlags = anywhere('flags')
+  const keyedByFlags = inAsync.has('flags')
   const viewReadsRoute = inView.has('route') || inAcl.has('route')
   // The keys on screen, for a component that lists them.
   const readsKeyboard = inView.has('keyboard')
-  // An acl.ts that reads only `acl` (the snapshot, and what is inherited) is a rule of the folder,
-  // the same for every instance: it is decided where the snapshot is read, and an instance renders
-  // again only when its decision changes, not every time the snapshot does (a sign-in re-decides
-  // a delete link in every row, and renders none whose answer stays the same).
-  const folderRule = inAcl.size > 0 && [...inAcl].every((name) => name === 'acl')
+  // An acl.ts that reads only `acl` (the snapshot, and what is inherited) and `flags` is a rule of
+  // the folder, the same for every instance: it is decided where the snapshot and the flags are
+  // read, and an instance renders again only when its decision changes, not every time the snapshot
+  // or a flag does (a sign-in re-decides a delete link in every row, and renders none whose answer
+  // stays the same).
+  const folderRule = inAcl.size > 0 && [...inAcl].every((name) => name === 'acl' || name === 'flags')
   // A rule that reads the chart's state is decided after the chart; any other, before it, so the
   // chart's declaration and its guards see this render's decision.
   const ruleReadsState = inAcl.has('state') || inAcl.has('*')
@@ -182,18 +196,22 @@ export function component(spec: Spec) {
 
   /** Every layer of the view but the state layer, called in the same order on every render. */
   function useLayers() {
-    const { injection, skin, sources, data, user: userRead, acl: aclRead } = useFramework()
+    const { injection, skin, sources, data, user: userRead, acl: aclRead, flags: flagsRead } = useFramework()
     const language = useLanguage()
     // The person signed in, from Root's `user` read: a sign-in or a sign-out makes it stale, and
     // only the components that read it render again.
     const user = readsUser ? (userRead ? (useSuspenseQuery(userRead).data as unknown) : null) : undefined
     const module = use(loadView())
     const inherited = readsAcl || module.acl ? use(AclContext) : true
-    // The parts of the backend's snapshot this component's files read, recorded as they read
-    // them (reads.ts). The component follows those parts, and its own rule's decision: TanStack
-    // renders it again only when what `select` returns changes.
+    // The parts of the backend's snapshot and of the flags this component's files read, recorded as
+    // they read them (reads.ts). The component follows those parts, and its folder rule's decision:
+    // one subscription to both reads, which renders it again only when what `combine` returns
+    // changes. Each part is compared with what this component last rendered, so the keys a render
+    // first reads count from the first change on.
     const keys = useRef(new Set<string>()).current
+    const flagKeys = useRef(new Set<string>()).current
     const views = useRef(new WeakMap<object, Allowed>()).current
+    const flagViews = useRef(new WeakMap<object, Flags>()).current
     const view = useCallback(
       (acl: Allowed) => {
         let tracked = views.get(acl)
@@ -202,14 +220,43 @@ export function component(spec: Spec) {
       },
       [views, keys],
     )
-    const rule = folderRule ? module.acl?.default : undefined
-    const select = useCallback(
-      (snapshot: unknown) => ({ parts: pick(snapshot, ofSnapshot(keys)), decided: rule ? decide(rule, { acl: allowedOn(snapshot, inherited) }) : undefined }),
-      [rule, inherited, keys],
+    const flagsView = useCallback(
+      (flags: Flags) => {
+        let tracked = flagViews.get(flags)
+        if (!tracked) flagViews.set(flags, (tracked = tracking(flags, flagKeys)))
+        return tracked
+      },
+      [flagViews, flagKeys],
     )
-    const followed = readsAcl ? (aclRead ? (useSuspenseQuery({ ...aclRead, select }).data as ReturnType<typeof select>) : select(NO_SNAPSHOT)) : undefined
+    const rule = folderRule ? module.acl?.default : undefined
+    // Which of Root's reads this component subscribes to, in a fixed order: whether it reads each is
+    // fixed once its view has loaded, and whether Root has each, for Root's life.
+    const aclAt = readsAcl && aclRead ? 0 : -1
+    const flagsAt = readsFlags && flagsRead ? aclAt + 1 : -1
+    const seen = useRef<{ acl: Seen | null; flags: Seen | null }>({ acl: null, flags: null }).current
+    const combine = useCallback(
+      (results: readonly Pick<QueryObserverResult, 'data'>[]) => {
+        const snapshot = aclAt < 0 ? NO_SNAPSHOT : results[aclAt]?.data
+        const flags = (flagsAt < 0 ? NO_FLAGS : results[flagsAt]?.data) as Flags
+        return {
+          parts: readsAcl ? seenOf(seen.acl, snapshot, ofSnapshot(keys)) : undefined,
+          flags: readsFlags ? seenOf(seen.flags, flags, flagKeys) : undefined,
+          decided: rule ? decide(rule, { acl: allowedOn(snapshot, inherited), flags }) : undefined,
+        }
+      },
+      [rule, inherited, keys, flagKeys, aclAt, flagsAt, seen],
+    )
+    const subscribed = [...(aclAt < 0 ? [] : [aclRead!]), ...(flagsAt < 0 ? [] : [flagsRead!])]
+    const followed = readsAcl || readsFlags ? (subscribed.length ? useSuspenseQueries({ queries: subscribed, combine }) : combine([])) : undefined
+    // What this render shows: a later change is compared with it.
+    if (followed) {
+      seen.acl = followed.parts ?? null
+      seen.flags = followed.flags ?? null
+    }
     const latest = useCallback(() => (aclRead ? data.client.getQueryData(aclRead.queryKey) : NO_SNAPSHOT), [aclRead, data])
+    const latestFlags = useCallback(() => ((flagsRead ? data.client.getQueryData(flagsRead.queryKey) : undefined) ?? NO_FLAGS) as Flags, [flagsRead, data])
     const snapshot = readsAcl ? latest() : undefined
+    const flagged = readsFlags ? latestFlags() : undefined
     const route = viewReadsRoute ? use(RouteContext) : undefined
     const keyboard = readsKeyboard ? useKeyboard() : undefined
     // What the chart's guards and the operations read when they run: the latest decision, set by
@@ -223,11 +270,12 @@ export function component(spec: Spec) {
     const { locale } = language
     const injected = useMemo(() => {
       const all: Record<string, unknown> = { ...injection, ...sources, ...defined(language), ...defined({ user }) }
-      // A getter: the chart's guards and the operations spread these when they run, and get the
-      // snapshot and the decision of that moment.
+      // Getters: the chart's guards and the operations spread these when they run, and get the
+      // snapshot, the decision and the flags of that moment.
       if (readsAcl) Object.defineProperty(all, 'acl', { get: () => view(allowedOn(latest(), judged.current)), enumerable: true })
+      if (readsFlags) Object.defineProperty(all, 'flags', { get: () => flagsView(latestFlags()), enumerable: true })
       return all
-    }, [injection, sources, language, user, view, latest])
+    }, [injection, sources, language, user, view, latest, flagsView, latestFlags])
 
     // The default export of async.ts, as a query: it records the services and route parameters
     // it reads, so the data layer knows when to run it again. It gets the query's signal, which
@@ -247,11 +295,11 @@ export function component(spec: Spec) {
               readRoute,
               (record, signal) =>
                 execute(exported, { ...injected, signal, services: recording(injection.services, record.service, record.peek), route: recordingRoute(readRoute, record.route) }, []),
-              keyedByLocale || keyedByUser || keyedByAcl
-                ? defined({ locale: keyedByLocale ? locale : undefined, user: keyedByUser ? userId : undefined, acl: keyedByAcl ? snapshot : undefined })
+              keyedByLocale || keyedByUser || keyedByAcl || keyedByFlags
+                ? defined({ locale: keyedByLocale ? locale : undefined, user: keyedByUser ? userId : undefined, acl: keyedByAcl ? snapshot : undefined, flags: keyedByFlags ? flagged : undefined })
                 : undefined,
             ),
-      [data, exported, injection, injected, readRoute, locale, userId, snapshot],
+      [data, exported, injection, injected, readRoute, locale, userId, snapshot, flagged],
     )
     // A view with no default read has no query. A stand-in query would suspend the first instance
     // of each such component once, and React would render everything inside the boundary again
@@ -273,9 +321,10 @@ export function component(spec: Spec) {
     const operations = useOperations(spec.path, module.async, withForm)
     const hasRead = query !== null
     const async = useMemo(() => module.async && { ...operations, ...(hasRead ? { default: initial } : {}) }, [module.async, operations, hasRead, initial])
+    const flags = flagged && flagsView(flagged)
     const access = useMemo(
-      () => ({ given: defined({ user, route, keyboard }), user, inherited, decided: followed?.decided, snapshot, view }),
-      [user, route, keyboard, inherited, followed, snapshot, view],
+      () => ({ given: defined({ user, flags, route, keyboard }), user, flags, flagged, inherited, decided: followed?.decided, snapshot, view }),
+      [user, flags, flagged, route, keyboard, inherited, followed, snapshot, view],
     )
     return { module, scope, injection, sources, withForm, form, async, language, access, judged }
   }
@@ -367,7 +416,7 @@ export function component(spec: Spec) {
   // calls a hook behind a condition. The view's module, once loaded, decides which.
   function StatefulView(props: Props) {
     const layers = useLayers()
-    const { module, access, judged, language, sources } = layers
+    const { module, access, judged, language } = layers
     // The decision comes before the chart, so its declaration and its guards see this render's.
     // A rule that reads the chart's state is decided after it, in show.
     const early = ruleReadsState ? undefined : decisionOf(module, givenOf(props, layers, undefined, classes(spec.path, props.className)), access)
@@ -377,7 +426,7 @@ export function component(spec: Spec) {
     const declared = defined({
       acl: readsAcl ? access.view(allowedOn(access.snapshot, judged.current)) : undefined,
       user: access.user,
-      flags: sources.flags,
+      flags: access.flags,
       ...language,
     })
     // The route being rendered, for the chart's first reads (machine.ts), read only until the
@@ -386,7 +435,7 @@ export function component(spec: Spec) {
     const told = defined({
       user: inState.has('user') ? access.user : undefined,
       acl: inState.has('acl') ? access.snapshot : undefined,
-      flags: inState.has('flags') ? sources.flags : undefined,
+      flags: inState.has('flags') ? access.flagged : undefined,
       locale: inState.has('locale') ? language.locale : undefined,
     })
     const state = useStateLayer(spec.path, module.state as StateModule, layers.injection, declared, layers.withForm, readRendering, told)

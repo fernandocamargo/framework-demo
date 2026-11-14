@@ -1,7 +1,7 @@
 /**
  * `Root`: composes what the framework provides: the injection, the data layer (one
- * TanStack Query client), the sources the state and async layers read (`entity`,
- * `route`, `flags`, `navigation`), the page's skin, and the app's global error listeners, the
+ * TanStack Query client), the sources the state and async layers read (`entity`, `route`,
+ * `navigation`), the reads every layer may follow (`user`, `acl`, `flags`), the page's skin, and the app's global error listeners, the
  * last resort of the error pipeline. A `Suspense` at the top catches components with no
  * placeholder.
  */
@@ -16,10 +16,10 @@ import { report, setLocation } from './pipeline'
 import { listenToKeys } from './shortcuts'
 import { activateSkin } from './style'
 
-type Sources = { entity: Entity; route: Route; flags: Flags; navigation: Navigation }
-/** The query of Root's `user` read, which components that read `user` share. */
-type UserRead = ReturnType<DataLayer['component']>
-type Framework = { injection: Injection; skin: string; sources: Sources; data: DataLayer; user: UserRead | null; acl: UserRead | null }
+type Sources = { entity: Entity; route: Route; navigation: Navigation }
+/** The query of one of Root's reads (`user`, `acl`, `flags`), which the components that read it share. */
+type Read = ReturnType<DataLayer['component']>
+type Framework = { injection: Injection; skin: string; sources: Sources; data: DataLayer; user: Read | null; acl: Read | null; flags: Read | null }
 
 const FrameworkContext = createContext<Framework | null>(null)
 FrameworkContext.displayName = 'Framework'
@@ -60,8 +60,15 @@ export type RootProps = {
   entity?: Entity
   /** The current route's parameters. A stand-in until the routing layer is designed. */
   route?: Route
-  /** The feature flags. */
-  flags?: Flags
+  /**
+   * The feature flags for the person signed in: a read of the services, given that person as the
+   * `user` read names them (`({ services, user }) => services.flags.evaluate(…)`). Every component
+   * file and chart declaration that reads `flags` gets them, waits for them the first time, and
+   * follows only the flags it reads. It runs through the data layer and reads the person the way
+   * the `user` read does, so a sign-in or a sign-out reads it again; a service read that follows
+   * its source (`follows` in `meta.ts`) reads it again when a flag changes. Keep the function stable.
+   */
+  flags?: (injection: Injection & { signal: AbortSignal; user: User | null }) => Promise<Flags>
   /**
    * Who is signed in: a read of the services, such as the session and then the profile it names
    * (`({ services }) => …`), resolving to the person or `null`. Components whose files read
@@ -109,7 +116,7 @@ export type RootProps = {
   children?: ReactNode
 }
 
-export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, navigation = NONE, skin = 'default', locale = SOURCE_LOCALE, user, acl, sync, location, client: given, children }: RootProps) {
+export function Root({ env = NONE, entity = NONE, route = NONE, flags, navigation = NONE, skin = 'default', locale = SOURCE_LOCALE, user, acl, sync, location, client: given, children }: RootProps) {
   // Services were created once and read the entity when they run, so the entity they see is live.
   const current = useRef(entity)
   current.current = entity
@@ -133,7 +140,7 @@ export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, na
     committedRoute.current = route
   }, [route])
   const liveRoute = useMemo(() => liveView(committedRoute), [])
-  const sources = useMemo(() => ({ entity, route: liveRoute, flags, navigation }), [entity, liveRoute, flags, navigation])
+  const sources = useMemo(() => ({ entity, route: liveRoute, navigation }), [entity, liveRoute, navigation])
   // A new route counts as pending for `whenIdle()` until React commits it: a navigation in a
   // transition keeps the old page on screen with no placeholder while React renders the new one.
   useCommitted(route)
@@ -165,7 +172,20 @@ export function Root({ env = NONE, entity = NONE, route = NONE, flags = NONE, na
     () => (acl ? data.component('framework/acl', {}, (record, signal) => acl({ ...injection, signal, services: recording(injection.services, record.service, record.peek) })) : null),
     [data, injection, acl],
   )
-  const framework = useMemo(() => ({ injection, skin, sources, data, user: userRead, acl: aclRead }), [injection, skin, sources, data, userRead, aclRead])
+  // The flags are for a person: the read runs the `user` read's function too, through the same
+  // recording, so it reads what that one reads (cached), and is read again whenever it is.
+  const flagsRead = useMemo(
+    () =>
+      flags
+        ? data.component('framework/flags', {}, async (record, signal) => {
+            const services = recording(injection.services, record.service, record.peek)
+            const person = user ? await user({ ...injection, signal, services }) : null
+            return flags({ ...injection, signal, services, user: person })
+          })
+        : null,
+    [data, injection, user, flags],
+  )
+  const framework = useMemo(() => ({ injection, skin, sources, data, user: userRead, acl: aclRead, flags: flagsRead }), [injection, skin, sources, data, userRead, aclRead, flagsRead])
 
   // Failures and interactions carry where the app is; setLocation returns what unsets it.
   useEffect(() => (location === undefined ? undefined : setLocation(location)), [location])

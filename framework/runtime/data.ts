@@ -36,6 +36,12 @@ export type ServiceRule = {
   invalidates?: unknown[]
   /** The reads this write changes when it is sent, before the server confirms it, each with how. */
   optimistic?: readonly Update[]
+  /**
+   * For a read whose source can change outside the app (a flag provider's push, a socket): calls
+   * `stale` whenever it does, and the read and every component that read it are read again.
+   * Called once, when the rules are read; what it returns, if anything, stops it.
+   */
+  follows?: (stale: () => void) => void | (() => void)
 }
 
 /** One read a write changes when it is sent, and how: `update(products.get, (product, change) => …)`. */
@@ -241,10 +247,13 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
     rederive(targets)
   }
 
-  /** Makes the reads at these paths stale, and every component that read one; `by` is the write's path. */
-  const invalidatePaths = (targets: Set<string>, by: string, fromTab = false) => {
+  /**
+   * Makes the reads at these paths stale, and every component that read one. `by` is the write's
+   * path; `from` says when it was not a write here: another tab's, or the read's own source.
+   */
+  const invalidatePaths = (targets: Set<string>, by: string, from?: 'tab' | 'source') => {
     if (!targets.size) return Promise.resolve()
-    emitData({ action: 'stale', path: by, reads: [...targets], ...(fromTab ? { outcome: 'received' as const } : {}) })
+    emitData({ action: 'stale', path: by, reads: [...targets], ...(from ? { outcome: from === 'tab' ? ('received' as const) : ('pushed' as const) } : {}) })
     const stale = (query: Query) => {
       const [first] = query.queryKey
       if (typeof first === 'string' && targets.has(first)) return true
@@ -275,7 +284,7 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
         const reads = stale.filter((path): path is string => typeof path === 'string')
         const by = typeof event.data.by === 'string' ? event.data.by : 'another tab'
         emitData({ action: 'tab', path: by, outcome: 'received', reads })
-        void hold(invalidatePaths(new Set(reads), by, true))
+        void hold(invalidatePaths(new Set(reads), by, 'tab'))
       }
       return () => {
         channel.close()
@@ -285,6 +294,9 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
     /** Records what a service folder's `meta.ts` says, keyed by operation path. */
     rule(path: string, rule: ServiceRule) {
       rules.set(path, rule)
+      // A read that follows its source is stale when the source says so: here, and in each tab
+      // that hears its source too.
+      rule.follows?.(() => void hold(invalidatePaths(new Set([path]), path, 'source')))
     },
     /** Runs a service operation through the data layer. */
     call(path: string, operation: Operation, args: unknown[]): Promise<unknown> {

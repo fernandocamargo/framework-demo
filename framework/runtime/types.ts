@@ -171,6 +171,12 @@ export type ServiceMeta<Module> = {
      * `[update(products.get, (product, change) => …)]`. Shown at once; taken out if the write fails.
      */
     optimistic?: readonly Update<ArgsOf<Module[Name]>>[]
+    /**
+     * For a read whose source can change outside the app (a flag provider's push, a socket): calls
+     * `stale` whenever it does, and the read is read again, with every component that read it.
+     * `(stale) => flags.changed(stale)`. What it returns, if anything, stops it.
+     */
+    follows?: (stale: () => void) => void | (() => void)
   }
 }
 

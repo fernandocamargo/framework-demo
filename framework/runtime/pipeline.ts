@@ -86,13 +86,14 @@ export type DataEvent = {
    * - `derive`: a component's answer was worked out again from the cache, for an optimistic write;
    * - `write`: a write was sent, or ended (`outcome`);
    * - `optimistic`: a write's changes to `reads` show; `rollback`: they were taken back;
-   * - `stale`: `reads` were made stale, by the write at `path`, or by another tab's;
+   * - `stale`: `reads` were made stale, by the write at `path`, by another tab's (`outcome:
+   *   'received'`), or by their own source (`'pushed'`: a read that follows it, in `meta.ts`);
    * - `tab`: a message to the other tabs (`outcome: 'sent'`) or from one (`'received'`).
    */
   action: 'read' | 'derive' | 'write' | 'optimistic' | 'rollback' | 'stale' | 'tab'
   path: string
   reads?: string[]
-  outcome?: 'sent' | 'done' | 'failed' | 'received'
+  outcome?: 'sent' | 'done' | 'failed' | 'received' | 'pushed'
   /** The interaction whose handler started it. */
   cause?: number
   /** How long it took, in milliseconds. */
