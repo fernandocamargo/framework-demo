@@ -43,6 +43,24 @@ onFailure((failure) =>
   ),
 )
 
+// One element for the page's life: the shell renders again at every change of address, and React
+// skips an element it showed before.
+const failures = (
+  <ToastRegion queue={toasts} aria-label="Failures">
+    {({ toast }) => (
+      <Toast toast={toast}>
+        <ToastContent>
+          <Text slot="title">{toast.content.title}</Text>
+          <Text slot="description">{toast.content.description}</Text>
+        </ToastContent>
+        <Button slot="close" aria-label="Dismiss">
+          <span className="icon" data-icon="close" />
+        </Button>
+      </Toast>
+    )}
+  </ToastRegion>
+)
+
 // The address changes inside a transition: a page whose read is keyed by the address keeps
 // showing until the new read arrives, instead of falling back to its placeholder.
 function useRoute() {
@@ -118,19 +136,7 @@ function Shell() {
       <Root env={env} entity={entity} route={route} navigation={navigation} client={client} locale={locale} user={whoIsSignedIn} acl={permissions} flags={featureFlags} sync={`stockroom:${world}`}>
         {page === null ? <App navigating={navigating} /> : 'gallery' in page ? <States /> : <Frame key={`${page.path}/${page.state}`} path={page.path} state={page.state} />}
       </Root>
-      <ToastRegion queue={toasts} aria-label="Failures">
-        {({ toast }) => (
-          <Toast toast={toast}>
-            <ToastContent>
-              <Text slot="title">{toast.content.title}</Text>
-              <Text slot="description">{toast.content.description}</Text>
-            </ToastContent>
-            <Button slot="close" aria-label="Dismiss">
-              <span className="icon" data-icon="close" />
-            </Button>
-          </Toast>
-        )}
-      </ToastRegion>
+      {failures}
     </I18nProvider>
   )
 }

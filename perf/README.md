@@ -106,3 +106,13 @@ Two changes for every component, and one for forms. Chromium, one run, the same 
 - **A form that follows what it reads.** The values live in a store per instance; a component follows only the values its files read. The editor's fields hold what is typed and start from `form.initial`. Typing six keys in the title: no framework render (6 before) and 50 of react-aria's components (602 before), 18 of them changing nothing (366 before); 0.8 ms of render time (7.5 ms before). The rest is react-aria's text field, which renders its label, input and error with each key.
 
 Shared elements alone barely moved typing (584, 348): while the editor held the value, each key changed the title field's element and every element around it, and react-aria's `Form`, `Dialog` and `Modal` gave their fields new context values.
+
+## After route fields
+
+Each field of the route has a context of its own, and a component reads only the fields it uses. Chromium, the same 29 steps, measured before and after on the same day: 0 misses in three runs, 422 render calls, framework components rendered again 248 times (9 changing nothing), other components 4,700 times (1,821 changing nothing). Before: 267 (28) and 4,870 (1,969). Render time moves by more than 10 ms between runs of the same build, so these runs show no change in time.
+
+- **A default read follows the fields it read.** The catalogue's read follows `q`, `category`, `sort`, `order` and `page`; the network lab's, `edit`. Opening or closing a product or the bulk change no longer renders either of them: opening a product renders two framework components again instead of four, the shell's `App` twice for `navigating`. The editor opening or closing renders the lab, not the catalogue.
+- **A chart's first reads go field by field.** A component with a `state.ts` read the whole route in its first render, for its chart, and so rendered once more at the first change of address after it mounted. The first search rendered the lab and the shortcut list for that alone. It now follows only the fields its chart read. The chart is now created in the render, not in `useState`'s initializer, since creating it reads those contexts.
+- **The shell's toast region is one element.** `main.tsx` renders again at every change of address; the toast region is now an element made once, so React skips it: four fewer re-renders per change of address.
+
+What is left at a change of filter is real: the rows' links carry the filters, so each row renders, and react-aria renders inside them (151 changing nothing when sorting by price).
