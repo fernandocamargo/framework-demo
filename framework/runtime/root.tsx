@@ -186,6 +186,12 @@ export function Root({ env = NONE, entity = NONE, route = NONE, flags, navigatio
     [data, injection, user, flags],
   )
   const framework = useMemo(() => ({ injection, skin, sources, data, user: userRead, acl: aclRead, flags: flagsRead }), [injection, skin, sources, data, userRead, aclRead, flagsRead])
+  // Root's reads start side by side as Root mounts, not each when the first component that reads it
+  // renders: a read first needed deep in the tree (the rows' flags) would suspend it there, and
+  // React would render the components around it again.
+  useEffect(() => {
+    for (const read of [userRead, aclRead, flagsRead]) if (read) void data.client.prefetchQuery(read)
+  }, [data, userRead, aclRead, flagsRead])
 
   // Failures and interactions carry where the app is; setLocation returns what unsets it.
   useEffect(() => (location === undefined ? undefined : setLocation(location)), [location])

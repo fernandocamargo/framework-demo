@@ -32,6 +32,14 @@ The plugin reads one root folder (here `src`), which holds `clients/`, `services
   })
   ```
 
+- A read whose source can change outside the app follows it: `follows` gets a `stale` callback to call whenever the source says so (a flag provider's push, a socket's message), and the read is read again, with every component that read it. The meta file gets the clients too:
+
+  ```ts
+  export default ({ clients: { flags } }) => ({
+    evaluate: { reads: true, follows: (stale) => flags.changed(stale) },
+  })
+  ```
+
 ### Component folders
 
 A folder under `components/` with a `render` file and no `index` is a component. Importing the folder (`./components/filters`, or `@/components/…`) gives the component, which the plugin writes from the folder's files.
@@ -110,6 +118,16 @@ The app does not own its permissions: the backend sends a snapshot of them, and 
 - A rule that throws refuses, and is reported as the `acl` layer's failure. A default read that reads `acl` or `user` is keyed by it.
 - `framework/testing`'s `startFlow` gives a chart `acl: { allowed: true }` and `user: null` unless the test says otherwise.
 
+**Feature flags.** `Root`'s `flags` is a third read, given the person the `user` read names: `({ services, user }) => services.flags.evaluate({ targetingKey: …, role: … })`. It reads the person the way the `user` read does, so a sign-in or a sign-out reads the flags again, for the new person. A service read that `follows` its provider reads them again when a flag is served another way. `Root` starts its three reads side by side as it mounts, so a flag first needed deep in the tree does not suspend it there.
+
+- Every component file and chart declaration that reads `flags` gets them, waits for them the first time, and follows only the flags it reads: serving one flag another way renders the components that read that flag, and no other.
+- A flag is read wherever it decides something. The demo reads one in each of three places, so the choice stays open (S-009, Q-303):
+  - in a `props.ts`, for what a component shows: the rows' count is being rolled out (`flags.stockCount`);
+  - inside an `acl.ts`, for whether something may be done: deletions paused is not allowed, and everything below follows `acl.allowed`, its keys included, without reading the flag (`flags.deletions && acl.allowed && …`);
+  - in a chart's guard, read when the event arrives: the percentage above which the bulk change asks again (`flags.largeChangeAt`).
+- A folder rule that reads `acl` and `flags` is still the folder's: one subscription to both reads decides it, and an instance renders again only when its decision changes.
+- A default read that reads `flags` is keyed by them.
+
 ### Keys
 
 A component folder's `shortcuts.ts` says which keys the component answers while it is on screen. It gets what `props.ts` gets, so a key can follow the locale, what may be done, the chart's state and the component's read:
@@ -163,6 +181,8 @@ export default ({ services: { products } }) => ({
 - When the write is sent, every cached answer of those reads shows the change, and every component whose default read used one is worked out again from the cache, without asking the server. A count in a row moves the moment it is pressed.
 - The writes sent and not settled are kept in order over the server's last answer, a rebase: an answer that lands meanwhile gets them laid over it again, and a write that fails is taken out while the others stay. Three presses where the first is refused still show the third's count, which is where the server ends.
 - A write that succeeds makes the reads it changed stale too, so the server has the last word. A change that predicts the server's answer exactly (the version it will bump) renders nothing when that answer arrives.
+
+**Reads that follow their source.** A read with `follows` in its `meta.ts` is made stale when its source says so, not by a write: the flags' reads follow the provider, so a flag served another way, in this tab or in another one that told its own provider, reads the flags again. The inspector shows it as the read's source changing.
 
 **Other tabs.** `Root`'s `sync` names a channel the app's tabs share (`BroadcastChannel`). A write that succeeds in one tab tells the others which reads it made stale, by path, and they read them again: a save, a count, a sign-in or a sign-out in one tab reaches the others, and with them who is signed in, the snapshot of what they may do, and every component that read any of it. Only confirmed writes cross; optimistic changes stay in their tab. Work that one tab must do for all, such as refreshing a session they share, is the client's: the demo's takes a Web Lock (`clients/dummyjson/http.ts`).
 
@@ -299,7 +319,8 @@ After a change to the plugin's own files (`framework/typescript/`), run "TypeScr
 - **Typing:** ESLint and Vitest do not load the TypeScript plugin, so a test file gets the injected types only through `check.cjs`. The language-service requests the plugin does not map (outlines, formatting, refactors) see the file as written.
 - **Routing:** `Root` takes a `route` object and a `navigation` object from the app. A routing layer would own both.
 - **Forms:** `form.ts` is a stand-in for a form manager.
-- **The data layer:** services get no `signal`. Component queries stay fresh until a read they used is made stale, or their key changes; changes made by someone else are not seen until then.
+- **The data layer:** services get no `signal`. Component queries stay fresh until a read they used is made stale, or their key changes; changes made by someone else are not seen until then, unless the read follows its source.
+- **Flags:** a component follows every flag it has ever read, not only those its last render read: a row that read `acl.role` while counting was on still renders when the role changes with counting off, to the same output.
 - **The pipelines:** a failure is reported once, by the first layer that catches it, so outer layers' context (the handler's site, say) is not added to a service's failure.
 - **Skins:** a skin overridden for a subtree; removing CSS with the last instance.
 - **A service export that is not an operation** (a constant, say) fails when the app starts, not at build time.
