@@ -2,7 +2,8 @@
 // step acts, waits for `window.__framework.idle()`, then checks the page once. A check that fails
 // right after `idle()` is a miss: the signal resolved before the page was done.
 const dialog = (page, name) => page.getByRole('dialog', { name }).or(page.getByRole('alertdialog', { name }));
-const rows = (page) => page.getByRole('list', { name: 'Products' }).getByRole('listitem');
+/** The list's own items, not those of the lists inside them (a row's commands). */
+const rows = (page) => page.getByRole('list', { name: 'Products' }).locator(':scope > li');
 const shown = async (locator) => (await locator.count()) > 0 && (await locator.first().isVisible());
 const status = (page) => page.getByRole('status').first().innerText();
 const lab = (page) => page.getByRole('complementary', { name: 'Network lab' });

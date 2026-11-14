@@ -18,6 +18,8 @@ import { createPortal } from 'react-dom';
 import Flags from './components/flags';
 import SellOut from './components/sell-out';
 
+// The lab is a tool of its own, as schema.org names a piece of software; each entry of its logs is
+// an action, with what became of it.
 export default ({
   breakRefresh,
   change,
@@ -45,12 +47,10 @@ export default ({
       aria-controls="network-lab"
       aria-expanded={open}
       aria-label={toggleLabel}
-      data-active={faults > 0 || undefined}
       onPress={() => send({ type: 'toggle' })}
     >
-      <span className="icon" data-icon="signal" />
-      <span className="text">{i18n.title}</span>
-      {faults > 0 && <span className="count">{faults}</span>}
+      <span>{i18n.title}</span>
+      {faults > 0 && <data value={faults}>{faults}</data>}
     </Button>
 
     {/* The panel goes to the end of the page, outside the header (which is its own stacking
@@ -59,19 +59,20 @@ export default ({
       createPortal(
         <aside
           aria-label={i18n.title}
-          className={`${className} panel`}
+          className={className}
           data-react-aria-top-layer="true"
           id="network-lab"
+          itemScope
+          itemType="https://schema.org/SoftwareApplication"
         >
           <header>
-            <h2>{i18n.title}</h2>
-            <Button aria-label={i18n.close} data-variant="icon" onPress={() => send({ type: 'toggle' })}>
-              <span className="icon" data-icon="close" />
+            <h2 itemProp="name">{i18n.title}</h2>
+            <Button onPress={() => send({ type: 'toggle' })} slot="close">
+              {i18n.close}
             </Button>
           </header>
-          <p className="intro">{i18n.intro}</p>
-
-          <div className="controls">
+          <p itemProp="description">{i18n.intro}</p>
+          <fieldset>
             <Slider
               defaultValue={latency}
               maxValue={3000}
@@ -100,35 +101,36 @@ export default ({
             </Slider>
             <RadioGroup onChange={(value) => change({ force: Number(value) as 0 | 429 | 500 })} value={force}>
               <Label>{i18n.force.label}</Label>
-              <div className="choices">
-                <Radio value="0">{i18n.force.ok}</Radio>
-                <Radio value="500">500</Radio>
-                <Radio value="429">429</Radio>
-              </div>
+              <Radio value="0">{i18n.force.ok}</Radio>
+              <Radio value="500">500</Radio>
+              <Radio value="429">429</Radio>
             </RadioGroup>
             <RadioGroup onChange={(value) => change({ tokenMinutes: Number(value) })} value={tokenMinutes}>
               <Label>{i18n.token.label}</Label>
-              <div className="choices">
-                {minutes.map((choice) => (
-                  <Radio key={choice.value} value={choice.value}>
-                    {choice.label}
-                  </Radio>
-                ))}
-              </div>
+              {minutes.map((choice) => (
+                <Radio key={choice.value} value={choice.value}>
+                  {choice.label}
+                </Radio>
+              ))}
             </RadioGroup>
             <Switch isSelected={offline} onChange={(selected) => change({ offline: selected })}>
-              <span className="track" />
               {i18n.offline}
             </Switch>
-          </div>
-
-          <div className="buttons">
-            <Button onPress={() => expireToken()}>{i18n.actions.expire}</Button>
-            <Button onPress={() => breakRefresh()}>{i18n.actions.revoke}</Button>
-            <SellOut />
-            <Button onPress={() => forgetChanges()}>{i18n.actions.forget}</Button>
-          </div>
-
+          </fieldset>
+          <menu>
+            <li>
+              <Button onPress={() => expireToken()}>{i18n.actions.expire}</Button>
+            </li>
+            <li>
+              <Button onPress={() => breakRefresh()}>{i18n.actions.revoke}</Button>
+            </li>
+            <li>
+              <SellOut />
+            </li>
+            <li>
+              <Button onPress={() => forgetChanges()}>{i18n.actions.forget}</Button>
+            </li>
+          </menu>
           <Tabs>
             <TabList aria-label={i18n.tabs.label}>
               <Tab id="network">{i18n.tabs.network}</Tab>
@@ -136,29 +138,28 @@ export default ({
               <Tab id="flags">{i18n.tabs.flags}</Tab>
             </TabList>
             <TabPanel id="network">
-              <ol aria-label={i18n.network.label} className="log">
-                {network.length === 0 && <li className="none">{i18n.network.none}</li>}
+              <ol aria-label={i18n.network.label}>
+                {network.length === 0 && <li>{i18n.network.none}</li>}
                 {network.map((entry) => (
-                  <li key={entry.id}>
-                    <time>{entry.when}</time>
-                    <span className="badge" data-tone={entry.tone}>
-                      {entry.kind}
-                    </span>
-                    <span>{entry.text}</span>
+                  <li itemScope itemType="https://schema.org/Action" key={entry.id}>
+                    <link href={entry.status} itemProp="actionStatus" />
+                    <time itemProp="startTime">{entry.when}</time>
+                    <span itemProp="name">{entry.kind}</span>
+                    <span itemProp="description">{entry.text}</span>
                   </li>
                 ))}
               </ol>
             </TabPanel>
             <TabPanel id="tracked">
-              <ol aria-label={i18n.tracked.label} className="log">
-                {tracked.length === 0 && <li className="none">{i18n.tracked.none}</li>}
+              <ol aria-label={i18n.tracked.label}>
+                {tracked.length === 0 && <li>{i18n.tracked.none}</li>}
                 {tracked.map((entry) => (
-                  <li data-kind={entry.type} key={entry.id}>
-                    <time>{entry.when}</time>
-                    <span className="badge" data-tone={entry.tone}>
-                      {entry.kind}
-                    </span>
-                    <span>
+                  <li itemScope itemType="https://schema.org/Action" key={entry.id}>
+                    <link href={entry.status} itemProp="actionStatus" />
+                    {entry.byPerson && <span hidden itemProp="agent" itemScope itemType="https://schema.org/Person" />}
+                    <time itemProp="startTime">{entry.when}</time>
+                    <span itemProp="name">{entry.kind}</span>
+                    <span itemProp="description">
                       {entry.text && <code>{entry.text}</code>} <small>{entry.where}</small>
                     </span>
                   </li>

@@ -1,4 +1,3 @@
 {
-  "components/product/remove-link/label": "Excluir {title}",
-  "components/product/remove-link/text": "Excluir"
+  "components/product/remove-link/label": "Excluir {title}"
 }

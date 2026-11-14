@@ -1,7 +1,7 @@
 import { css } from 'framework';
 
 export default css`
-  & .intro {
+  & header + p {
     color: var(--muted);
     margin-block-end: 1rem;
   }
@@ -27,8 +27,18 @@ export default css`
     align-items: center;
     gap: 0.75rem;
   }
-  & dl > div[data-available='false'] {
+  /* A key that does nothing now. */
+  & dl > div:not(:has([itemprop='actionStatus'])) {
     color: var(--muted);
+  }
+  & dd small {
+    padding: 0.1rem 0.5rem;
+    border-radius: 1rem;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
   }
   & dt {
     display: flex;

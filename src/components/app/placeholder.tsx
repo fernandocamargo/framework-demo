@@ -1,13 +1,10 @@
 export default ({ className, i18n }) => (
   <div aria-busy="true" className={className}>
     <header>
-      <div className="brand">
-        <span aria-hidden="true" className="mark" />
+      <hgroup>
         <h1>{i18n.brand}</h1>
-      </div>
+      </hgroup>
     </header>
-    <main>
-      <p className="visually-hidden">{i18n.loading}</p>
-    </main>
+    <main aria-label={i18n.loading} />
   </div>
 );

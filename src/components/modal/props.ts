@@ -10,28 +10,36 @@ export type Props = {
   children: ReactNode;
   /** What closing it does: a click outside, Escape. */
   onClose: () => void;
-  size: 'large' | 'small';
 };
 
-export default ({ children, onClose, size }) => ({ children, onClose, size });
-
-const dialog = (title: string, text: string) =>
-  createElement(Dialog, null, createElement(Heading, { slot: 'title' }, title), createElement('p', null, text));
+export default ({ children, onClose }) => ({ children, onClose });
 
 /** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
 export const examples = {
-  Large: {
+  'A product': {
     props: {
-      children: dialog('A product', 'A large modal holds a product, its pictures and its reviews.'),
+      children: createElement(
+        Dialog,
+        null,
+        createElement(
+          'article',
+          { itemScope: true, itemType: 'https://schema.org/Product' },
+          createElement(Heading, { slot: 'title' }, createElement('span', { itemProp: 'name' }, 'Arc Floor Lamp')),
+          createElement('p', { itemProp: 'description' }, 'A modal holding a product is wide: pictures and reviews.'),
+        ),
+      ),
       onClose: () => undefined,
-      size: 'large',
     },
   },
-  Small: {
+  'A question': {
     props: {
-      children: dialog('A question', 'A small modal holds a question or a failure.'),
+      children: createElement(
+        Dialog,
+        { role: 'alertdialog' },
+        createElement(Heading, { slot: 'title' }, 'Delete this product?'),
+        createElement('p', null, 'A modal holding a question or a failure is small.'),
+      ),
       onClose: () => undefined,
-      size: 'small',
     },
   },
 };

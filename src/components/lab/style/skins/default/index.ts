@@ -4,28 +4,37 @@ export default css`
   > .react-aria-Button {
     border-color: transparent;
     background: transparent;
+    &::before {
+      content: '';
+      inline-size: 1.1rem;
+      block-size: 1.1rem;
+      background: currentColor;
+      mask: var(--glyph-signal) center / contain no-repeat;
+      -webkit-mask: var(--glyph-signal) center / contain no-repeat;
+    }
     &[data-hovered] {
       background: var(--surface-2);
     }
-    &[data-active] {
+    /* Faults on: the toggle counts them. */
+    &:has(data) {
       background: var(--warn-soft);
       color: var(--warn);
     }
-  }
-  .count {
-    display: grid;
-    place-items: center;
-    min-inline-size: 1.3rem;
-    block-size: 1.3rem;
-    border-radius: 1rem;
-    background: var(--warn);
-    color: var(--surface);
-    font-size: 0.78rem;
+    data {
+      display: grid;
+      place-items: center;
+      min-inline-size: 1.3rem;
+      block-size: 1.3rem;
+      border-radius: 1rem;
+      background: var(--warn);
+      color: var(--surface);
+      font-size: 0.78rem;
+    }
   }
   /* Docked beside the page on a wide screen (the app's skin makes room for it), a sheet at the
      bottom on a narrow one. render.tsx puts it at the end of the page, with this component's
      class, so these rules reach it. */
-  &.panel {
+  &:is(aside) {
     position: fixed;
     inset: var(--header) 0 0 auto;
     z-index: 30;
@@ -39,7 +48,7 @@ export default css`
     overflow: auto;
   }
   @media (max-width: 64rem) {
-    &.panel {
+    &:is(aside) {
       inset: auto 0.5rem 0.5rem;
       inline-size: auto;
       max-block-size: 60dvh;
@@ -49,7 +58,7 @@ export default css`
       animation: rise 200ms var(--ease);
     }
   }
-  &.panel > header {
+  &:is(aside) > header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -57,15 +66,15 @@ export default css`
       font-size: 1.05rem;
     }
   }
-  .intro {
+  [itemprop='description']:is(p) {
     color: var(--muted);
     font-size: 0.9rem;
   }
-  .controls {
+  fieldset {
     display: grid;
     gap: 0.9rem;
   }
-  .buttons {
+  &:is(aside) > menu {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
@@ -75,7 +84,7 @@ export default css`
       font-size: 0.87rem;
     }
   }
-  .log {
+  ol {
     display: grid;
     gap: 0.35rem;
     align-content: start;
@@ -88,6 +97,11 @@ export default css`
       gap: 0.4rem;
       overflow-wrap: anywhere;
     }
+    /* Nothing yet. */
+    li:not([itemscope]) {
+      display: block;
+      color: var(--muted);
+    }
     time {
       color: var(--muted);
       font-variant-numeric: tabular-nums;
@@ -99,18 +113,36 @@ export default css`
       font-size: 0.78rem;
       margin-inline-end: 0.3rem;
     }
-    /* A component's read and the work it caused, set apart from what the person did. */
-    li[data-kind='interaction'] {
+    /* What each entry is, coloured by what became of it. */
+    [itemprop='name'] {
+      padding: 0.1rem 0.5rem;
+      border-radius: 1rem;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    li:has(> [itemprop='actionStatus'][href='https://schema.org/CompletedActionStatus']) [itemprop='name'] {
+      background: var(--ok-soft);
+      color: var(--ok);
+    }
+    li:has(> [itemprop='actionStatus'][href='https://schema.org/FailedActionStatus']) [itemprop='name'] {
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+    li:has(> [itemprop='actionStatus'][href='https://schema.org/ActiveActionStatus']) [itemprop='name'] {
+      background: var(--warn-soft);
+      color: var(--warn);
+    }
+    /* What the person did starts a group: the reads and the work it caused follow. */
+    li:has(> [itemprop='agent']) {
       padding-block-start: 0.35rem;
       border-block-start: 1px solid var(--border);
     }
-    .none {
-      display: block;
-      color: var(--muted);
-    }
   }
   @media (max-width: 44rem) {
-    .text {
+    > .react-aria-Button > span {
       display: none;
     }
   }

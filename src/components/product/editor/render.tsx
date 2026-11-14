@@ -36,6 +36,7 @@ export default ({
   locked,
   problems,
   readOnly,
+  saves,
   saveText,
   send,
   set,
@@ -51,38 +52,33 @@ export default ({
       <Dialog>
         <header>
           <Heading slot="title">{heading}</Heading>
-          <Button aria-label={i18n.close} data-variant="icon" isDisabled={busy} onPress={() => send({ type: 'close' })}>
-            <span className="icon" data-icon="close" />
+          <Button isDisabled={busy} slot="close">
+            {i18n.close}
           </Button>
         </header>
 
         {loading && (
-          <div aria-busy="true" aria-label={i18n.loading} className="fields">
-            <div className="skeleton wide" style={{ blockSize: '2.4rem' }} />
-            <div className="skeleton wide" style={{ blockSize: '5.5rem' }} />
-            <div className="skeleton" style={{ blockSize: '2.4rem' }} />
-            <div className="skeleton" style={{ blockSize: '2.4rem' }} />
+          <div aria-busy="true" aria-label={i18n.loading}>
+            <div />
+            <div />
+            <div />
+            <div />
           </div>
         )}
 
         {unavailable && (
-          <div className="notice" data-tone="danger" role="alert">
-            <span className="icon" data-icon="alert" />
-            <div>
-              <p>{i18n.unavailable.message({ message: error })}</p>
-              <div className="actions">
+          <div itemScope itemType="https://schema.org/ReadAction" role="alert">
+            <link href="https://schema.org/FailedActionStatus" itemProp="actionStatus" />
+            <p itemProp="error">{i18n.unavailable.message({ message: error })}</p>
+            <menu>
+              <li>
                 <Button onPress={() => send({ type: 'retry' })}>{i18n.unavailable.retry}</Button>
-              </div>
-            </div>
+              </li>
+            </menu>
           </div>
         )}
 
-        {formShown && readOnly && (
-          <p className="notice" data-tone="info" role="note">
-            <span className="icon" data-icon="user" />
-            {i18n.readOnly}
-          </p>
-        )}
+        {formShown && readOnly && <p role="note">{i18n.readOnly}</p>}
 
         {formShown && (
           <Form
@@ -93,10 +89,9 @@ export default ({
             }}
             validationErrors={problems}
           >
-            <div className="fields">
+            <fieldset>
               <TextField
                 autoFocus
-                className="react-aria-TextField wide"
                 defaultValue={initial.title}
                 isReadOnly={locked}
                 name="title"
@@ -107,7 +102,6 @@ export default ({
                 <FieldError />
               </TextField>
               <TextField
-                className="react-aria-TextField wide"
                 defaultValue={initial.description}
                 isReadOnly={locked}
                 name="description"
@@ -126,7 +120,6 @@ export default ({
                 <Label>{i18n.fields.category}</Label>
                 <Button>
                   <SelectValue />
-                  <span className="icon" data-icon="chevron" />
                 </Button>
                 <FieldError />
                 <Popover>
@@ -177,37 +170,37 @@ export default ({
                 </Group>
                 <FieldError />
               </NumberField>
-            </div>
+            </fieldset>
           </Form>
         )}
 
         {conflict && (
-          <div className="notice" data-tone="warn" role="alert">
-            <span className="icon" data-icon="alert" />
-            <div>
-              <p>{i18n.conflict.message}</p>
-              <div className="actions">
+          <div itemScope itemType="https://schema.org/UpdateAction" role="alert">
+            <link href="https://schema.org/ActiveActionStatus" itemProp="actionStatus" />
+            <p itemProp="description">{i18n.conflict.message}</p>
+            <menu>
+              <li>
                 <Button onPress={() => send({ type: 'takeTheirs' })}>{i18n.conflict.theirs}</Button>
-                <Button data-variant="primary" onPress={() => send({ type: 'keepMine' })}>
-                  {i18n.conflict.mine}
-                </Button>
-              </div>
-            </div>
+              </li>
+              <li>
+                <Button onPress={() => send({ type: 'keepMine' })}>{i18n.conflict.mine}</Button>
+              </li>
+            </menu>
           </div>
         )}
 
         {failed && (
-          <div className="notice" data-tone="danger" role="alert">
-            <span className="icon" data-icon="alert" />
-            <div>
-              <p>{i18n.failed.message({ message: error })}</p>
-              <div className="actions">
+          <div itemScope itemType={saves} role="alert">
+            <link href="https://schema.org/FailedActionStatus" itemProp="actionStatus" />
+            <p itemProp="error">{i18n.failed.message({ message: error })}</p>
+            <menu>
+              <li>
                 <Button onPress={() => send({ type: 'edit' })}>{i18n.failed.back}</Button>
-                <Button data-variant="primary" onPress={() => send({ type: 'retry' })}>
-                  {i18n.failed.retry}
-                </Button>
-              </div>
-            </div>
+              </li>
+              <li>
+                <Button onPress={() => send({ type: 'retry' })}>{i18n.failed.retry}</Button>
+              </li>
+            </menu>
           </div>
         )}
 
@@ -216,16 +209,17 @@ export default ({
             <Button isDisabled={busy} onPress={() => send({ type: 'close' })}>
               {i18n.cancel}
             </Button>
-            <Button data-variant="primary" form="product" isDisabled={readOnly} isPending={busy} type="submit">
-              {busy && <span aria-hidden="true" className="spinner" />}
-              {saveText}
+            <Button form="product" isDisabled={readOnly} isPending={busy} type="submit">
+              <span itemScope itemType={saves}>
+                <span itemProp="name">{saveText}</span>
+              </span>
             </Button>
           </footer>
         )}
       </Dialog>
 
       <ModalOverlay isOpen={confirmingDiscard} onOpenChange={(open) => !open && send({ type: 'keepEditing' })}>
-        <Modal data-size="small">
+        <Modal>
           <Dialog role="alertdialog">
             <Heading slot="title">{i18n.discard.title}</Heading>
             <p>{i18n.discard.text}</p>
@@ -233,8 +227,10 @@ export default ({
               <Button autoFocus onPress={() => send({ type: 'keepEditing' })}>
                 {i18n.discard.keep}
               </Button>
-              <Button data-variant="danger" onPress={() => send({ type: 'discard' })}>
-                {i18n.discard.discard}
+              <Button onPress={() => send({ type: 'discard' })}>
+                <span itemScope itemType="https://schema.org/DeleteAction">
+                  <span itemProp="name">{i18n.discard.discard}</span>
+                </span>
               </Button>
             </footer>
           </Dialog>

@@ -1,9 +1,8 @@
 import { Modal, ModalOverlay } from 'react-aria-components';
 
-export default ({ children, className, onClose, size }) => (
+// Its width follows what it holds (base.css): a product is wide, a question or a failure small.
+export default ({ children, className, onClose }) => (
   <ModalOverlay isDismissable isOpen onOpenChange={(open) => !open && onClose()}>
-    <Modal className={`react-aria-Modal ${className}`} data-size={size}>
-      {children}
-    </Modal>
+    <Modal className={`react-aria-Modal ${className}`}>{children}</Modal>
   </ModalOverlay>
 );

@@ -2,7 +2,7 @@
 // the filters, so its links keep them. Prices and ratings are formatted for the locale on screen.
 
 import { type Filters, href } from '@/address';
-import { CURRENCY, STOCK_TONES, stockLevel } from '@/format';
+import { AVAILABILITY, CURRENCY, stockLevel } from '@/format';
 import type { Listed } from '@/services/products/types';
 
 export type Props = { filters: Filters; product: Listed };
@@ -13,15 +13,20 @@ export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product 
   // products and someone signed in to send it.
   const counts = flags.stockCount && acl.allowed && acl.role !== 'guest';
   return {
+    brand: product.brand ?? '',
     canEdit: acl.allowed,
-    change: product.local === 'created' ? i18n.change.created : product.local === 'edited' ? i18n.change.edited : null,
+    category: product.category,
+    change: product.local ? { label: i18n.change[product.local], value: product.local } : null,
+    currency: CURRENCY,
     editHref: href(filters, { edit: product.id }),
     editLabel: i18n.actions.edit({ title: product.title }),
-    origin: [product.brand, product.category].filter(Boolean).join(' · '),
-    price: intl.formatNumber(product.price, { currency: CURRENCY, style: 'currency' }),
-    rated: i18n.rated,
+    price: { text: intl.formatNumber(product.price, { currency: CURRENCY, style: 'currency' }), value: product.price },
     rating: product.rating
-      ? intl.formatNumber(product.rating, { maximumFractionDigits: 1, minimumFractionDigits: 1 })
+      ? {
+          label: `${i18n.rated} ${intl.formatNumber(product.rating, { maximumFractionDigits: 1, minimumFractionDigits: 1 })}`,
+          text: intl.formatNumber(product.rating, { maximumFractionDigits: 1, minimumFractionDigits: 1 }),
+          value: product.rating,
+        }
       : null,
     removeHref: href(filters, { remove: product.id }),
     stepper: counts
@@ -36,7 +41,11 @@ export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product 
           sending: setStock.pending,
         }
       : null,
-    stock: { label: i18n.stock({ count: product.stock, level }), tone: STOCK_TONES[level] },
+    stock: {
+      availability: AVAILABILITY[level],
+      count: product.stock,
+      label: i18n.stock({ count: product.stock, level }),
+    },
     thumbnail: product.thumbnail,
     title: product.title,
     viewHref: href(filters, { view: product.id }),

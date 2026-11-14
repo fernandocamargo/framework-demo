@@ -3,6 +3,8 @@ import { Link } from 'react-aria-components';
 import Filters from './components/filters';
 import ProductRow from './components/product-row';
 
+// The catalogue, as schema.org names one: a list of offers, each row one of its elements, with
+// what may be done to it as its potential actions.
 export default ({
   bulkHref,
   canChange,
@@ -17,34 +19,42 @@ export default ({
   items,
   paging,
   summary,
+  total,
 }) => (
-  <section aria-labelledby="catalogue-title" className={className}>
-    <div className="top">
-      <div>
-        <h2 id="catalogue-title">{i18n.title}</h2>
-        <p className="summary" role="status">
-          {summary}
+  <section aria-labelledby="catalogue-title" className={className} itemScope itemType="https://schema.org/OfferCatalog">
+    <header>
+      <hgroup>
+        <h2 id="catalogue-title" itemProp="name">
+          {i18n.title}
+        </h2>
+        <p role="status">
+          {summary((chunks) => (
+            <data itemProp="numberOfItems" value={total}>
+              {chunks}
+            </data>
+          ))}
         </p>
-      </div>
+      </hgroup>
       {canChange && (
-        <div className="actions">
-          <Link data-variant="secondary" href={bulkHref}>
-            <span className="icon" data-icon="tag" />
-            {i18n.actions.bulk}
-          </Link>
-          <Link data-variant="primary" href={createHref}>
-            <span className="icon" data-icon="plus" />
-            {i18n.actions.create}
-          </Link>
-        </div>
+        <menu>
+          <li>
+            <Link href={bulkHref}>
+              <span itemProp="potentialAction" itemScope itemType="https://schema.org/ReplaceAction">
+                <span itemProp="name">{i18n.actions.bulk}</span>
+              </span>
+            </Link>
+          </li>
+          <li>
+            <Link href={createHref}>
+              <span itemProp="potentialAction" itemScope itemType="https://schema.org/CreateAction">
+                <span itemProp="name">{i18n.actions.create}</span>
+              </span>
+            </Link>
+          </li>
+        </menu>
       )}
-    </div>
-    {!canChange && (
-      <p className="notice" data-tone="info" role="note">
-        <span className="icon" data-icon="user" />
-        {i18n.readOnly}
-      </p>
-    )}
+    </header>
+    {!canChange && <p role="note">{i18n.readOnly}</p>}
     <Filters
       categories={categories}
       category={filters.category}
@@ -53,24 +63,24 @@ export default ({
       sort={filters.sort}
     />
     {empty ? (
-      <div className="empty">
-        <p>{emptyText}</p>
+      <p>
+        {emptyText}
         {clearHref && <Link href={clearHref}>{i18n.empty.clear}</Link>}
-      </div>
+      </p>
     ) : (
-      <ul aria-label={i18n.list} className="rows">
+      <ul aria-label={i18n.list}>
         {items.map((product) => (
           <ProductRow filters={filters} key={product.id} product={product} />
         ))}
       </ul>
     )}
     {paging.shown && (
-      <nav aria-label={i18n.paging.label} className="paging">
-        <Link data-variant="secondary" href={paging.previousHref ?? undefined} isDisabled={!paging.previousHref}>
+      <nav aria-label={i18n.paging.label}>
+        <Link href={paging.previousHref ?? undefined} isDisabled={!paging.previousHref}>
           {i18n.paging.previous}
         </Link>
         <span>{paging.text}</span>
-        <Link data-variant="secondary" href={paging.nextHref ?? undefined} isDisabled={!paging.nextHref}>
+        <Link href={paging.nextHref ?? undefined} isDisabled={!paging.nextHref}>
           {i18n.paging.next}
         </Link>
       </nav>

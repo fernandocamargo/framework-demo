@@ -20,8 +20,10 @@ async function act(page: Page, action: () => Promise<unknown>) {
 }
 
 const open = (page: Page, hash = '#/products') => act(page, () => page.goto(`./?world=memory${hash}`));
-const rows = (page: Page, name = 'Products') => page.getByRole('list', { name }).getByRole('listitem');
-const titles = (page: Page) => rows(page).getByRole('link').filter({ hasNotText: /^$/ }).allInnerTexts();
+/** A list's own items, not the items of lists inside them (a row's commands). */
+const rows = (page: Page, name = 'Products') => page.getByRole('list', { name }).locator(':scope > li');
+/** Each row's title: the link in its heading. */
+const titles = (page: Page) => rows(page).getByRole('heading').getByRole('link').allInnerTexts();
 const summary = (page: Page) => page.getByRole('status').first().innerText();
 const dialog = (page: Page, name: RegExp | string) =>
   page.getByRole('dialog', { name }).or(page.getByRole('alertdialog', { name }));

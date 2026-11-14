@@ -1,5 +1,7 @@
 // What the catalogue's render shows, worked out from what its read answered, in the page's words.
 
+import type { ReactNode } from 'react';
+
 import { filtered, HOME, href } from '@/address';
 
 export default ({ acl, async: { default: answer }, i18n }) => {
@@ -23,11 +25,15 @@ export default ({ acl, async: { default: answer }, i18n }) => {
       shown: page.pages > 1,
       text: i18n.paging.page({ page: page.page, pages: page.pages }),
     },
-    summary: i18n.summary({
-      category,
-      count: page.total,
-      filter: filters.q && category ? 'both' : filters.q ? 'q' : category ? 'category' : 'none',
-      q: filters.q,
-    }),
+    /** How many products, with what marks the count: `summary(count)`. */
+    summary: (count: (chunks: ReactNode[]) => ReactNode) =>
+      i18n.summary({
+        category,
+        count: page.total,
+        filter: filters.q && category ? 'both' : filters.q ? 'q' : category ? 'category' : 'none',
+        q: filters.q,
+        total: count,
+      }),
+    total: page.total,
   };
 };

@@ -13,17 +13,18 @@ export default ({ charts, className, i18n }) => (
           <code>{chart.file}</code> <small>{chart.count}</small>
         </h2>
         {chart.description && <p>{chart.description}</p>}
-        <ul className="frames">
+        <ul>
           {chart.states.map((state) => (
             <li key={state.path}>
-              <figure>
-                <div className="frame">
-                  <iframe loading="lazy" src={state.src} tabIndex={-1} title={state.title} />
+              {/* Each frame is a page of the app, held in one state, as schema.org names a page. */}
+              <figure itemScope itemType="https://schema.org/WebPage">
+                <div>
+                  <iframe itemProp="url" loading="lazy" src={state.src} tabIndex={-1} title={state.title} />
                 </div>
                 <figcaption>
-                  <strong>{state.path}</strong>
-                  {state.example && <span className="badge">{state.example}</span>}
-                  {state.description && <span>{state.description}</span>}
+                  <strong itemProp="name">{state.path}</strong>
+                  {state.example && <small itemProp="isBasedOn">{state.example}</small>}
+                  {state.description && <span itemProp="description">{state.description}</span>}
                 </figcaption>
               </figure>
             </li>

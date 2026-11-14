@@ -59,9 +59,7 @@ const failures = (
           <Text slot="title">{toast.content.title}</Text>
           <Text slot="description">{toast.content.description}</Text>
         </ToastContent>
-        <Button aria-label="Dismiss" slot="close">
-          <span className="icon" data-icon="close" />
-        </Button>
+        <Button slot="close">Dismiss</Button>
       </Toast>
     )}
   </ToastRegion>

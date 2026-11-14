@@ -2,3 +2,5 @@
 package-lock.json
 # Built from the workspace's sketch (S-008); formatted there.
 public/explainer/
+# Written by framework/microdata/write-vocabulary.mjs, on one line.
+framework/microdata/vocabulary.json

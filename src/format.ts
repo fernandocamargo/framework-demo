@@ -10,8 +10,12 @@ export const CURRENCY = 'USD';
 /** How a stock level reads: out, low or in stock. Each component words it in its messages. */
 export const stockLevel = (stock: number) => (stock <= 0 ? 'out' : stock <= LOW_STOCK ? 'low' : 'in');
 
-/** The tone a stock level is shown in. */
-export const STOCK_TONES = { in: 'ok', low: 'warn', out: 'danger' } as const;
+/** A stock level as schema.org names an offer's availability: what a page marks it with. */
+export const AVAILABILITY = {
+  in: 'https://schema.org/InStock',
+  low: 'https://schema.org/LimitedAvailability',
+  out: 'https://schema.org/OutOfStock',
+} as const;
 
 /** A failure's message, whatever was thrown. */
 export const message = (thrown: unknown) => (thrown instanceof Error ? thrown.message : String(thrown));

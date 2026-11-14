@@ -8,21 +8,22 @@ import type { I18n, Intl } from 'framework';
 
 import type * as messages from './i18n';
 
-const TONES = {
-  derive: 'accent',
-  failed: 'danger',
-  failure: 'danger',
-  fault: 'warn',
-  interaction: 'accent',
-  optimistic: 'accent',
-  read: 'ok',
-  refresh: 'accent',
-  request: 'ok',
-  retry: 'warn',
-  rollback: 'warn',
-  stale: 'warn',
-  tab: 'ok',
-  write: 'accent',
+/** What became of each kind of entry, as schema.org names an action's status. */
+const STATUS = {
+  derive: 'https://schema.org/CompletedActionStatus',
+  failed: 'https://schema.org/FailedActionStatus',
+  failure: 'https://schema.org/FailedActionStatus',
+  fault: 'https://schema.org/ActiveActionStatus',
+  interaction: 'https://schema.org/CompletedActionStatus',
+  optimistic: 'https://schema.org/PotentialActionStatus',
+  read: 'https://schema.org/CompletedActionStatus',
+  refresh: 'https://schema.org/ActiveActionStatus',
+  request: 'https://schema.org/CompletedActionStatus',
+  retry: 'https://schema.org/ActiveActionStatus',
+  rollback: 'https://schema.org/ActiveActionStatus',
+  stale: 'https://schema.org/ActiveActionStatus',
+  tab: 'https://schema.org/CompletedActionStatus',
+  write: 'https://schema.org/PotentialActionStatus',
 } as const;
 
 /** One entry of the inspector: its kind, what it was about, and what it says. */
@@ -100,7 +101,7 @@ export default ({
     network: state.context.network.map((entry) => ({
       ...entry,
       kind: i18n.kinds[entry.kind],
-      tone: TONES[entry.kind],
+      status: STATUS[entry.kind],
       when: when(entry.at),
     })),
     offline: settings.offline,
@@ -121,11 +122,12 @@ export default ({
       return tracked.map((entry) => {
         const { kind, text, where } = describe(entry, i18n, intl, causes);
         return {
+          // Something the person did: an action with a person as its agent.
+          byPerson: kind === 'interaction',
           id: entry.event.id,
           kind: i18n.kinds[kind],
+          status: STATUS[kind],
           text,
-          tone: TONES[kind],
-          type: kind,
           when: when(entry.at),
           where,
         };

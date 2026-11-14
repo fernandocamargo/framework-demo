@@ -13,7 +13,6 @@ import {
   ModalOverlay,
   NumberField,
   Popover,
-  ProgressBar,
   Radio,
   RadioGroup,
   Select,
@@ -55,230 +54,228 @@ export default ({
     isOpen
     onOpenChange={(open) => !open && state.send({ type: 'close' })}
   >
-    <Modal className={`react-aria-Modal ${className}`} data-size="large">
+    <Modal className={`react-aria-Modal ${className}`}>
       <Dialog>
-        <header>
-          <div>
-            <Heading slot="title">{i18n.title}</Heading>
-            <p className="step-text">{stepText}</p>
-          </div>
-          <Button
-            aria-label={i18n.close}
-            data-variant="icon"
-            isDisabled={state.applying}
-            onPress={() => state.send({ type: 'close' })}
-          >
-            <span className="icon" data-icon="close" />
-          </Button>
-        </header>
-        <ol aria-hidden="true" className="steps">
-          {steps.map((step) => (
-            <li data-current={step.current || undefined} data-done={step.done || undefined} key={step.label}>
-              {step.label}
-            </li>
-          ))}
-        </ol>
+        {/* The whole change, as schema.org names it: prices replaced, step by step. */}
+        <div itemScope itemType="https://schema.org/ReplaceAction">
+          <header>
+            <hgroup>
+              <Heading slot="title">
+                <span itemProp="name">{i18n.title}</span>
+              </Heading>
+              <p>{stepText}</p>
+            </hgroup>
+            <Button isDisabled={state.applying} slot="close">
+              {i18n.close}
+            </Button>
+          </header>
+          <ol aria-hidden="true" itemProp="actionProcess" itemScope itemType="https://schema.org/HowTo">
+            {steps.map((step) => (
+              <li
+                aria-current={step.current ? 'step' : undefined}
+                itemProp="step"
+                itemScope
+                itemType="https://schema.org/HowToStep"
+                key={step.label}
+              >
+                <span itemProp="name">{step.label}</span>
+              </li>
+            ))}
+          </ol>
 
-        {step === 1 && (
-          <>
-            <Select
-              onSelectionChange={(key) => state.send({ category: String(key), type: 'categoryChanged' })}
-              selectedKey={values.category}
-            >
-              <Label>{i18n.choose.category}</Label>
-              <Button>
-                <SelectValue />
-                <span className="icon" data-icon="chevron" />
-              </Button>
-              <Popover>
-                <ListBox items={categories}>
-                  {(category) => <ListBoxItem id={category.slug}>{category.name}</ListBoxItem>}
-                </ListBox>
-              </Popover>
-            </Select>
-            {state.loadingProducts ? (
-              <div
-                aria-busy="true"
-                aria-label={i18n.choose.loading}
-                className="skeleton"
-                style={{ blockSize: '12rem' }}
-              />
-            ) : loadError ? (
-              <div className="notice" data-tone="danger" role="alert">
-                <span className="icon" data-icon="alert" />
-                <div>
-                  <p>{i18n.choose.failed({ message: loadError })}</p>
-                  <div className="actions">
-                    <Button onPress={() => state.send({ type: 'retry' })}>{i18n.choose.retry}</Button>
+          {step === 1 && (
+            <>
+              <Select
+                onSelectionChange={(key) => state.send({ category: String(key), type: 'categoryChanged' })}
+                selectedKey={values.category}
+              >
+                <Label>{i18n.choose.category}</Label>
+                <Button>
+                  <SelectValue />
+                </Button>
+                <Popover>
+                  <ListBox items={categories}>
+                    {(category) => <ListBoxItem id={category.slug}>{category.name}</ListBoxItem>}
+                  </ListBox>
+                </Popover>
+              </Select>
+              {state.loadingProducts ? (
+                <div aria-busy="true" aria-label={i18n.choose.loading} />
+              ) : loadError ? (
+                <div itemScope itemType="https://schema.org/SearchAction" role="alert">
+                  <link href="https://schema.org/FailedActionStatus" itemProp="actionStatus" />
+                  <p itemProp="error">{i18n.choose.failed({ message: loadError })}</p>
+                  <menu>
+                    <li>
+                      <Button onPress={() => state.send({ type: 'retry' })}>{i18n.choose.retry}</Button>
+                    </li>
+                  </menu>
+                </div>
+              ) : (
+                <CheckboxGroup onChange={(ids) => set('selected', ids.map(Number))} value={selectedIds}>
+                  <Label>{selectionText}</Label>
+                  <div>
+                    {items.map((item) => (
+                      <Checkbox key={item.id} value={String(item.id)}>
+                        <span itemScope itemType="https://schema.org/Product">
+                          <span itemProp="name">{item.title}</span>
+                          <span itemProp="offers" itemScope itemType="https://schema.org/Offer">
+                            <data itemProp="price" value={item.price.value}>
+                              {item.price.text}
+                            </data>
+                          </span>
+                        </span>
+                      </Checkbox>
+                    ))}
                   </div>
-                </div>
-              </div>
-            ) : (
-              <CheckboxGroup onChange={(ids) => set('selected', ids.map(Number))} value={selectedIds}>
-                <Label>{selectionText}</Label>
-                <div className="choose">
-                  {items.map((item) => (
-                    <Checkbox key={item.id} value={String(item.id)}>
-                      <span className="box">
-                        <span className="icon" data-icon="check" />
-                      </span>
-                      <span className="title">{item.title}</span>
-                      <span className="price">{item.price}</span>
-                    </Checkbox>
-                  ))}
-                </div>
-              </CheckboxGroup>
-            )}
-            <footer>
-              <Button onPress={() => state.send({ type: 'close' })}>{i18n.cancel}</Button>
-              <Button
-                data-variant="primary"
-                isDisabled={!state.choosing || selectedIds.length === 0}
-                onPress={() => state.send({ type: 'next' })}
-              >
-                {i18n.choose.next}
-              </Button>
-            </footer>
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <div className="rule">
-              <RadioGroup
-                onChange={(value) => set('direction', value as 'decrease' | 'increase')}
-                value={values.direction}
-              >
-                <Label>{i18n.rule.direction}</Label>
-                <div className="choices">
-                  <Radio value="decrease">{i18n.rule.decrease}</Radio>
-                  <Radio value="increase">{i18n.rule.increase}</Radio>
-                </div>
-              </RadioGroup>
-              <NumberField
-                formatOptions={{ style: 'unit', unit: 'percent' }}
-                isInvalid={Boolean(ruleProblem)}
-                minValue={0}
-                onChange={(value) => set('percent', value)}
-                step={1}
-                value={values.percent}
-              >
-                <Label>{i18n.rule.by}</Label>
-                <Group>
-                  <Input />
-                  <Button slot="decrement">−</Button>
-                  <Button slot="increment">+</Button>
-                </Group>
-              </NumberField>
-            </div>
-            {ruleProblem && (
-              <p className="problem" role="alert">
-                {ruleProblem}
-              </p>
-            )}
-            <footer>
-              <Button onPress={() => state.send({ type: 'back' })}>{i18n.back}</Button>
-              <Button
-                data-variant="primary"
-                isDisabled={Boolean(ruleProblem)}
-                onPress={() => state.send({ type: 'next' })}
-              >
-                {i18n.rule.next}
-              </Button>
-            </footer>
-          </>
-        )}
-
-        {step === 3 && (
-          <>
-            <p>
-              {applies((chunks) => (
-                <strong>{chunks}</strong>
-              ))}
-            </p>
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">{i18n.preview.product}</th>
-                  <th scope="col">{i18n.preview.now}</th>
-                  <th scope="col">{i18n.preview.after}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {preview.map((row) => (
-                  <tr key={row.id}>
-                    <th scope="row">{row.title}</th>
-                    <td>{row.from}</td>
-                    <td>
-                      <strong>{row.to}</strong>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {limitText && (
-              <p className="notice" data-tone="info" role="note">
-                <span className="icon" data-icon="user" />
-                {limitText}
-              </p>
-            )}
-            <footer>
-              <Button onPress={() => state.send({ type: 'back' })}>{i18n.back}</Button>
-              <Button data-variant="primary" isDisabled={!canApply} onPress={() => state.send({ type: 'apply' })}>
-                {applyText}
-              </Button>
-            </footer>
-          </>
-        )}
-
-        {step >= 4 && (
-          <>
-            {state.summary ? (
-              <div className="notice" data-tone={failedCount ? 'warn' : 'ok'} role="status">
-                <span className="icon" data-icon={failedCount ? 'alert' : 'check'} />
-                <p>{summaryText}</p>
-              </div>
-            ) : (
-              <ProgressBar aria-label={i18n.progress.label} maxValue={progress.total} value={progress.value}>
-                {({ percentage }) => (
-                  <>
-                    <span>{current ?? progress.text}</span>
-                    <div className="bar">
-                      <div className="fill" style={{ inlineSize: `${percentage}%` }} />
-                    </div>
-                  </>
-                )}
-              </ProgressBar>
-            )}
-            <ul aria-label={i18n.results} className="results">
-              {results.map((result) => (
-                <li data-failed={result.error !== null || undefined} key={result.id}>
-                  <span className="icon" data-icon={result.error === null ? 'check' : 'alert'} />
-                  <span className="title">{result.title}</span>
-                  {result.error === null ? (
-                    <span className="price">
-                      {result.from} → <strong>{result.to}</strong>
-                    </span>
-                  ) : (
-                    <span className="error">{result.error}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {state.summary && (
+                </CheckboxGroup>
+              )}
               <footer>
-                {failedCount > 0 && <Button onPress={() => state.send({ type: 'retryFailed' })}>{retryText}</Button>}
-                <Button data-variant="primary" onPress={() => state.send({ type: 'close' })}>
-                  {i18n.done}
+                <Button onPress={() => state.send({ type: 'close' })}>{i18n.cancel}</Button>
+                <Button
+                  isDisabled={!state.choosing || selectedIds.length === 0}
+                  onPress={() => state.send({ type: 'next' })}
+                >
+                  {i18n.choose.next}
                 </Button>
               </footer>
-            )}
-          </>
-        )}
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <fieldset>
+                <RadioGroup
+                  onChange={(value) => set('direction', value as 'decrease' | 'increase')}
+                  value={values.direction}
+                >
+                  <Label>{i18n.rule.direction}</Label>
+                  <Radio value="decrease">{i18n.rule.decrease}</Radio>
+                  <Radio value="increase">{i18n.rule.increase}</Radio>
+                </RadioGroup>
+                <NumberField
+                  formatOptions={{ style: 'unit', unit: 'percent' }}
+                  isInvalid={Boolean(ruleProblem)}
+                  minValue={0}
+                  onChange={(value) => set('percent', value)}
+                  step={1}
+                  value={values.percent}
+                >
+                  <Label>{i18n.rule.by}</Label>
+                  <Group>
+                    <Input />
+                    <Button slot="decrement">−</Button>
+                    <Button slot="increment">+</Button>
+                  </Group>
+                </NumberField>
+              </fieldset>
+              {ruleProblem && <p role="alert">{ruleProblem}</p>}
+              <footer>
+                <Button onPress={() => state.send({ type: 'back' })}>{i18n.back}</Button>
+                <Button isDisabled={Boolean(ruleProblem)} onPress={() => state.send({ type: 'next' })}>
+                  {i18n.rule.next}
+                </Button>
+              </footer>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <p>
+                {applies((chunks) => (
+                  <strong>{chunks}</strong>
+                ))}
+              </p>
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{i18n.preview.product}</th>
+                    <th scope="col">{i18n.preview.now}</th>
+                    <th scope="col">{i18n.preview.after}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.map((row) => (
+                    <tr itemScope itemType="https://schema.org/ReplaceAction" key={row.id}>
+                      <th itemProp="object" scope="row">
+                        {row.title}
+                      </th>
+                      <td itemProp="replacee">{row.from}</td>
+                      <td itemProp="replacer">
+                        <strong>{row.to}</strong>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {limitText && <p role="note">{limitText}</p>}
+              <footer>
+                <Button onPress={() => state.send({ type: 'back' })}>{i18n.back}</Button>
+                <Button isDisabled={!canApply} onPress={() => state.send({ type: 'apply' })}>
+                  <span itemScope itemType="https://schema.org/ReplaceAction">
+                    <span itemProp="name">{applyText}</span>
+                  </span>
+                </Button>
+              </footer>
+            </>
+          )}
+
+          {step >= 4 && (
+            <>
+              {state.summary ? (
+                <div role="status">
+                  <link
+                    href={
+                      failedCount ? 'https://schema.org/FailedActionStatus' : 'https://schema.org/CompletedActionStatus'
+                    }
+                    itemProp="actionStatus"
+                  />
+                  <p>{summaryText}</p>
+                </div>
+              ) : (
+                <p>
+                  <span>{current ?? progress.text}</span>
+                  <progress aria-label={i18n.progress.label} max={progress.total} value={progress.value}>
+                    {progress.text}
+                  </progress>
+                </p>
+              )}
+              <ul aria-label={i18n.results}>
+                {results.map((result) => (
+                  <li itemScope itemType="https://schema.org/ReplaceAction" key={result.id}>
+                    <link
+                      href={
+                        result.error === null
+                          ? 'https://schema.org/CompletedActionStatus'
+                          : 'https://schema.org/FailedActionStatus'
+                      }
+                      itemProp="actionStatus"
+                    />
+                    <span itemProp="object">{result.title}</span>
+                    {result.error === null ? (
+                      <span>
+                        <span itemProp="replacee">{result.from}</span> →{' '}
+                        <strong itemProp="replacer">{result.to}</strong>
+                      </span>
+                    ) : (
+                      <span itemProp="error">{result.error}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {state.summary && (
+                <footer>
+                  {failedCount > 0 && <Button onPress={() => state.send({ type: 'retryFailed' })}>{retryText}</Button>}
+                  <Button onPress={() => state.send({ type: 'close' })}>{i18n.done}</Button>
+                </footer>
+              )}
+            </>
+          )}
+        </div>
       </Dialog>
 
       <ModalOverlay isOpen={state.confirmingLargeChange} onOpenChange={(open) => !open && state.send({ type: 'back' })}>
-        <Modal data-size="small">
+        <Modal>
           <Dialog role="alertdialog">
             <Heading slot="title">{largeTitle}</Heading>
             <p>
@@ -290,8 +287,10 @@ export default ({
               <Button autoFocus onPress={() => state.send({ type: 'back' })}>
                 {i18n.large.back}
               </Button>
-              <Button data-variant="danger" onPress={() => state.send({ type: 'confirm' })}>
-                {i18n.large.confirm}
+              <Button onPress={() => state.send({ type: 'confirm' })}>
+                <span itemScope itemType="https://schema.org/ReplaceAction">
+                  <span itemProp="name">{i18n.large.confirm}</span>
+                </span>
               </Button>
             </footer>
           </Dialog>

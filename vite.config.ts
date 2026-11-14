@@ -21,6 +21,6 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['src/**/*.test.{ts,tsx}', 'framework/runtime/__tests__/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'framework/runtime/__tests__/*.test.{ts,tsx}', 'framework/microdata/*.test.ts'],
   },
 });

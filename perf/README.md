@@ -178,3 +178,19 @@ Four of the round's options, built. The same 39 steps, before and after on one d
 - **The lab's sliders keep the keyboard.** A `key` that changed with the setting mounted them again at each step. They now hold their own value, as the editor's fields do. The further steps' slider steps focus once and press twice. The lab still renders once when its setting changes, to learn it, and shows nothing new: those are the further steps' two more "changing nothing", against 162 fewer of react-aria's re-renders.
 - **A function that reads the render is kept** while what it reads is the same (`keep`). The sliders' outputs now get the messages themselves, which stay the same.
 - **A product's modal opens once.** `components/modal` holds the overlay and has no read; the product's placeholder, content and error are each its `Dialog` inside it. One overlay mounts and the modal animates in once (twice before). React still holds the content 300 ms after the skeleton shows: the renders thrown away at "open a product" are 11 in every run after, and 11 to 14 before, by how many of react-aria's commits fall in the wait. Its react-aria re-renders are 113 (45) in every run after, and between 88 (30) and 128 (53) before.
+
+## After the markup names what each piece is
+
+Microdata from schema.org, HTML's elements and ARIA's roles in place of presentational classes; glyphs, placeholders and spinners drawn by the skins (Chromium):
+
+| Visit                                       | Before                          | After         |
+| ------------------------------------------- | ------------------------------- | ------------- |
+| misses                                      | 0                               | 0             |
+| render calls, thrown away                   | 419, 17                         | 419, 17       |
+| framework rendered again (changing nothing) | 246 (5)                         | 246 (5)       |
+| other rendered again (changing nothing)     | 4,573 to 4,687 (1,834 to 1,925) | 4,535 (1,811) |
+| further steps: framework (changing nothing) | 34 (4)                          | 34 (4)        |
+| further steps: other (changing nothing)     | 579 (229)                       | 571 (229)     |
+
+- The framework renders exactly as before. react-aria's progress bar and the hidden labels of the selects are gone (a native `progress`, and the selects' own `aria-label`), so a few of its components no longer render.
+- steps.mjs counts a list's own items (`:scope > li`): a product's row now holds a list of its commands.

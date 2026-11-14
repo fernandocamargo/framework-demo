@@ -16,6 +16,6 @@ export default {
   readOnly: 'You can browse the catalogue. Changing it needs a permission you do not have.',
   // One message for every summary: a plural for the count, a select for the filters on.
   summary:
-    '{count, plural, one {# product} other {# products}}{filter, select, q { matching “{q}”} category { in {category}} both { matching “{q}” in {category}} other {}}',
+    '<total>{count, plural, one {# product} other {# products}}</total>{filter, select, q { matching “{q}”} category { in {category}} both { matching “{q}” in {category}} other {}}',
   title: 'Products',
 };

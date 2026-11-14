@@ -1,15 +1,14 @@
-import { Button, Label, ListBox, ListBoxItem, Popover, Select, SelectValue } from 'react-aria-components';
+import { Button, ListBox, ListBoxItem, Popover, Select, SelectValue } from 'react-aria-components';
 
 import { type Locale, speak } from '@/locales';
 
+// The language on screen, as schema.org names one, by its code.
 export default ({ className, label, locale, options }) => (
-  <div className={className}>
+  <div className={className} itemScope itemType="https://schema.org/Language">
+    <meta content={locale} itemProp="alternateName" />
     <Select aria-label={label} onSelectionChange={(key) => speak(key as Locale)} selectedKey={locale}>
-      <Label className="visually-hidden">{label}</Label>
       <Button>
-        <span className="icon" data-icon="globe" />
         <SelectValue />
-        <span className="icon" data-icon="chevron" />
       </Button>
       <Popover>
         <ListBox items={options}>

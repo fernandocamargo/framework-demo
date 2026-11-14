@@ -290,6 +290,31 @@ One `EventTarget` carries three kinds of event.
 - In `style/` files, the default import of another component folder becomes its escaped selector, so `${Lab} { … }` targets it.
 - Content a component renders in a portal (a dialog) takes the component's class, so the skin reaches it.
 
+### Markup names what a piece is
+
+A component's class is its path, which the framework gives it. Nothing else in the markup is a class, a variant or any other word for how a piece looks. A piece is named by what it is, in four vocabularies, and the skins style those names:
+
+- HTML's elements: `hgroup`, `menu`, `search`, `fieldset`, `data`, `meter`, `progress`, `time`, `small`.
+- ARIA's roles and states: `role="alert"`, `"note"`, `"status"` and `"timer"`, `aria-busy`, `aria-current`.
+- react-aria's anatomy: its default classes, its `slot`s (`slot="close"`) and its data states.
+- schema.org's microdata: an item is `itemscope` with an `itemtype` (`Product`, `Offer`, `Review`, `Person`, `ReplaceAction`…), and each piece of it names its place with `itemprop` (`name`, `price`, `availability`, `ratingValue`, `potentialAction`, `actionStatus`, `error`). An enumeration's value is a link: `<link itemprop="availability" href="https://schema.org/LimitedAvailability">`.
+
+What follows from the names:
+
+- A command holds the action it performs, as schema.org names it (`CreateAction`, `UpdateAction`, `DeleteAction`, `ReplaceAction`). The skin draws its glyph from that type, and a command that deletes is the dangerous one.
+- A notice is an `alert`, a `note`, or the `status` of an action, with its `actionStatus` (failed, completed, active). Its glyph and colour follow.
+- The last command of a dialog's footer, or of what a notice offers, is the step forward.
+- Glyphs, placeholders and spinners are drawn by the skins, never written in the markup. A placeholder is its element waiting (`aria-busy`); each skin says which of its shapes wait.
+
+[`microdata/check.ts`](microdata/check.ts) checks the microdata of a page against one release of schema.org, pinned in [`microdata/vocabulary.json`](microdata/vocabulary.json) (`node framework/microdata/write-vocabulary.mjs` writes it). It reports:
+
+- a type or a property schema.org does not have, or has only as pending or superseded;
+- a property the item's type does not take;
+- a property outside any item;
+- an item or an enumeration value a property does not take.
+
+It has no imports, so a page runs it as it is: the end-to-end flows run it on every page they reach ([`e2e/microdata.spec.ts`](../e2e/microdata.spec.ts)).
+
 ### Types of injected arguments
 
 Nobody writes them. The TypeScript plugin shows TypeScript each layer file with its first parameters annotated:

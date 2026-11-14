@@ -1,6 +1,6 @@
 // What the wizard's render shows at each step, worked out from the flow and the form, in the
-// locale on screen. Prices are formatted by `intl`; the sentences with a bold part are functions
-// the render gives the tag to.
+// locale on screen. Prices are formatted by `intl`; the sentences that name the rule are functions
+// the render gives the element for it to.
 
 import type { ReactNode } from 'react';
 
@@ -26,18 +26,22 @@ export default ({ acl, async: { default: categories }, flags, form, i18n, intl, 
   const ruleText = i18n.rule.text({ direction: rule.direction, percent: rule.percent });
   const problem = ruleProblem(rule);
   return {
-    /** The rule, with what makes it bold: `applies(b)`, in the preview and the question. */
-    applies: (b: (chunks: ReactNode[]) => ReactNode) =>
-      i18n.preview.applies({ b, count: context.items.length, rule: ruleText, selected: selected.length }),
+    /** The rule, with what marks it: `applies(change)`, in the preview and the question. */
+    applies: (marked: (chunks: ReactNode[]) => ReactNode) =>
+      i18n.preview.applies({ change: marked, count: context.items.length, rule: ruleText, selected: selected.length }),
     applyText: i18n.preview.apply({ count: selected.length }),
     canApply: acl.allowed,
     categories: [{ name: i18n.choose.all, slug: '' }, ...categories],
     current: context.queue[0] ? i18n.progress.saving({ title: context.queue[0].title }) : null,
     failedCount: failed.length,
     i18n,
-    items: context.items.map((item) => ({ id: item.id, price: money(item.price), title: item.title })),
-    largeText: (b: (chunks: ReactNode[]) => ReactNode) =>
-      i18n.large.text({ b, count: selected.length, rule: ruleText }),
+    items: context.items.map((item) => ({
+      id: item.id,
+      price: { text: money(item.price), value: item.price },
+      title: item.title,
+    })),
+    largeText: (marked: (chunks: ReactNode[]) => ReactNode) =>
+      i18n.large.text({ change: marked, count: selected.length, rule: ruleText }),
     largeTitle: i18n.large.title({ limit: flags.largeChangeAt }),
     // Why not, for a person signed in whom the rule refuses.
     limitText: acl.allowed

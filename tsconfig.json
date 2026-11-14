@@ -13,6 +13,7 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
@@ -32,5 +33,12 @@
     },
     "plugins": [{ "name": "framework-typescript-plugin", "root": "./src" }]
   },
-  "include": ["src", "framework/runtime", "framework/storybook", ".storybook", "framework-stories"]
+  "include": [
+    "src",
+    "framework/runtime",
+    "framework/microdata",
+    "framework/storybook",
+    ".storybook",
+    "framework-stories"
+  ]
 }

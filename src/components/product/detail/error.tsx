@@ -9,9 +9,7 @@ export default ({ className, error, i18n, resetErrorBoundary }) => (
     <p>{error.message}</p>
     <footer>
       <Button onPress={() => go({ view: null })}>{i18n.failed.close}</Button>
-      <Button data-variant="primary" onPress={resetErrorBoundary}>
-        {i18n.failed.retry}
-      </Button>
+      <Button onPress={resetErrorBoundary}>{i18n.failed.retry}</Button>
     </footer>
   </Dialog>
 );

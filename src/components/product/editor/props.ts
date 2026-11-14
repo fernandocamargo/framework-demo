@@ -32,6 +32,8 @@ export default ({ acl, async: { default: categories }, form, i18n, state }) => {
       ? Object.fromEntries(problems(form.values).map((field) => [field, i18n.problems[field]]))
       : {},
     readOnly: !acl.allowed,
+    // What saving does, as schema.org names it.
+    saves: context.creating ? 'https://schema.org/CreateAction' : 'https://schema.org/UpdateAction',
     saveText: context.creating ? i18n.save.create : i18n.save.edit,
     send: state.send,
     set: form.set,

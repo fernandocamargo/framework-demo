@@ -4,6 +4,7 @@ export default css`
   & {
     display: grid;
     grid-template-columns: 3.5rem minmax(0, 1fr) 11rem 3.5rem 6rem auto;
+    grid-template-areas: 'picture name stock rating price commands';
     align-items: center;
     gap: 0.9rem;
     padding: 0.6rem 0.9rem;
@@ -15,22 +16,28 @@ export default css`
   &:hover {
     background: color-mix(in srgb, var(--surface-2) 50%, transparent);
   }
-  img,
-  .no-picture {
+  /* A product with no picture shows where one would be. */
+  & > img,
+  &:not(:has(> img))::before {
+    grid-area: picture;
     inline-size: 3.5rem;
     block-size: 3.5rem;
     border-radius: var(--radius-s);
     background: var(--surface-2);
     object-fit: cover;
   }
-  .name {
+  &:not(:has(> img))::before {
+    content: '';
+  }
+  hgroup {
+    grid-area: name;
     min-inline-size: 0;
+    h3 {
+      font-size: inherit;
+    }
     .react-aria-Link {
       color: var(--text);
       font-weight: 600;
-    }
-    .badge {
-      margin-inline-start: 0.5rem;
     }
     p {
       color: var(--muted);
@@ -40,70 +47,127 @@ export default css`
       white-space: nowrap;
     }
   }
-  .badge {
-    justify-self: start;
-  }
-  .stock {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-  .stock .react-aria-Group {
+  [itemprop='additionalProperty'],
+  [itemprop='inventoryLevel'] {
     display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.5rem;
+    border-radius: 1rem;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
   }
-  /* The count shows at once; the buttons say a write is on its way. */
-  .stock .react-aria-Group[data-sending] .react-aria-Button {
+  /* Changed in this browser. */
+  [itemprop='additionalProperty'] {
+    margin-inline-start: 0.5rem;
+    background: var(--accent-soft);
     color: var(--accent);
   }
-  .stock .react-aria-Button {
-    inline-size: 1.6rem;
-    block-size: 1.6rem;
-    font-weight: 600;
+  /* The offer's parts take their own places in the row. */
+  [itemprop='offers'] {
+    display: contents;
+    > div {
+      grid-area: stock;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
   }
-  .rating {
+  [itemprop='offers']:has([itemprop='availability'][href='https://schema.org/InStock']) [itemprop='inventoryLevel'] {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+  [itemprop='offers']:has([itemprop='availability'][href='https://schema.org/LimitedAvailability'])
+    [itemprop='inventoryLevel'] {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+  [itemprop='offers']:has([itemprop='availability'][href='https://schema.org/OutOfStock']) [itemprop='inventoryLevel'] {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+  .react-aria-Group {
+    display: inline-flex;
+    .react-aria-Button {
+      inline-size: 1.6rem;
+      min-block-size: 1.6rem;
+      padding: 0;
+      border-color: transparent;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 600;
+      &[data-hovered] {
+        background: var(--surface-2);
+        color: var(--text);
+      }
+    }
+    /* The count shows at once; the buttons say a write is on its way. */
+    &[aria-busy='true'] .react-aria-Button {
+      color: var(--accent);
+    }
+  }
+  [itemprop='aggregateRating'] {
+    grid-area: rating;
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
-    .icon {
+    &::before {
       color: var(--warn);
     }
   }
-  .price {
+  [itemprop='price'] {
+    grid-area: price;
     justify-self: end;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
-  .actions {
+  /* The commands on a product are their glyphs; their names stay for assistive technology. */
+  menu {
+    grid-area: commands;
     display: flex;
+    > li:empty {
+      display: none;
+    }
+    .react-aria-Link {
+      inline-size: 2.4rem;
+      padding: 0;
+      border-color: transparent;
+      background: transparent;
+      color: var(--muted);
+      &[data-hovered] {
+        background: var(--surface-2);
+        color: var(--text);
+      }
+    }
+    [itemprop='name'] {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
   }
   @media (max-width: 44rem) {
     & {
       grid-template-columns: 3.5rem minmax(0, 1fr) auto;
       grid-template-areas:
         'picture name price'
-        'picture stock actions';
+        'picture stock commands';
       row-gap: 0.25rem;
     }
-    img,
-    .no-picture {
-      grid-area: picture;
+    & > img,
+    &:not(:has(> img))::before {
       align-self: start;
     }
-    .name {
-      grid-area: name;
-    }
-    .price {
-      grid-area: price;
-    }
-    .stock {
-      grid-area: stock;
-    }
-    .rating {
+    [itemprop='aggregateRating'] {
       display: none;
     }
-    .actions {
-      grid-area: actions;
+    menu {
       justify-self: end;
     }
   }

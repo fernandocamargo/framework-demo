@@ -10,7 +10,6 @@ export default ({ className, label, open, send }) => (
       aria-keyshortcuts="?"
       aria-label={label}
       className={`react-aria-Button ${className}`}
-      data-variant="icon"
       onPress={() => send({ type: 'open' })}
     >
       <kbd>?</kbd>

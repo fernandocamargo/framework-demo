@@ -12,32 +12,32 @@ import Editor from '@/components/product/editor';
 import Remove from '@/components/product/remove';
 import Session from '@/components/session';
 
+// The page, as schema.org names one: its name, the data it is based on (the world it reads), and the
+// catalogue in its main part.
 export default ({ askToSignIn, brand, className, dialogs, navigating, signInReason, skip, states, world }) => (
-  <div aria-busy={navigating} className={className}>
-    <Button className="skip" onPress={() => document.getElementById('main')?.focus()}>
-      {skip}
-    </Button>
+  <div aria-busy={navigating} className={className} itemScope itemType="https://schema.org/WebPage">
+    <Button onPress={() => document.getElementById('main')?.focus()}>{skip}</Button>
     <header>
-      <div className="brand">
-        <span aria-hidden="true" className="mark" />
-        <h1>{brand}</h1>
-        <span className="badge">{world}</span>
-      </div>
-      <Link className="react-aria-Link states" data-variant="quiet" href="#/states">
-        {states}
-      </Link>
+      <hgroup>
+        <h1 itemProp="name">{brand}</h1>
+        <p itemProp="isBasedOn" itemScope itemType="https://schema.org/Dataset">
+          <span itemProp="name">{world}</span>
+        </p>
+      </hgroup>
+      <nav>
+        <Link href="#/states">{states}</Link>
+      </nav>
       <Lab />
       <Language />
       <Keyboard />
       <Session asked={askToSignIn} reason={signInReason} />
     </header>
-    <div className="progress" data-active={navigating || undefined} role="presentation" />
     <main id="main" tabIndex={-1}>
       <Catalogue />
     </main>
     {/* The product's modal opens at once; the product's dialog waits for its read inside it. */}
     {dialogs.view !== null && (
-      <Modal onClose={() => go({ view: null })} size="large">
+      <Modal onClose={() => go({ view: null })}>
         <Detail />
       </Modal>
     )}

@@ -5,6 +5,11 @@
  * component's class. This file holds only what no component owns: the tokens every skin reads,
  * and the react-aria controls, styled once by their default class names. Popovers and modals
  * render in a portal outside the component that opened them, so their look has to live here.
+ *
+ * The markup says what each piece is, never how it looks: HTML's elements, ARIA's roles and
+ * states, react-aria's anatomy (its classes, slots and data states), and schema.org's microdata
+ * (itemscope, itemtype, itemprop). The look follows from those names. Nothing decorative is
+ * written in the markup: glyphs, placeholders and spinners are drawn here and in the skins.
  */
 :root {
   color-scheme: light dark;
@@ -61,12 +66,19 @@ ul,
 ol,
 dl,
 dd,
-figure {
+figure,
+menu,
+fieldset {
   margin: 0;
   padding: 0;
 }
+fieldset {
+  min-inline-size: 0;
+  border: 0;
+}
 ul,
-ol {
+ol,
+menu {
   list-style: none;
 }
 img {
@@ -87,69 +99,101 @@ select {
 :focus-visible {
   box-shadow: var(--ring);
 }
-.visually-hidden {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+/* ---- Glyphs ---------------------------------------------------------------------------------- */
+/*
+ * A glyph is drawn, never written: a pseudo-element masks the text's colour with the glyph its
+ * element is given (--glyph), by what the element is. These are the glyphs.
+ */
+:root {
+  --glyph-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  --glyph-plus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+  --glyph-close: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");
+  --glyph-edit: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4'/%3E%3C/svg%3E");
+  --glyph-trash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5'/%3E%3C/svg%3E");
+  --glyph-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --glyph-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  --glyph-alert: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 2.5 20h19L12 3zM12 10v4M12 17.2v.3'/%3E%3C/svg%3E");
+  --glyph-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='m12 3 2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9 6.6 19.8l1.1-6.1L3.2 9.4l6.1-.8L12 3z'/%3E%3C/svg%3E");
+  --glyph-signal: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 19v-3M10 19v-7M15 19V8M20 19V4'/%3E%3C/svg%3E");
+  --glyph-tag: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12V4h8l10 10-8 8L3 12z'/%3E%3Ccircle cx='8' cy='9' r='1.3'/%3E%3C/svg%3E");
+  --glyph-globe: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z'/%3E%3C/svg%3E");
+  --glyph-user: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6'/%3E%3C/svg%3E");
 }
-
-/* ---- Icons: one element, coloured by the text around it ------------------------------------ */
-.icon {
+/* Commands whose name is drawn as a glyph keep the name for assistive technology only. */
+[slot='close'],
+.react-aria-SearchField .react-aria-Button {
+  font-size: 0;
+}
+[slot='close'] {
+  --glyph: var(--glyph-close);
+}
+.react-aria-SearchField {
+  --glyph: var(--glyph-search);
+  .react-aria-Button {
+    --glyph: var(--glyph-close);
+  }
+}
+.react-aria-Select > .react-aria-Button {
+  --glyph: var(--glyph-chevron);
+}
+/* What a command does, as schema.org's actions name it. */
+:is(.react-aria-Button, .react-aria-Link) > [itemscope] {
+  &[itemtype='https://schema.org/CreateAction'] {
+    --glyph: var(--glyph-plus);
+  }
+  &[itemtype='https://schema.org/UpdateAction'] {
+    --glyph: var(--glyph-edit);
+  }
+  &[itemtype='https://schema.org/DeleteAction'] {
+    --glyph: var(--glyph-trash);
+  }
+  &[itemtype='https://schema.org/ReplaceAction'] {
+    --glyph: var(--glyph-tag);
+  }
+}
+[itemprop='aggregateRating'] {
+  --glyph: var(--glyph-star);
+}
+[slot='close']::before,
+.react-aria-SearchField::before,
+.react-aria-SearchField .react-aria-Button::before,
+.react-aria-Select > .react-aria-Button::after,
+:is(.react-aria-Button, .react-aria-Link) > [itemscope]::before,
+[itemprop='aggregateRating']::before {
+  content: '';
   display: inline-block;
   flex: none;
-  inline-size: 1.1em;
-  block-size: 1.1em;
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
   background: currentColor;
-  mask: var(--icon) center / contain no-repeat;
-  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--glyph) center / contain no-repeat;
+  -webkit-mask: var(--glyph) center / contain no-repeat;
   vertical-align: -0.18em;
 }
-.icon[data-icon='search'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
-}
-.icon[data-icon='plus'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
-}
-.icon[data-icon='close'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");
-}
-.icon[data-icon='edit'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4'/%3E%3C/svg%3E");
-}
-.icon[data-icon='trash'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5'/%3E%3C/svg%3E");
-}
-.icon[data-icon='chevron'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-}
-.icon[data-icon='check'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
-}
-.icon[data-icon='alert'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 2.5 20h19L12 3zM12 10v4M12 17.2v.3'/%3E%3C/svg%3E");
-}
-.icon[data-icon='star'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='m12 3 2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9 6.6 19.8l1.1-6.1L3.2 9.4l6.1-.8L12 3z'/%3E%3C/svg%3E");
-}
-.icon[data-icon='signal'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 19v-3M10 19v-7M15 19V8M20 19V4'/%3E%3C/svg%3E");
-}
-.icon[data-icon='tag'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12V4h8l10 10-8 8L3 12z'/%3E%3Ccircle cx='8' cy='9' r='1.3'/%3E%3C/svg%3E");
-}
-.icon[data-icon='globe'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z'/%3E%3C/svg%3E");
-}
-.icon[data-icon='user'] {
-  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6'/%3E%3C/svg%3E");
+/* An action named inside a command: the glyph, then the name. */
+:is(.react-aria-Button, .react-aria-Link) > [itemscope] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
 }
 
 /* ---- Buttons and links ---------------------------------------------------------------------- */
+/*
+ * A link reads as text, unless it is one of a list of commands (`menu`), a dialog's footer or a
+ * navigation, where it is a command like the buttons beside it. The last command of a footer, or
+ * of what a notice offers when it offers more than one thing, is the step forward.
+ */
+.react-aria-Link {
+  color: var(--accent);
+  text-decoration: none;
+  border-radius: 3px;
+  cursor: pointer;
+  &[data-hovered] {
+    text-decoration: underline;
+  }
+}
 .react-aria-Button,
-.react-aria-Link[data-variant] {
+:where(menu, footer, nav) .react-aria-Link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -171,40 +215,10 @@ select {
 
   &[data-hovered] {
     background: var(--surface-2);
+    text-decoration: none;
   }
   &[data-pressed] {
     transform: scale(0.98);
-  }
-  &[data-variant='primary'] {
-    border-color: transparent;
-    background: var(--accent);
-    color: var(--on-accent);
-    &[data-hovered] {
-      background: var(--accent-hover);
-    }
-  }
-  &[data-variant='danger'] {
-    border-color: transparent;
-    background: var(--danger);
-    color: var(--on-accent);
-  }
-  &[data-variant='quiet'] {
-    border-color: transparent;
-    background: transparent;
-    &[data-hovered] {
-      background: var(--surface-2);
-    }
-  }
-  &[data-variant='icon'] {
-    inline-size: 2.4rem;
-    padding: 0;
-    border-color: transparent;
-    background: transparent;
-    color: var(--muted);
-    &[data-hovered] {
-      background: var(--surface-2);
-      color: var(--text);
-    }
   }
   &[data-disabled],
   &[data-pending] {
@@ -212,14 +226,51 @@ select {
     cursor: default;
   }
 }
-.react-aria-Link:not([data-variant]) {
-  color: var(--accent);
-  text-decoration: none;
-  border-radius: 3px;
-  cursor: pointer;
+:where(footer > :last-child, [role] > menu > li:last-child:not(:only-child) > *):is(
+  .react-aria-Button,
+  .react-aria-Link
+) {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--on-accent);
   &[data-hovered] {
-    text-decoration: underline;
+    background: var(--accent-hover);
   }
+}
+/* A command that deletes, as schema.org names it, has consequences. */
+.react-aria-Button:has(> [itemtype='https://schema.org/DeleteAction']) {
+  border-color: transparent;
+  background: var(--danger);
+  color: var(--on-accent);
+  &[data-hovered] {
+    background: var(--danger);
+  }
+}
+/* A command that closes is its glyph alone. */
+.react-aria-Button[slot='close'] {
+  inline-size: 2.4rem;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  &[data-hovered] {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+}
+/* A command on its way shows a spinner in place of its glyph. */
+.react-aria-Button[data-pending] > [itemscope]::before {
+  display: none;
+}
+/* A command on its way turns its own glyph into a spinner. */
+.react-aria-Button[data-pending]::before {
+  content: '';
+  inline-size: 1.1em;
+  block-size: 1.1em;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-block-start-color: currentColor;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
 }
 
 /* ---- Fields --------------------------------------------------------------------------------- */
@@ -290,7 +341,7 @@ select {
       display: none;
     }
   }
-  > .icon {
+  &::before {
     position: absolute;
     inset: 50% auto auto 0.7rem;
     translate: 0 -50%;
@@ -380,32 +431,36 @@ select {
   gap: 0.6rem;
   cursor: default;
 }
-.react-aria-Switch .track {
+/* A switch's track and knob, and a checkbox's box and mark, are drawn on the control itself. */
+.react-aria-Switch::before {
+  content: '';
   flex: none;
   inline-size: 2.4rem;
   block-size: 1.4rem;
-  padding: 2px;
   border-radius: 1rem;
   background: var(--border-strong);
   transition: background 160ms var(--ease);
-  &::before {
-    content: '';
-    display: block;
-    block-size: 100%;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    background: #fff;
-    transition: translate 160ms var(--ease);
-  }
 }
-.react-aria-Switch[data-selected] .track {
-  background: var(--accent);
+.react-aria-Switch::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 2px;
+  inline-size: calc(1.4rem - 4px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  transition: translate 160ms var(--ease);
+}
+.react-aria-Switch[data-selected] {
   &::before {
+    background: var(--accent);
+  }
+  &::after {
     translate: 1rem;
   }
 }
-.react-aria-Switch[data-focus-visible] .track,
-.react-aria-Checkbox[data-focus-visible] .box,
+.react-aria-Switch[data-focus-visible]::before,
+.react-aria-Checkbox[data-focus-visible]::before,
 .react-aria-Radio[data-focus-visible]::before {
   box-shadow: var(--ring);
 }
@@ -414,27 +469,39 @@ select {
 .react-aria-Radio[data-focus-visible] {
   box-shadow: none;
 }
-.react-aria-Checkbox .box {
-  display: grid;
-  place-items: center;
+.react-aria-Checkbox::before {
+  content: '';
   flex: none;
   inline-size: 1.2rem;
   block-size: 1.2rem;
   border: 1.5px solid var(--border-strong);
   border-radius: 4px;
   background: var(--surface);
-  color: transparent;
-  font-size: 0.8rem;
 }
-.react-aria-Checkbox[data-selected] .box {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
+.react-aria-Checkbox[data-selected] {
+  &::before {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0.2rem;
+    inline-size: 0.8rem;
+    block-size: 0.8rem;
+    background: var(--on-accent);
+    mask: var(--glyph-check) center / contain no-repeat;
+    -webkit-mask: var(--glyph-check) center / contain no-repeat;
+  }
 }
-.react-aria-RadioGroup .choices {
+/* A group's radios share a line; its label and anything else above them take a line each. */
+.react-aria-RadioGroup {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+  > :not(.react-aria-Radio) {
+    flex-basis: 100%;
+  }
 }
 .react-aria-Radio {
   min-block-size: 2rem;
@@ -486,20 +553,24 @@ select {
     }
   }
 }
-.react-aria-ProgressBar {
-  display: grid;
-  gap: 0.35rem;
-  .bar {
-    block-size: 6px;
-    border-radius: 3px;
+progress {
+  appearance: none;
+  inline-size: 100%;
+  block-size: 6px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--accent);
+  overflow: hidden;
+  &::-webkit-progress-bar {
     background: var(--surface-2);
-    overflow: hidden;
   }
-  .fill {
-    block-size: 100%;
-    border-radius: 3px;
+  &::-webkit-progress-value {
     background: var(--accent);
     transition: inline-size 200ms var(--ease);
+  }
+  &::-moz-progress-bar {
+    background: var(--accent);
   }
 }
 .react-aria-Tabs {
@@ -540,7 +611,7 @@ select {
   &[data-entering] {
     animation: fade 160ms var(--ease);
   }
-  &.above {
+  &[data-react-aria-top-layer] {
     z-index: 25;
   }
 }
@@ -564,10 +635,8 @@ select {
   &[data-entering] {
     animation: rise 200ms var(--ease);
   }
-  &[data-size='small'] {
-    inline-size: min(26rem, 100%);
-  }
-  &[data-size='large'] {
+  /* A product is wide, from its placeholder on, so its modal opens once at its size. */
+  &:has([itemtype='https://schema.org/Product']) {
     inline-size: min(44rem, 100%);
   }
   /* A failure or a question is small, in whatever modal it shows (a product's failure in its modal). */
@@ -585,13 +654,19 @@ select {
     font-size: 1.15rem;
     line-height: 1.3;
   }
-  > header {
+  /* What a dialog holds, when it is one item (a product, an action), lays out as the dialog does. */
+  > [itemscope] {
+    display: grid;
+    gap: 1rem;
+    min-inline-size: 0;
+  }
+  :is(&, & > [itemscope]) > header {
     display: flex;
     align-items: start;
     justify-content: space-between;
     gap: 1rem;
   }
-  > footer {
+  :is(&, & > [itemscope]) > footer {
     display: flex;
     flex-wrap: wrap;
     justify-content: end;
@@ -599,79 +674,61 @@ select {
   }
 }
 
-/* ---- Small shared pieces --------------------------------------------------------------------- */
-.notice {
-  display: flex;
-  gap: 0.6rem;
+/* ---- Notices --------------------------------------------------------------------------------- */
+/*
+ * A notice is what the page says: an alert (asks for attention), a note (what may be done), or the
+ * status of an action, which names it with schema.org's actionStatus. Its glyph and colour follow:
+ * a failed action is a danger, a completed one is done, anything else asks for attention.
+ */
+:is([role='alert'], [role='note'], [role='status']:has(> [itemprop='actionStatus'])) {
+  --glyph: var(--glyph-alert);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.6rem;
+  row-gap: 0.6rem;
+  align-items: start;
   padding: 0.7rem 0.8rem;
   border-radius: var(--radius-s);
-  background: var(--surface-2);
-  &[data-tone='danger'] {
-    background: var(--danger-soft);
-    color: var(--danger);
-  }
-  &[data-tone='warn'] {
-    background: var(--warn-soft);
-    color: var(--warn);
-  }
-  &[data-tone='ok'] {
-    background: var(--ok-soft);
-    color: var(--ok);
-  }
-  &[data-tone='info'] {
-    background: var(--accent-soft);
-    color: var(--accent);
-  }
-  .icon {
+  background: var(--warn-soft);
+  color: var(--warn);
+  &::before {
+    content: '';
+    grid-row: span 2;
+    inline-size: 1.1rem;
+    block-size: 1.1rem;
     margin-block-start: 0.15em;
+    background: currentColor;
+    mask: var(--glyph) center / contain no-repeat;
+    -webkit-mask: var(--glyph) center / contain no-repeat;
   }
-  .actions {
+  > :not(link, meta) {
+    grid-column: 2;
+  }
+  > menu {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-block-start: 0.6rem;
   }
-}
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3em;
-  padding: 0.1rem 0.5rem;
-  border-radius: 1rem;
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-  &[data-tone='ok'] {
-    background: var(--ok-soft);
-    color: var(--ok);
-  }
-  &[data-tone='warn'] {
-    background: var(--warn-soft);
-    color: var(--warn);
-  }
-  &[data-tone='danger'] {
+  &:has(> [itemprop='actionStatus'][href='https://schema.org/FailedActionStatus']) {
     background: var(--danger-soft);
     color: var(--danger);
   }
-  &[data-tone='accent'] {
-    background: var(--accent-soft);
-    color: var(--accent);
+  &:has(> [itemprop='actionStatus'][href='https://schema.org/CompletedActionStatus']) {
+    --glyph: var(--glyph-check);
+    background: var(--ok-soft);
+    color: var(--ok);
   }
 }
-.skeleton {
-  border-radius: var(--radius-s);
-  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%) 0 0 / 200% 100%;
-  animation: shimmer 1.4s linear infinite;
+[role='note'] {
+  --glyph: var(--glyph-user);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
-.spinner {
-  inline-size: 1.1em;
-  block-size: 1.1em;
-  border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
-  border-block-start-color: currentColor;
-  border-radius: 50%;
-  animation: spin 700ms linear infinite;
+
+/* ---- Placeholders ---------------------------------------------------------------------------- */
+/* What a placeholder's shapes are painted with; each skin says which of its shapes wait. */
+:root {
+  --placeholder: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%) 0 0 / 200% 100%;
 }
 
 /* ---- Failures, as toasts (main.tsx) ---------------------------------------------------------- */
@@ -735,12 +792,12 @@ select {
     background-position: -200% 0;
   }
 }
-@keyframes travel {
+@keyframes sweep {
   from {
-    translate: -100%;
+    background-position: -70% 0;
   }
   to {
-    translate: 250%;
+    background-position: 170% 0;
   }
 }
 @keyframes spin {
@@ -759,7 +816,8 @@ select {
   }
 }
 @media (forced-colors: active) {
-  .icon {
-    background: CanvasText;
+  ::before,
+  ::after {
+    forced-color-adjust: none;
   }
 }

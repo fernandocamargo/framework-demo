@@ -1,12 +1,15 @@
 import { format } from '@/address';
-import { CURRENCY, STOCK_TONES, stockLevel } from '@/format';
+import { AVAILABILITY, CURRENCY, stockLevel } from '@/format';
 
 export default ({ acl, async: { default: product }, i18n, intl, route }) => {
   const level = stockLevel(product.stock);
   const images: string[] = product.images.length ? product.images : product.thumbnail ? [product.thumbnail] : [];
   return {
+    brand: product.brand ?? '',
     canEdit: acl.allowed,
-    change: product.local === 'created' ? i18n.change.created : product.local === 'edited' ? i18n.change.edited : null,
+    category: product.category,
+    change: product.local ? { label: i18n.change[product.local], value: product.local } : null,
+    currency: CURRENCY,
     description: product.description,
     i18n,
     id: product.id,
@@ -14,11 +17,14 @@ export default ({ acl, async: { default: product }, i18n, intl, route }) => {
       alt: i18n.pictures.picture({ index: index + 1, title: product.title }),
       src,
     })),
-    origin: [product.brand, product.category].filter(Boolean).join(' · '),
-    price: intl.formatNumber(product.price, { currency: CURRENCY, style: 'currency' }),
+    price: { text: intl.formatNumber(product.price, { currency: CURRENCY, style: 'currency' }), value: product.price },
     // The same address, with this dialog closed and the deletion asked for.
     removeHref: format({ ...route, remove: product.id, view: null }),
-    stock: { label: i18n.stock({ count: product.stock, level }), tone: STOCK_TONES[level] },
+    stock: {
+      availability: AVAILABILITY[level],
+      count: product.stock,
+      label: i18n.stock({ count: product.stock, level }),
+    },
     title: product.title,
   };
 };

@@ -1,6 +1,6 @@
 {
   "components/catalogue/title": "Produtos",
-  "components/catalogue/summary": "{count, plural, one {# produto} other {# produtos}}{filter, select, q { com “{q}”} category { em {category}} both { com “{q}” em {category}} other {}}",
+  "components/catalogue/summary": "<total>{count, plural, one {# produto} other {# produtos}}</total>{filter, select, q { com “{q}”} category { em {category}} both { com “{q}” em {category}} other {}}",
   "components/catalogue/actions/bulk": "Mudar preços em lote",
   "components/catalogue/actions/create": "Novo produto",
   "components/catalogue/list": "Produtos",

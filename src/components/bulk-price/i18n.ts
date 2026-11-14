@@ -1,4 +1,4 @@
-// The wizard's words, in English. Translations: i18n/<locale>.json. Rich text (`<b>`) is
+// The wizard's words, in English. Translations: i18n/<locale>.json. Rich text (`<change>`) is
 // placed by the render, which says what a tag becomes.
 export default {
   title: 'Bulk price change',
@@ -33,7 +33,7 @@ export default {
   },
   preview: {
     after: 'After',
-    applies: '<b>{rule}</b>, for {selected, number} of {count, plural, one {# product} other {# products}}.',
+    applies: '<change>{rule}</change>, for {selected, number} of {count, plural, one {# product} other {# products}}.',
     apply: 'Apply to {count, number}',
     now: 'Now',
     product: 'Product',
@@ -41,7 +41,7 @@ export default {
   large: {
     back: 'Back to the preview',
     confirm: 'Yes, apply it',
-    text: '<b>{rule}</b> is a large change. It will be applied to {count, plural, one {# product} other {# products}}.',
+    text: '<change>{rule}</change> is a large change. It will be applied to {count, plural, one {# product} other {# products}}.',
     title: 'Change these prices by more than {limit, number}%?',
   },
   progress: {

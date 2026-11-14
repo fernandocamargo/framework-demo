@@ -34,7 +34,7 @@ What this does not do: it does not decide what to build, and it does not judge w
 | Service          | The operations on one resource, written against clients. A folder under `services/`.                                                                                                                                                                                                                   |
 | Injection        | What the framework hands to a layer file's functions: `clients`, `services`, `route`, `navigation`, `form`, `i18n`, `intl`, `locale`. Components never import a client or a service. A component follows only what its files read: one that does not read the locale never renders for a change of it. |
 | Messages         | A component's words, in its `i18n.ts`, as an object of any shape; translations beside it in `i18n/<locale>.json`, loaded when a component of the folder first shows in that locale.                                                                                                                    |
-| Skin             | A component's plain CSS, nested under its class: `style/skins/<name>/index.ts`.                                                                                                                                                                                                                        |
+| Skin             | A component's plain CSS, nested under its class: `style/skins/<name>/index.ts`. It styles what the markup says each piece is (HTML, ARIA, react-aria's anatomy, schema.org's microdata), never a class for its look.                                                                                   |
 
 ## One component, toured
 
@@ -233,7 +233,7 @@ Nobody wrote the type `{ page: number; pages: number }`: it is read from `'Page 
 - [`http.test.ts`](src/clients/dummyjson/http.test.ts): the client on a bad network: "requests that meet a 401 at the same time share one refresh".
 - [`framework/runtime/__tests__/`](framework/runtime/__tests__): the framework's own guarantees.
 
-The end-to-end tests ([`e2e/flows.spec.ts`](e2e/flows.spec.ts)) drive the production build. After each action they wait on one promise, `window.__framework.idle()`, then look once. It resolves when no read or write is pending, no view or skin is loading, no operation is running and no placeholder is on screen. A flow across two tabs also waits on `window.__framework.fromTab()`, which resolves once a tab has handled another's message. There are no sleeps and no retried assertions, with one stated exception for a list that refreshes on a timer.
+The end-to-end tests ([`e2e/flows.spec.ts`](e2e/flows.spec.ts)) drive the production build. After each action they wait on one promise, `window.__framework.idle()`, then look once. It resolves when no read or write is pending, no view or skin is loading, no operation is running and no placeholder is on screen. A flow across two tabs also waits on `window.__framework.fromTab()`, which resolves once a tab has handled another's message. There are no sleeps and no retried assertions, with one stated exception for a list that refreshes on a timer. [`e2e/microdata.spec.ts`](e2e/microdata.spec.ts) runs the framework's microdata check on every page the flows reach: the catalogue, a product, the editor, the dialogs and the lab name their pieces as schema.org does.
 
 ## The network lab
 
@@ -362,7 +362,7 @@ The mechanism differs. The idea carries: give each kind of decision one place, t
 ## Layout
 
 ```
-framework/          The framework: plugin/, runtime/, typescript/, shared/, storybook/. See its README.
+framework/          The framework: plugin/, runtime/, typescript/, shared/, storybook/, microdata/. See its README.
 src/
   main.tsx          The shell: which world and locale, the router's stand-in, Root, failures as toasts.
   locales.ts        The locales the app speaks, and `?lang=` in the address.

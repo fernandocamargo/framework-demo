@@ -32,7 +32,7 @@ export default css`
     color: var(--muted);
     margin-block: 0.25rem 1rem;
   }
-  .frames {
+  section > ul {
     display: grid;
     grid-template-columns: repeat(auto-fill, 360px);
     gap: 1.25rem;
@@ -42,7 +42,7 @@ export default css`
   figure {
     margin: 0;
   }
-  .frame {
+  figure > div {
     inline-size: 360px;
     block-size: 300px;
     overflow: hidden;
@@ -66,8 +66,14 @@ export default css`
     span {
       color: var(--muted);
     }
-    .badge {
+    small {
       justify-self: start;
+      padding: 0.1rem 0.5rem;
+      border-radius: 1rem;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
     }
   }
 `;
