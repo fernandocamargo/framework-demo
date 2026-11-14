@@ -10,8 +10,12 @@ import base from '../vite.config.ts'
 /** Insertions into the runtime's component.tsx, each before an anchor that must be there. */
 const EDITS: [anchor: string, before: string][] = [
   ['const rendered = shareElements(', '__call = globalThis.__renderCall?.(spec.path)\n    '],
-  // The layout effect of the render React commits holds that render's call: one it throws away never runs it.
-  ['useLayoutEffect(() => commitHandlers(scope))', 'let __call: unknown\n    useLayoutEffect(() => void (__call !== undefined && globalThis.__kept?.(__call)))\n    '],
+  // Each element a call returned remembers the call. The layout effect of the render React commits
+  // marks the call behind the element it shows: a render React threw away whose output a later
+  // render returns again was not wasted, and one whose output nothing shows was.
+  ['last.current = { inputs, props, shaped, allowed, rendered, element }', ';(globalThis.__callOf ??= new WeakMap()).set(element as object, __call)\n    '],
+  ['last.current = { ...last.current, inputs, props, shaped }', ';(globalThis.__callOf ??= new WeakMap()).set(last.current.element as object, __call)\n      '],
+  ['useLayoutEffect(() => commitHandlers(scope))', 'let __call: unknown\n    useLayoutEffect(() => void globalThis.__kept?.(globalThis.__callOf?.get(last.current?.element as object)))\n    '],
   ['const module = use(loadView())', "if (loadView().status !== 'fulfilled') globalThis.__suspend?.(spec.path, 'view')\n    "],
   ['if (loadThisSkin) use(loadSkin(', "if (loadThisSkin && loadSkin(spec.path, skin, loadThisSkin).status !== 'fulfilled') globalThis.__suspend?.(spec.path, 'skin')\n    "],
   ['const answer: unknown = query ? useSuspenseQuery(', "if (query && __client.getQueryData(query.queryKey) === undefined) globalThis.__suspend?.(spec.path, 'data')\n    "],

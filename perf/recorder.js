@@ -9,8 +9,8 @@
 //   Each also says which framework component it is `within`, so what react-aria renders can be
 //   told apart by the component of ours that holds it.
 // It also counts every call of a framework component's render (`window.__renderCall`, from
-// perf/vite.config.ts), per step (`window.__phase`), and marks the calls React committed
-// (`window.__kept`): a call never marked is a render React threw away.
+// perf/vite.config.ts), per step (`window.__phase`), and marks the calls whose output React
+// committed (`window.__kept`): a call never marked is a render React threw away.
 (() => {
   const PERFORMED_WORK = 1;
   // React's flag on a fiber whose children were removed in this commit, bubbled up as subtreeFlags.
@@ -113,7 +113,7 @@
     return call;
   };
   window.__kept = (call) => {
-    call.kept = true;
+    if (call) call.kept = true;
   };
   // The framework component a fiber is inside of: the nearest view above it.
   const VIEWS = new Set(['StatefulView', 'StatelessView']);
