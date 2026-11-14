@@ -1,6 +1,6 @@
 import { Button, Dialog, FieldError, Form, Group, Heading, Input, Label, ListBox, ListBoxItem, Modal, ModalOverlay, NumberField, Popover, Select, SelectValue, TextArea, TextField } from 'react-aria-components'
 
-export default ({ className, i18n, send, values, set, categories, currency, heading, saveText, problems, loading, unavailable, formShown, locked, readOnly, busy, conflict, failed, confirmingDiscard, error }) => (
+export default ({ className, i18n, send, initial, set, categories, currency, heading, saveText, problems, loading, unavailable, formShown, locked, readOnly, busy, conflict, failed, confirmingDiscard, error }) => (
   <ModalOverlay isOpen isDismissable={!busy} isKeyboardDismissDisabled={busy} onOpenChange={(open) => !open && send({ type: 'close' })}>
     <Modal className={`react-aria-Modal ${className}`}>
       <Dialog>
@@ -49,16 +49,16 @@ export default ({ className, i18n, send, values, set, categories, currency, head
             }}
           >
             <div className="fields">
-              <TextField className="react-aria-TextField wide" name="title" value={values.title} onChange={(value) => set('title', value)} isReadOnly={locked} autoFocus>
+              <TextField className="react-aria-TextField wide" name="title" defaultValue={initial.title} onChange={(value) => set('title', value)} isReadOnly={locked} autoFocus>
                 <Label>{i18n.fields.title}</Label>
                 <Input />
                 <FieldError />
               </TextField>
-              <TextField className="react-aria-TextField wide" name="description" value={values.description} onChange={(value) => set('description', value)} isReadOnly={locked}>
+              <TextField className="react-aria-TextField wide" name="description" defaultValue={initial.description} onChange={(value) => set('description', value)} isReadOnly={locked}>
                 <Label>{i18n.fields.description}</Label>
                 <TextArea />
               </TextField>
-              <Select name="category" selectedKey={values.category || null} onSelectionChange={(key) => set('category', String(key))} isDisabled={locked} placeholder={i18n.fields.choose}>
+              <Select name="category" defaultSelectedKey={initial.category || null} onSelectionChange={(key) => set('category', String(key))} isDisabled={locked} placeholder={i18n.fields.choose}>
                 <Label>{i18n.fields.category}</Label>
                 <Button>
                   <SelectValue />
@@ -69,11 +69,11 @@ export default ({ className, i18n, send, values, set, categories, currency, head
                   <ListBox items={categories}>{(category) => <ListBoxItem id={category.slug}>{category.name}</ListBoxItem>}</ListBox>
                 </Popover>
               </Select>
-              <TextField name="brand" value={values.brand} onChange={(value) => set('brand', value)} isReadOnly={locked}>
+              <TextField name="brand" defaultValue={initial.brand} onChange={(value) => set('brand', value)} isReadOnly={locked}>
                 <Label>{i18n.fields.brand}</Label>
                 <Input />
               </TextField>
-              <NumberField name="price" value={values.price} onChange={(value) => set('price', value)} minValue={0} step={0.01} formatOptions={currency} isReadOnly={locked}>
+              <NumberField name="price" defaultValue={initial.price} onChange={(value) => set('price', value)} minValue={0} step={0.01} formatOptions={currency} isReadOnly={locked}>
                 <Label>{i18n.fields.price}</Label>
                 <Group>
                   <Input />
@@ -82,7 +82,7 @@ export default ({ className, i18n, send, values, set, categories, currency, head
                 </Group>
                 <FieldError />
               </NumberField>
-              <NumberField name="stock" value={values.stock} onChange={(value) => set('stock', value)} minValue={0} step={1} isReadOnly={locked}>
+              <NumberField name="stock" defaultValue={initial.stock} onChange={(value) => set('stock', value)} minValue={0} step={1} isReadOnly={locked}>
                 <Label>{i18n.fields.stock}</Label>
                 <Group>
                   <Input />

@@ -1,4 +1,6 @@
-// What the editor's render shows in each state of the flow, in the locale on screen.
+// What the editor's render shows in each state of the flow, in the locale on screen. The fields
+// start from the seeded values and hold what is typed, so a key renders its field alone; the
+// values are read only to say what is wrong with them, once a save was tried.
 import { CURRENCY } from '@/format'
 import { problems } from './form'
 
@@ -8,7 +10,7 @@ export default ({ state, form, i18n, acl, async: { default: categories } }) => {
   return {
     i18n,
     send: state.send,
-    values: form.values,
+    initial: form.initial,
     set: form.set,
     categories,
     currency: { style: 'currency', currency: CURRENCY } as const,

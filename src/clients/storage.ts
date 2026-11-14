@@ -1,6 +1,30 @@
 // What a client keeps between calls. The browser's `sessionStorage` and `localStorage` fit it;
 // `memoryStorage()` is the same thing for tests and for the memory world.
-export type KeyValue = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+export type KeyValue = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> & {
+  /** Calls `listener` when another tab changes `key`, once the change can be read here; returns what stops it. */
+  watch?(key: string, listener: () => void): () => void
+}
+
+/**
+ * The browser's storage, shared by the tabs, saying when another tab changes a key. The `storage`
+ * event fires once the change can be read in this tab. A message on a channel can arrive before
+ * that (WebKit makes another page's writes visible in its own time), so what is read from here
+ * follows the event, not the message.
+ */
+export function shared(storage: Storage = window.localStorage): KeyValue {
+  return {
+    getItem: (key) => storage.getItem(key),
+    setItem: (key, value) => storage.setItem(key, value),
+    removeItem: (key) => storage.removeItem(key),
+    watch(key, listener) {
+      const changed = (event: StorageEvent) => {
+        if (event.storageArea === storage && (event.key === key || event.key === null)) listener()
+      }
+      window.addEventListener('storage', changed)
+      return () => window.removeEventListener('storage', changed)
+    },
+  }
+}
 
 export function memoryStorage(): KeyValue {
   const values = new Map<string, string>()
@@ -17,6 +41,7 @@ export function prefixed(storage: KeyValue, prefix: string): KeyValue {
     getItem: (key) => storage.getItem(prefix + key),
     setItem: (key, value) => storage.setItem(prefix + key, value),
     removeItem: (key) => storage.removeItem(prefix + key),
+    ...(storage.watch && { watch: (key: string, listener: () => void) => storage.watch!(prefix + key, listener) }),
   }
 }
 

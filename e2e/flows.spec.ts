@@ -6,7 +6,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 
 declare global {
   interface Window {
-    __framework: { idle(): Promise<void> }
+    __framework: { idle(): Promise<void>; fromTab(): Promise<void> }
   }
 }
 
@@ -405,17 +405,13 @@ test('the tabs share the session and the catalogue: a sign-in, a count and a sig
   for (const page of [one, other]) page.on('pageerror', (error) => { throw error })
   await open(one)
   await open(other)
-  // What another tab says arrives in its own time: a test waits for the message, then for idle.
+  // What another tab does arrives in its own time, twice: its message on the channel, and the
+  // storage they share, which the app's reads follow. A test waits until the app has handled the
+  // message and the storage has changed (the app's listener runs first), then for idle.
   const listen = (page: Page) =>
     page.evaluate(() => {
-      const heard = new Promise<void>((resolve) => {
-        const channel = new BroadcastChannel('stockroom:memory')
-        channel.onmessage = () => {
-          channel.close()
-          resolve()
-        }
-      })
-      ;(window as unknown as { heard: Promise<void> }).heard = heard
+      const stored = new Promise<void>((resolve) => window.addEventListener('storage', () => resolve(), { once: true }))
+      ;(window as unknown as { heard: Promise<unknown> }).heard = Promise.all([window.__framework.fromTab(), stored])
     })
   const heard = async (page: Page) => {
     await page.evaluate(() => (window as unknown as { heard: Promise<void> }).heard)

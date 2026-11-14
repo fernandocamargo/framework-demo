@@ -236,6 +236,8 @@ export function createHttp({ baseUrl, wire, storage, backoff = 400, random = Mat
         return shown(session)
       },
       refresh: () => refresh(),
+      /** Calls `listener` when another tab signs in, renews the session or signs out; returns what stops it. */
+      changed: (listener: () => void) => storage.watch?.(KEY, listener) ?? (() => undefined),
       signOut: () => keep(null),
     },
 

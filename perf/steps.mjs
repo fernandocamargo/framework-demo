@@ -9,7 +9,7 @@ const status = (page) => page.getByRole('status').first().innerText()
 /** In the page: serves the flags these ways, as another tab of the world would. */
 const serve = (ways) => {
   window.localStorage.setItem('memory:flags', JSON.stringify(ways))
-  window.dispatchEvent(new StorageEvent('storage', { key: 'memory:flags' }))
+  window.dispatchEvent(new StorageEvent('storage', { key: 'memory:flags', storageArea: window.localStorage }))
 }
 
 export const STEPS = [

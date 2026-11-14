@@ -6,7 +6,7 @@
 // is newer, somebody else saved meanwhile (another tab, or the network lab's button), and the
 // save is refused as a conflict.
 import type { Product } from '@/services/products/types'
-import { prefixed, sleep, type KeyValue } from '../storage'
+import { prefixed, shared, sleep, type KeyValue } from '../storage'
 
 export type Overlay = {
   /** Changed fields by product id, with the version the change made. */
@@ -70,6 +70,8 @@ export function createStore({ storage, latency = 0 }: { storage: KeyValue; laten
       const overlay = load()
       save({ ...overlay, created: overlay.created.filter((item) => item.id !== id), removed: isLocal(id) ? overlay.removed : [...new Set([...overlay.removed, id])] })
     },
+    /** Calls `listener` when another tab changes the overlay; returns what stops it. */
+    changed: (listener: () => void) => storage.watch?.(KEY, listener) ?? (() => undefined),
     /** Forgets everything: the catalogue is DummyJSON's again. */
     async reset(): Promise<void> {
       await sleep(latency)
@@ -79,4 +81,4 @@ export function createStore({ storage, latency = 0 }: { storage: KeyValue; laten
 }
 
 // Both worlds keep the changes in localStorage, apart, so every tab of a world sees the same catalogue.
-export default ({ env }) => (env.world === 'memory' ? createStore({ storage: prefixed(window.localStorage, 'memory:') }) : createStore({ storage: window.localStorage, latency: 120 }))
+export default ({ env }) => (env.world === 'memory' ? createStore({ storage: prefixed(shared(), 'memory:') }) : createStore({ storage: shared(), latency: 120 }))

@@ -3,7 +3,7 @@
 // and the local changes are kept as the real world keeps them, in the browser's localStorage
 // (under `memory:`), so every tab of the memory world shares them; a new browser starts over.
 import { createHttp } from '../dummyjson/http'
-import { prefixed } from '../storage'
+import { prefixed, shared } from '../storage'
 import { createServer } from './server'
 
-export default ({ env: _ }) => createHttp({ baseUrl: 'http://memory.invalid', wire: createServer(), storage: prefixed(window.localStorage, 'memory:'), backoff: 20 })
+export default ({ env: _ }) => createHttp({ baseUrl: 'http://memory.invalid', wire: createServer(), storage: prefixed(shared(), 'memory:'), backoff: 20 })

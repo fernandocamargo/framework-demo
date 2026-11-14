@@ -27,7 +27,7 @@ test('a flag served another way in another tab reaches this one', async () => {
   const changed = vi.fn()
   const stop = flags.changed(changed)
   window.localStorage.setItem('memory:flags', JSON.stringify({ stockCount: 'everyone' }))
-  window.dispatchEvent(new StorageEvent('storage', { key: 'memory:flags' }))
+  window.dispatchEvent(new StorageEvent('storage', { key: 'memory:flags', storageArea: window.localStorage }))
   await vi.waitFor(() => expect(changed).toHaveBeenCalled())
   expect((await flags.evaluate(moderator)).stockCount).toBe(true)
   expect(flags.lab.served()).toEqual({ stockCount: 'everyone', deletions: 'on', largeChangeAt: 'moderators' })

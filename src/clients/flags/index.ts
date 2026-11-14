@@ -8,7 +8,7 @@
 // providers, as each tab hears GrowthBook's stream, and each provider says its flags changed.
 import { InMemoryProvider, OpenFeature, ProviderEvents } from '@openfeature/web-sdk'
 import type { Flags } from 'framework'
-import { prefixed } from '../storage'
+import { prefixed, shared } from '../storage'
 import { definitions, names, type Name, type Served, type Targeting } from './definitions'
 
 const KEY = 'flags'
@@ -29,7 +29,7 @@ const configuration = (served: Served) =>
 
 export default ({ env }) => {
   const remote = env.world === 'dummyjson' ? env.flagsKey : undefined
-  const storage = env.world === 'memory' ? prefixed(window.localStorage, 'memory:') : window.localStorage
+  const storage = env.world === 'memory' ? prefixed(shared(), 'memory:') : shared()
   const stored = (): Served => {
     try {
       const kept = JSON.parse(storage.getItem(KEY) ?? '{}') as Partial<Record<Name, string>>
@@ -51,10 +51,7 @@ export default ({ env }) => {
   ).catch(() => undefined)
   const client = OpenFeature.getClient()
   // Another tab served a flag another way: this tab's provider takes it.
-  if (memory)
-    window.addEventListener('storage', (event) => {
-      if (event.key === `${env.world === 'memory' ? 'memory:' : ''}${KEY}`) void memory.putConfiguration(configuration(stored()))
-    })
+  if (memory) storage.watch?.(KEY, () => void memory.putConfiguration(configuration(stored())))
   const value = (name: Name) => {
     const { key, fallback } = definitions[name]
     return typeof fallback === 'boolean' ? client.getBooleanValue(key, fallback) : client.getNumberValue(key, fallback)

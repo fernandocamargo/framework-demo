@@ -14,9 +14,11 @@ const edited = <T extends Listed>(product: T, changes: Partial<Listed>): T => ({
 const changed = (page: Page, id: number, changes: Partial<Listed>): Page =>
   page.items.some((item) => item.id === id) ? { ...page, items: page.items.map((item) => (item.id === id ? edited(item, changes) : item)) } : page
 
-export default ({ services: { products } }) => ({
-  search: { reads: true },
-  get: { reads: true },
+// The reads lay the local overlay over DummyJSON's answers; in another tab, they follow the
+// overlay the tabs share, once its change can be read there.
+export default ({ clients: { local }, services: { products } }) => ({
+  search: { reads: true, follows: (stale) => local.changed(stale) },
+  get: { reads: true, follows: (stale) => local.changed(stale) },
   reviews: { reads: true, freshFor: 60_000 },
   categories: { reads: true, freshFor: 5 * 60_000 },
   // A save shows at once in the list and in the product's dialog; a conflict or a failure takes it out.
