@@ -534,6 +534,10 @@ select {
   &[data-size='large'] {
     inline-size: min(44rem, 100%);
   }
+  /* A failure or a question is small, in whatever modal it shows (a product's failure in its modal). */
+  &:has(> [role='alertdialog']) {
+    inline-size: min(26rem, 100%);
+  }
 }
 .react-aria-Dialog {
   /* A dialog takes the focus itself when nothing inside asks for it: its edge is ring enough. */

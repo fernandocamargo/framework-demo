@@ -1,6 +1,7 @@
 import { css } from 'framework'
 
-// The dialog renders in a portal; its modal takes this component's class, so the skin reaches it.
+// The dialog renders in a portal, in the modal the page opened; the dialog takes this component's
+// class, so the skin reaches it.
 export default css`
   .origin {
     color: var(--muted);
