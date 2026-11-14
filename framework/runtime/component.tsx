@@ -264,9 +264,14 @@ export function component(spec: Spec) {
     const flagged = readsFlags ? latestFlags() : undefined
     const route = viewReadsRoute ? use(RouteContext) : undefined
     const keyboard = readsKeyboard ? useKeyboard() : undefined
-    // What the chart's guards and the operations read when they run: the latest decision, set by
-    // each render.
+    // The decision, twice. `judged` is this render's, for what runs inside the render: the chart's
+    // declaration, and its first reads when it is created. `decided` is the one React committed,
+    // for what runs later: the chart's guards and the operations. A render React throws away (a
+    // transition the person leaves before it arrives) sets the first and never the second, so a
+    // guard reads the decision the page shows.
     const judged = useRef<boolean>(inherited)
+    const decided = useRef<boolean>(inherited)
+    const rendering = useRef(false)
     const loadThisSkin = spec.skins[skin]
     if (loadThisSkin) use(loadSkin(spec.path, skin, loadThisSkin))
 
@@ -277,7 +282,7 @@ export function component(spec: Spec) {
       const all: Record<string, unknown> = { ...injection, ...sources, ...defined(language), ...defined({ user }) }
       // Getters: the chart's guards and the operations spread these when they run, and get the
       // snapshot, the decision and the flags of that moment.
-      if (readsAcl) Object.defineProperty(all, 'acl', { get: () => view(allowedOn(latest(), judged.current)), enumerable: true })
+      if (readsAcl) Object.defineProperty(all, 'acl', { get: () => view(allowedOn(latest(), (rendering.current ? judged : decided).current)), enumerable: true })
       if (readsFlags) Object.defineProperty(all, 'flags', { get: () => flagsView(latestFlags()), enumerable: true })
       return all
     }, [injection, sources, language, user, view, latest, flagsView, latestFlags])
@@ -354,7 +359,7 @@ export function component(spec: Spec) {
       () => ({ given: defined({ user, flags, route, keyboard }), user, flags, flagged, inherited, decided: followed?.decided, snapshot, view }),
       [user, flags, flagged, route, keyboard, inherited, followed, snapshot, view],
     )
-    return { module, scope, injection, sources, withForm, form, async, language, access, judged, fields }
+    return { module, scope, injection, sources, withForm, form, async, language, access, judged, decided, rendering, fields }
   }
 
   /** Runs a rule. A rule that throws refuses, and is reported as the acl layer's failure. */
@@ -398,19 +403,28 @@ export function component(spec: Spec) {
    * keeps its identity, so react-aria's collections and memoized children inside skip it.
    */
   function show(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, decided?: boolean) {
-    const { module, scope, form, async, language, access, judged } = layers
+    const { module, scope, form, async, language, access, judged, decided: committed } = layers
     const last = useRef<{ inputs: unknown[]; props: Props; shaped: Props; allowed: boolean; rendered: ReactNode; element: ReactNode } | null>(null)
     // The handlers of the render React committed are the ones the instance's wrappers call.
     useLayoutEffect(() => commitHandlers(scope))
+    // And its decision is the one the guards and the operations read.
+    let showing: boolean | undefined
+    useLayoutEffect(() => {
+      if (showing !== undefined) committed.current = showing
+    })
     // The keys this instance answers, registered after each commit while it is mounted.
     const keys = useRef<Entry[] | undefined>(undefined)
     useShortcuts(spec.path, scope, keys)
     const inputs = [module, scope, async, state, form, language, access, decided]
-    if (last.current && sameEach(last.current.inputs, inputs) && sameProps(last.current.props, props)) return last.current.element
+    if (last.current && sameEach(last.current.inputs, inputs) && sameProps(last.current.props, props)) {
+      showing = last.current.allowed
+      return last.current.element
+    }
     const className = classes(spec.path, props.className)
     const given = givenOf(props, layers, state, className)
     const allowed = decided ?? decisionOf(module, given, access)
     judged.current = allowed
+    showing = allowed
     const shaping = readsAcl ? { ...given, acl: access.view(allowedOn(access.snapshot, allowed)) } : given
     // shortcuts.ts gets what props.ts gets. Its keys follow the state even when the render is skipped.
     if (module.shortcuts) keys.current = shortcutsOf(spec.path, module.shortcuts, shaping, state as never, scope, module.shortcutSites)
@@ -449,6 +463,15 @@ export function component(spec: Spec) {
   // calls a hook behind a condition. The view's module, once loaded, decides which.
   function StatefulView(props: Props) {
     const layers = useLayers()
+    // Until this render returns, what the chart reads is this render's decision.
+    layers.rendering.current = true
+    try {
+      return stateful(props, layers)
+    } finally {
+      layers.rendering.current = false
+    }
+  }
+  function stateful(props: Props, layers: ReturnType<typeof useLayers>) {
     const { module, access, judged, language } = layers
     // The decision comes before the chart, so its declaration and its guards see this render's.
     // A rule that reads the chart's state is decided after it, in show.
