@@ -6,6 +6,12 @@ const rows = (page) => page.getByRole('list', { name: 'Products' }).getByRole('l
 const shown = async (locator) => (await locator.count()) > 0 && (await locator.first().isVisible())
 const status = (page) => page.getByRole('status').first().innerText()
 
+/** In the page: serves the flags these ways, as another tab of the world would. */
+const serve = (ways) => {
+  window.localStorage.setItem('memory:flags', JSON.stringify(ways))
+  window.dispatchEvent(new StorageEvent('storage', { key: 'memory:flags' }))
+}
+
 export const STEPS = [
   {
     name: 'open the catalogue',
@@ -139,6 +145,23 @@ export const STEPS = [
     name: 'done',
     act: (page) => dialog(page, 'Bulk price change').getByRole('button', { name: 'Done' }).click(),
     check: async (page) => !page.url().includes('bulk='),
+  },
+  // A flag served another way, as another tab (or GrowthBook's dashboard) would: the provider says
+  // its flags changed, and only the components that read that flag render again.
+  {
+    name: 'stock count served to nobody',
+    act: (page) => page.evaluate(serve, { stockCount: 'nobody' }),
+    check: async (page) => (await rows(page).count()) === 12 && (await page.getByRole('button', { name: 'One more in stock' }).count()) === 0,
+  },
+  {
+    name: 'deletions paused',
+    act: (page) => page.evaluate(serve, { stockCount: 'nobody', deletions: 'off' }),
+    check: async (page) => (await rows(page).count()) === 12 && (await rows(page).getByRole('link', { name: /^Delete / }).count()) === 0,
+  },
+  {
+    name: 'both served as before',
+    act: (page) => page.evaluate(serve, {}),
+    check: async (page) => (await page.getByRole('button', { name: 'One more in stock' }).count()) === 12 && (await rows(page).getByRole('link', { name: /^Delete / }).count()) === 12,
   },
   {
     name: 'open the network lab',

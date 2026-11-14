@@ -4,11 +4,14 @@
 //   same props (`parent`), or the props that changed, each marked `sameValue` when only the
 //   reference is new (a function with the same code, an object or element with equal contents);
 // - `dom`: whether the commit changed the page anywhere inside it (an attribute, a text, a node
-//   added or removed). A re-render with `dom: false` changed nothing anyone can see.
+//   added or removed, including all it rendered). A re-render with `dom: false` changed nothing
+//   anyone can see.
 // It also counts every call of a framework component's render, committed or not
 // (`window.__renderCall`, from perf/vite.config.ts), per step (`window.__phase`).
 (() => {
   const PERFORMED_WORK = 1;
+  // React's flag on a fiber whose children were removed in this commit, bubbled up as subtreeFlags.
+  const CHILD_DELETION = 16;
   const COMPONENT_TAGS = new Set([0, 1, 11, 14, 15]); // function, class, forwardRef, memo, simple memo
   const nameOf = (fiber) => {
     const type = fiber.type;
@@ -117,7 +120,9 @@
               fn: typeof node.type === 'function' ? node.type.name : '',
               mounted: node.alternate === null,
               self: Math.max(0, (node.actualDuration || 0) - children),
-              dom: touched.has(node),
+              // A removal shows in the mutations only at the parent node, outside a component that
+              // removes all it rendered (one that now renders nothing), so React's flags say it.
+              dom: touched.has(node) || ((node.flags | node.subtreeFlags) & CHILD_DELETION) !== 0,
               why: node.alternate ? why(node) : undefined,
             });
           }

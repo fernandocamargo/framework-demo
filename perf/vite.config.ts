@@ -21,7 +21,9 @@ const countRenders: Plugin = {
   enforce: 'pre',
   transform(code, id) {
     if (!id.endsWith('/framework/runtime/component.tsx')) return null
-    let patched = code.replace('import { useQueryErrorResetBoundary, useSuspenseQuery }', 'import { useQueryClient, useQueryErrorResetBoundary, useSuspenseQuery }')
+    const imports = 'import { useQueryErrorResetBoundary,'
+    if (!code.includes(imports)) throw new Error(`perf: component.tsx no longer has \`${imports}\`; update perf/vite.config.ts`)
+    let patched = code.replace(imports, 'import { useQueryClient, useQueryErrorResetBoundary,')
     for (const [anchor, before] of EDITS) {
       if (!patched.includes(anchor)) throw new Error(`perf: component.tsx no longer has \`${anchor}\`; update perf/vite.config.ts`)
       patched = patched.replace(anchor, `${before}${anchor}`)

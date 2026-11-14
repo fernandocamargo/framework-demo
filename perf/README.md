@@ -87,3 +87,12 @@ The data layer's events go to the pipelines, and the lab's tracker listens from 
 
 The header has a "States" link; nothing else in the visit changes. 0 misses, 385 render calls, framework components rendered again 226 times (28 changing nothing). A component's form and chart read whether they are pinned once per render, from a context nothing changes outside the gallery.
 
+
+## After flags
+
+`Root`'s `flags` is a read for the person signed in; the rows read one, two delete rules another, the bulk change's guard a third. The flow gains three steps after the bulk change: stock count served to nobody, deletions paused, and both served as before, each as another tab would serve them (localStorage and a `storage` event). Chromium, one run, 29 steps: 0 misses, 426 render calls, framework components rendered again 274 times (28 changing nothing), render time 180.8 ms (42.4 ms changing nothing).
+
+- On the 26 steps from before: 378 render calls, against 385. Opening the catalogue takes 37, against 41. `Root` now starts its three reads side by side as it mounts. The first count with flags was 392 (48 for opening the catalogue): the rows were the first to read the flags, so the read started there and suspended them, and React rendered the components around them again.
+- A flag served another way renders only what reads it: stock count to nobody renders the 12 rows (each loses its buttons); deletions paused renders the 12 delete links (each goes); serving both back renders the 24 again.
+- A component follows only the flags it reads, compared with what it last rendered: the first flag change after a component mounts counts from the keys its render read, not from none.
+- The recorder now counts a component that removes all it rendered (a delete link that renders nothing) as changing the page. React's flags say so, since the removal shows in the mutations only at the parent node.
