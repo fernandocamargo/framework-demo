@@ -222,7 +222,11 @@ function pinnedActor(machine: AnyStateMachine, pin: Pin) {
 
 /** The running chart: the declared one, once the flow is at rest; the last one until then. A pinned one is never started. */
 function useChart(declared: Declared, pin: Pin | null) {
-  const [current, setCurrent] = useState(() => ({ declared, actor: pin ? pinnedActor(declared.machine, pin) : (createActor(declared.machine) as AnyActorRef) }))
+  // Created in the render itself, not in useState's initializer: creating it runs the chart's first
+  // reads, and the route being rendered is read from contexts, which a hook's callback may not read.
+  const first = useRef<{ declared: Declared; actor: AnyActorRef } | null>(null)
+  first.current ??= { declared, actor: pin ? pinnedActor(declared.machine, pin) : (createActor(declared.machine) as AnyActorRef) }
+  const [current, setCurrent] = useState(first.current)
   let running = current
   if (!pin && declared !== current.declared && atRest(current.actor.getSnapshot())) {
     running = { declared, actor: createActor(declared.machine, carried(declared.machine, current.actor.getSnapshot())) as AnyActorRef }
@@ -247,8 +251,9 @@ export function useStateLayer(path: string, module: StateModule, injection: Sour
   // and reads the route at once: for its context, and for the input of the service its first
   // state runs. A component mounted by a change of route is rendered before that route is
   // committed, so until its first commit the chart reads the route being rendered. Only until
-  // then: `rendering` reads the route's context, and a component that read it in its last
-  // render would render again at every change of route.
+  // then: `rendering` reads the route's contexts, and a component follows the fields its last
+  // render read. It reads them field by field, so the first change of another field after the
+  // commit does not render it again either.
   const committed = useRef(false)
   const live = useRef(sources)
   live.current = committed.current || rendering === undefined ? sources : { ...sources, route: rendering() }

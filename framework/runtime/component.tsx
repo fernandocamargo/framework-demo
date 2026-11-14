@@ -31,7 +31,7 @@ import { useStateLayer, type StateModule } from './machine'
 import { PinContext } from './pin'
 import { shortcutsOf, useKeyboard, useShortcuts, type Entry, type ShortcutSites } from './shortcuts'
 import { report, toError, type Scope } from './pipeline'
-import { RouteContext, useFramework } from './root'
+import { fieldContext, renderingRoute, RouteContext, useFramework } from './root'
 import { activeSkin, loadSkin, type SkinModule } from './style'
 import { tracked } from './thenable'
 import { chainOf, commitHandlers, withScope } from './track'
@@ -121,6 +121,10 @@ const NO_LAYER = {}
 const defined = (values: object) => Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as Record<string, unknown>
 
 const sameEach = (a: readonly unknown[], b: readonly unknown[]) => a.length === b.length && a.every((value, index) => Object.is(value, b[index]))
+const sameRoute = (a: Record<string, unknown>, b: Record<string, unknown>) => {
+  const keys = Object.keys(b)
+  return Object.keys(a).length === keys.length && keys.every((key) => key in a && Object.is(a[key], b[key]))
+}
 
 /** The props are the same when they have the same keys with the same values, as `memo` compares them. */
 const sameProps = (a: Props, b: Props) => {
@@ -197,7 +201,7 @@ export function component(spec: Spec) {
 
   /** Every layer of the view but the state layer, called in the same order on every render. */
   function useLayers() {
-    const { injection, skin, sources, data, user: userRead, acl: aclRead, flags: flagsRead } = useFramework()
+    const { injection, skin, sources, data, user: userRead, acl: aclRead, flags: flagsRead, fields } = useFramework()
     const language = useLanguage()
     // The person signed in, from Root's `user` read: a sign-in or a sign-out makes it stale, and
     // only the components that read it render again.
@@ -281,11 +285,23 @@ export function component(spec: Spec) {
     // The default export of async.ts, as a query: it records the services and route parameters
     // it reads, so the data layer knows when to run it again. It gets the query's signal, which
     // aborts when nothing shows the read any more, as the named exports get theirs on unmount.
-    // Only a component with a default read reads the route, so a change of route re-renders it and
-    // no other. `use` may read a context behind a condition, and the condition is fixed
-    // for any one component once its view has loaded.
+    // Until the read has run once, the component reads the whole route. After that it reads only
+    // the fields that first run read, each from its own context (root.tsx), so a change of another
+    // field (a dialog opening over the list) does not render it again. `use` may read a context
+    // behind a condition: whether the view has a default read is fixed once it has loaded, and
+    // the fields it reads, once it has run.
     const exported = module.async?.default
-    const readRoute = (typeof exported === 'function' ? use(RouteContext) : null) as Record<string, unknown> | null
+    const learned = typeof exported === 'function' ? data.fieldsOf(spec.path) : undefined
+    const routeShown = useRef<Record<string, unknown> | null>(null)
+    const readRoute = ((): Record<string, unknown> | null => {
+      if (typeof exported !== 'function') return null
+      if (!learned) return use(RouteContext) as unknown as Record<string, unknown>
+      const values: Record<string, unknown> = {}
+      for (const key of learned) values[key] = fields.has(key) ? use(fieldContext(key)) : (use(RouteContext) as unknown as Record<string, unknown>)[key]
+      // The same fields with the same values are the same object, so the query below stays the same.
+      const last = routeShown.current
+      return last && sameRoute(last, values) ? last : (routeShown.current = values)
+    })()
     const userId = (user as { id?: unknown } | null | undefined)?.id ?? null
     const query = useMemo(
       () =>
@@ -295,12 +311,22 @@ export function component(spec: Spec) {
               spec.path,
               readRoute,
               (record, signal) =>
-                execute(exported, { ...injected, signal, services: recording(injection.services, record.service, record.peek), route: recordingRoute(readRoute, record.route) }, []),
+                execute(
+                  exported,
+                  {
+                    ...injected,
+                    signal,
+                    services: recording(injection.services, record.service, record.peek),
+                    // A field the first run did not read is outside the query's key: a later run gets it as committed.
+                    route: recordingRoute(learned ? { ...(sources.route as unknown as Record<string, unknown>), ...readRoute } : readRoute, record.route),
+                  },
+                  [],
+                ),
               keyedByLocale || keyedByUser || keyedByAcl || keyedByFlags
                 ? defined({ locale: keyedByLocale ? locale : undefined, user: keyedByUser ? userId : undefined, acl: keyedByAcl ? snapshot : undefined, flags: keyedByFlags ? flagged : undefined })
                 : undefined,
             ),
-      [data, exported, injection, injected, readRoute, locale, userId, snapshot, flagged],
+      [data, exported, injection, injected, readRoute, learned, sources, locale, userId, snapshot, flagged],
     )
     // A view with no default read has no query. A stand-in query would suspend the first instance
     // of each such component once, and React would render everything inside the boundary again
@@ -328,7 +354,7 @@ export function component(spec: Spec) {
       () => ({ given: defined({ user, flags, route, keyboard }), user, flags, flagged, inherited, decided: followed?.decided, snapshot, view }),
       [user, flags, flagged, route, keyboard, inherited, followed, snapshot, view],
     )
-    return { module, scope, injection, sources, withForm, form, async, language, access, judged }
+    return { module, scope, injection, sources, withForm, form, async, language, access, judged, fields }
   }
 
   /** Runs a rule. A rule that throws refuses, and is reported as the acl layer's failure. */
@@ -414,9 +440,6 @@ export function component(spec: Spec) {
     }
   }
 
-  /** The route being rendered. `use` may be called behind a condition, during a render. */
-  const readRendering = () => use(RouteContext)
-
   // A folder with a state.ts and one without render through different components, so neither
   // calls a hook behind a condition. The view's module, once loaded, decides which.
   function StatefulView(props: Props) {
@@ -435,7 +458,8 @@ export function component(spec: Spec) {
       ...language,
     })
     // The route being rendered, for the chart's first reads (machine.ts), read only until the
-    // component's first commit: after it, a change of route does not render the component again.
+    // component's first commit, and field by field: the commit follows only the fields the chart
+    // read, and after it a change of route does not render the component again.
     // The sources state.ts reads, each told to the chart by an event of its name when it changes.
     const told = defined({
       user: inState.has('user') ? access.user : undefined,
@@ -443,7 +467,7 @@ export function component(spec: Spec) {
       flags: inState.has('flags') ? access.flagged : undefined,
       locale: inState.has('locale') ? language.locale : undefined,
     })
-    const state = useStateLayer(spec.path, module.state as StateModule, layers.injection, declared, layers.withForm, readRendering, told)
+    const state = useStateLayer(spec.path, module.state as StateModule, layers.injection, declared, layers.withForm, () => renderingRoute(layers.fields), told)
     return show(props, layers, state, early)
   }
   function StatelessView(props: Props) {

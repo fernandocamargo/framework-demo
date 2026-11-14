@@ -6,7 +6,7 @@
  * placeholder.
  */
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
-import { createContext, Suspense, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, createElement, Suspense, use, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type Context, type ReactNode } from 'react'
 import { hold, Pending, useCommitted, watch } from './activity'
 import { createDataLayer, createQueryClient, recording, type DataLayer } from './data'
 import type { Acl, Entity, Env, Flags, Navigation, Route, User } from './index'
@@ -19,7 +19,17 @@ import { activateSkin } from './style'
 type Sources = { entity: Entity; route: Route; navigation: Navigation }
 /** The query of one of Root's reads (`user`, `acl`, `flags`), which the components that read it share. */
 type Read = ReturnType<DataLayer['component']>
-type Framework = { injection: Injection; skin: string; sources: Sources; data: DataLayer; user: Read | null; acl: Read | null; flags: Read | null }
+type Framework = {
+  injection: Injection
+  skin: string
+  sources: Sources
+  data: DataLayer
+  user: Read | null
+  acl: Read | null
+  flags: Read | null
+  /** The fields of the route that have a context of their own: those of the first route this Root rendered. */
+  fields: ReadonlySet<string>
+}
 
 const FrameworkContext = createContext<Framework | null>(null)
 FrameworkContext.displayName = 'Framework'
@@ -34,11 +44,48 @@ export function useFramework() {
 const NONE = {} as never
 
 /**
- * The route as the render sees it. Only a component whose default read can depend on the route
- * reads this context, so a change of route re-renders those and no other.
+ * The route as the render sees it, whole: for a view that reads the route, a field that has no
+ * context of its own, and a default read before its first run says which fields it reads.
  */
 export const RouteContext = createContext<Route>(NONE)
 RouteContext.displayName = 'Route'
+
+/**
+ * Each field of the route in a context of its own. A default read follows the fields its first run
+ * read (`route.q`, `route.page`), so a change of another field (a dialog opening) does not render
+ * it again. React has no selector for a context: a component that reads one renders again whenever
+ * its value changes, so each field gets its own.
+ */
+const fieldContexts = new Map<string, Context<unknown>>()
+export function fieldContext(key: string): Context<unknown> {
+  let found = fieldContexts.get(key)
+  if (!found) {
+    fieldContexts.set(key, (found = createContext<unknown>(undefined)))
+    found.displayName = `Route.${key}`
+  }
+  return found
+}
+
+/**
+ * The route being rendered, read field by field as it is read: the component follows the fields it
+ * read, and no other, until it renders again. Read it during a render only (`use` reads contexts).
+ * Its keys, and spreading it, read the whole route.
+ */
+export function renderingRoute(fields: ReadonlySet<string>): Route {
+  const whole = () => use(RouteContext) as object
+  const field = (key: string | symbol) => (typeof key === 'string' && fields.has(key) ? { value: use(fieldContext(key)) } : null)
+  return new Proxy({} as Route, {
+    get: (_, key) => (field(key) ?? { value: Reflect.get(whole(), key) }).value,
+    has: (_, key) => (typeof key === 'string' && fields.has(key)) || Reflect.has(whole(), key),
+    ownKeys: () => Reflect.ownKeys(whole()),
+    getOwnPropertyDescriptor: (_, key) => {
+      const own = field(key)
+      if (own) return { value: own.value, enumerable: true, configurable: true, writable: false }
+      const descriptor = Reflect.getOwnPropertyDescriptor(whole(), key)
+      return descriptor && { ...descriptor, configurable: true }
+    },
+  })
+}
 
 /** A view of `ref.current` as if it were the object itself: reading, `in`, keys and spreading. */
 function liveView<T extends object>(ref: { readonly current: T }): T {
@@ -185,7 +232,14 @@ export function Root({ env = NONE, entity = NONE, route = NONE, flags, navigatio
         : null,
     [data, injection, user, flags],
   )
-  const framework = useMemo(() => ({ injection, skin, sources, data, user: userRead, acl: aclRead, flags: flagsRead }), [injection, skin, sources, data, userRead, aclRead, flagsRead])
+  // The fields of the first route rendered each get a context, in the same order for Root's life,
+  // so the tree around the page keeps its shape. A field that appears later is read from the whole
+  // route (`RouteContext`).
+  const fields = useState(() => new Set(Object.keys(route)))[0]
+  const framework = useMemo(
+    () => ({ injection, skin, sources, data, user: userRead, acl: aclRead, flags: flagsRead, fields }),
+    [injection, skin, sources, data, userRead, aclRead, flagsRead, fields],
+  )
   // Root's reads start side by side as Root mounts, not each when the first component that reads it
   // renders: a read first needed deep in the tree (the rows' flags) would suspend it there, and
   // React would render the components around it again.
@@ -211,14 +265,16 @@ export function Root({ env = NONE, entity = NONE, route = NONE, flags, navigatio
     }
   }, [])
 
+  let page: ReactNode = (
+    <LocaleContext value={shown}>
+      <Suspense fallback={<Pending />}>{children}</Suspense>
+    </LocaleContext>
+  )
+  for (const key of [...fields].reverse()) page = createElement(fieldContext(key), { value: (route as unknown as Record<string, unknown>)[key] }, page)
   return (
     <QueryClientProvider client={client}>
       <FrameworkContext value={framework}>
-        <RouteContext value={route}>
-          <LocaleContext value={shown}>
-            <Suspense fallback={<Pending />}>{children}</Suspense>
-          </LocaleContext>
-        </RouteContext>
+        <RouteContext value={route}>{page}</RouteContext>
       </FrameworkContext>
     </QueryClientProvider>
   )

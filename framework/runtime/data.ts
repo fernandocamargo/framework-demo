@@ -388,6 +388,10 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
           ),
       )
     },
+    /** The route parameters the default export at `path` read on its first run; nothing before it ran. */
+    fieldsOf(path: string): ReadonlySet<string> | undefined {
+      return routeKeys.get(path)
+    },
     /**
      * The query of a component's `async.ts` default export. Its key holds the component's path,
      * the entity, and the route parameters its runs have read (learned on the first run), so a
