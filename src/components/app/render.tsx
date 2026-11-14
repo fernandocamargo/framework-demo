@@ -7,6 +7,7 @@ import Keyboard from '@/components/keyboard';
 import Lab from '@/components/lab';
 import Language from '@/components/language';
 import Modal from '@/components/modal';
+import Palette from '@/components/palette';
 import Detail from '@/components/product/detail';
 import Editor from '@/components/product/editor';
 import Remove from '@/components/product/remove';
@@ -51,6 +52,7 @@ export default ({
       <Lab />
       <Language />
       <Skin />
+      <Palette />
       <Keyboard />
       <Session asked={askToSignIn} reason={signInReason} />
     </header>

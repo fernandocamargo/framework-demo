@@ -4,12 +4,18 @@
 // running and no placeholder is on screen.
 
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { readdirSync } from 'node:fs';
 
 declare global {
   interface Window {
     __framework: { fromTab(): Promise<void>; idle(): Promise<void> };
   }
 }
+
+/** Every component folder with a chart: what the states gallery must show, one region each. */
+const CHARTS = readdirSync(new URL('../src/components', import.meta.url), { recursive: true }).filter(
+  (file) => String(file).split(/[\\/]/).pop() === 'state.ts',
+).length;
 
 const idle = (page: Page) => page.evaluate(() => window.__framework.idle());
 
@@ -562,7 +568,7 @@ test('the states gallery shows every chart in each of its states; a frame holds 
 }) => {
   await act(page, () => page.goto('./?world=memory#/states'));
   expect(await page.getByRole('heading', { level: 1 }).innerText()).toBe('States');
-  expect(await page.getByRole('region').count()).toBe(7);
+  expect(await page.getByRole('region').count()).toBe(CHARTS);
   const editor = page.getByRole('region', { name: 'components/product/editor' });
   expect(await editor.locator('iframe').count()).toBe(11);
   expect(await editor.innerText()).toContain('Somebody else saved this product meanwhile.');
