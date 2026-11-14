@@ -1,4 +1,4 @@
-import { css } from 'framework'
+import { css } from 'framework';
 
 // Each frame is the page at 720 × 600, shown at half its size: a picture of the state.
 export default css`
@@ -70,4 +70,4 @@ export default css`
       justify-self: start;
     }
   }
-`
+`;

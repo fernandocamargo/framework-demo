@@ -1,25 +1,25 @@
-import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components'
+import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components';
 
-export default ({ className, i18n, onClose, groups }) => (
-  <ModalOverlay isOpen isDismissable onOpenChange={(open) => !open && onClose()}>
+export default ({ className, groups, i18n, onClose }) => (
+  <ModalOverlay isDismissable isOpen onOpenChange={(open) => !open && onClose()}>
     <Modal className={`react-aria-Modal ${className}`}>
       <Dialog>
         <header>
           <Heading slot="title">{i18n.title}</Heading>
-          <Button data-variant="icon" aria-label={i18n.close} onPress={onClose}>
+          <Button aria-label={i18n.close} data-variant="icon" onPress={onClose}>
             <span className="icon" data-icon="close" />
           </Button>
         </header>
         <p className="intro">{i18n.intro}</p>
         {groups.length === 0 && <p>{i18n.none}</p>}
         {groups.map((group) => (
-          <section key={group.file} aria-label={group.file}>
+          <section aria-label={group.file} key={group.file}>
             <h3>
               <code>{group.file}</code>
             </h3>
             <dl>
               {group.shortcuts.map((shortcut) => (
-                <div key={shortcut.keys.join('+')} data-available={shortcut.available}>
+                <div data-available={shortcut.available} key={shortcut.keys.join('+')}>
                   <dt>
                     {shortcut.keys.map((key) => (
                       <kbd key={key}>{key}</kbd>
@@ -37,4 +37,4 @@ export default ({ className, i18n, onClose, groups }) => (
       </Dialog>
     </Modal>
   </ModalOverlay>
-)
+);

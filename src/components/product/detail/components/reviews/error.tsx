@@ -1,7 +1,7 @@
-import { Button } from 'react-aria-components'
+import { Button } from 'react-aria-components';
 
-export default ({ className, i18n, error, resetErrorBoundary }) => (
-  <section className={className} aria-label={i18n.label}>
+export default ({ className, error, i18n, resetErrorBoundary }) => (
+  <section aria-label={i18n.label} className={className}>
     <div className="notice" data-tone="warn" role="alert">
       <span className="icon" data-icon="alert" />
       <div>
@@ -12,4 +12,4 @@ export default ({ className, i18n, error, resetErrorBoundary }) => (
       </div>
     </div>
   </section>
-)
+);

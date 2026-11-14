@@ -1,9 +1,9 @@
 // What the page needs before it shows: who is signed in, and which dialogs the address opens.
 // The framework records what this read: `auth.session` and these route fields. So a sign-in
 // or a sign-out reads it again, and a change of filter does not.
-export default async ({ services, route, env }) => ({
-  world: env.world,
+export default async ({ env, route, services }) => ({
+  dialogs: { bulk: route.bulk, create: route.create, edit: route.edit, remove: route.remove, view: route.view },
   session: await services.auth.session(),
   signin: route.signin,
-  dialogs: { view: route.view, edit: route.edit, create: route.create, remove: route.remove, bulk: route.bulk },
-})
+  world: env.world,
+});

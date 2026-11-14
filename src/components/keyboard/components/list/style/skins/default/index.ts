@@ -1,4 +1,4 @@
-import { css } from 'framework'
+import { css } from 'framework';
 
 export default css`
   & .intro {
@@ -51,4 +51,4 @@ export default css`
     font-size: 0.85rem;
     text-align: center;
   }
-`
+`;

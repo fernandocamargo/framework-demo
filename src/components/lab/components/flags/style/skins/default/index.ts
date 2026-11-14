@@ -1,4 +1,4 @@
-import { css } from 'framework'
+import { css } from 'framework';
 
 export default css`
   display: grid;
@@ -25,4 +25,4 @@ export default css`
     flex-wrap: wrap;
     gap: 0.2rem 0.8rem;
   }
-`
+`;

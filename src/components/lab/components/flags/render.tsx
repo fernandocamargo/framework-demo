@@ -1,18 +1,18 @@
-import { Label, Radio, RadioGroup } from 'react-aria-components'
+import { Label, Radio, RadioGroup } from 'react-aria-components';
 
-export default ({ className, intro, label, flags, sending }) => (
-  <section className={className} aria-label={label} aria-busy={sending || undefined}>
+export default ({ className, flags, intro, label, sending }) => (
+  <section aria-busy={sending || undefined} aria-label={label} className={className}>
     <p className="intro">{intro}</p>
     {flags.map((flag) =>
       flag.served === null ? (
-        <div key={flag.name} className="flag">
+        <div className="flag" key={flag.name}>
           <p>
             {flag.title} <code>{flag.key}</code>
           </p>
           <p className="value">{flag.value}</p>
         </div>
       ) : (
-        <RadioGroup key={flag.name} value={flag.served} onChange={flag.choose}>
+        <RadioGroup key={flag.name} onChange={flag.choose} value={flag.served}>
           <Label>
             {flag.title} <code>{flag.key}</code>
           </Label>
@@ -28,4 +28,4 @@ export default ({ className, intro, label, flags, sending }) => (
       ),
     )}
   </section>
-)
+);

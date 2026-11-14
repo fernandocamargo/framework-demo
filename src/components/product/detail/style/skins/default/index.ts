@@ -1,4 +1,4 @@
-import { css } from 'framework'
+import { css } from 'framework';
 
 // The dialog renders in a portal, in the modal the page opened; the dialog takes this component's
 // class, so the skin reaches it.
@@ -35,4 +35,4 @@ export default css`
     font-size: 1.3rem;
     font-variant-numeric: tabular-nums;
   }
-`
+`;

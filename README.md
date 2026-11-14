@@ -22,19 +22,19 @@ What this does not do: it does not decide what to build, and it does not judge w
 
 ## The framework's words
 
-| Word | Meaning |
-|---|---|
-| Component folder | The module. A folder under `components/` with a `render.tsx`. Importing the folder gives the component. Its path (`components/product/editor`) is its identity and its CSS class. |
-| Layer file | A file with a fixed name and job inside a component folder: `render.tsx`, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `i18n.ts`, `acl.ts`, `shortcuts.ts`, `placeholder.tsx`, `error.tsx`. |
-| `shortcuts.ts` | The keys a component answers while it is on screen, translated, each sending a chart's event, focusing an element or running a function, and working only while the chart takes the event or its `when` holds. `?` lists them. |
-| `acl.ts` | Whether what a component offers may be done, as a boolean. The component and everything below it get `acl.allowed`, until a folder below says otherwise. |
-| Flags | What the person signed in gets of each feature flag, as `flags`, through OpenFeature. Any file may read them; a component follows only the flags it reads. |
-| `props.ts` | The module's interface. `export type Props` says what a parent passes; the default export shapes what the render gets. |
-| Client | A transport: how the app reaches a system. A folder under `clients/`. |
-| Service | The operations on one resource, written against clients. A folder under `services/`. |
-| Injection | What the framework hands to a layer file's functions: `clients`, `services`, `route`, `navigation`, `form`, `i18n`, `intl`, `locale`. Components never import a client or a service. A component follows only what its files read: one that does not read the locale never renders for a change of it. |
-| Messages | A component's words, in its `i18n.ts`, as an object of any shape; translations beside it in `i18n/<locale>.json`, loaded when a component of the folder first shows in that locale. |
-| Skin | A component's plain CSS, nested under its class: `style/skins/<name>/index.ts`. |
+| Word             | Meaning                                                                                                                                                                                                                                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Component folder | The module. A folder under `components/` with a `render.tsx`. Importing the folder gives the component. Its path (`components/product/editor`) is its identity and its CSS class.                                                                                                                      |
+| Layer file       | A file with a fixed name and job inside a component folder: `render.tsx`, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `i18n.ts`, `acl.ts`, `shortcuts.ts`, `placeholder.tsx`, `error.tsx`.                                                                                                          |
+| `shortcuts.ts`   | The keys a component answers while it is on screen, translated, each sending a chart's event, focusing an element or running a function, and working only while the chart takes the event or its `when` holds. `?` lists them.                                                                         |
+| `acl.ts`         | Whether what a component offers may be done, as a boolean. The component and everything below it get `acl.allowed`, until a folder below says otherwise.                                                                                                                                               |
+| Flags            | What the person signed in gets of each feature flag, as `flags`, through OpenFeature. Any file may read them; a component follows only the flags it reads.                                                                                                                                             |
+| `props.ts`       | The module's interface. `export type Props` says what a parent passes; the default export shapes what the render gets.                                                                                                                                                                                 |
+| Client           | A transport: how the app reaches a system. A folder under `clients/`.                                                                                                                                                                                                                                  |
+| Service          | The operations on one resource, written against clients. A folder under `services/`.                                                                                                                                                                                                                   |
+| Injection        | What the framework hands to a layer file's functions: `clients`, `services`, `route`, `navigation`, `form`, `i18n`, `intl`, `locale`. Components never import a client or a service. A component follows only what its files read: one that does not read the locale never renders for a change of it. |
+| Messages         | A component's words, in its `i18n.ts`, as an object of any shape; translations beside it in `i18n/<locale>.json`, loaded when a component of the folder first shows in that locale.                                                                                                                    |
+| Skin             | A component's plain CSS, nested under its class: `style/skins/<name>/index.ts`.                                                                                                                                                                                                                        |
 
 ## One component, toured
 
@@ -57,9 +57,13 @@ editor/
 The flow reads as the requirement does ([`state.ts`](src/components/product/editor/state.ts), shortened):
 
 ```ts
-export const unsaved = ({ form }) => form.unsaved
-export const isConflict = ({ event }) => event.error instanceof Error && event.error.name === 'ConflictError'
-export const changesToSave = ({ form, context, route }) => ({ id: route.edit ?? 0, changes: form.payload(), version: context.version })
+export const unsaved = ({ form }) => form.unsaved;
+export const isConflict = ({ event }) => event.error instanceof Error && event.error.name === 'ConflictError';
+export const changesToSave = ({ form, context, route }) => ({
+  id: route.edit ?? 0,
+  changes: form.payload(),
+  version: context.version,
+});
 
 export default ({ services }) => ({
   editing: {
@@ -77,11 +81,14 @@ export default ({ services }) => ({
       src: services.products.save,
       input: changesToSave,
       onDone: 'saved',
-      onError: [{ guard: isConflict, target: 'conflict' }, { target: 'failed', actions: rememberError }],
+      onError: [
+        { guard: isConflict, target: 'conflict' },
+        { target: 'failed', actions: rememberError },
+      ],
     },
   },
   // …
-})
+});
 ```
 
 There are no type annotations in that file, and none are missing. The TypeScript plugin types `form`, `context`, `route`, `event` and `services` from the folder's other files and from the app's clients and services. The render receives `state` with one boolean per state and a `send` that accepts only this chart's events.
@@ -94,16 +101,16 @@ The app does not own its permissions. A backend sends a snapshot of them (a role
 
 Each consumer tests the snapshot against what else it knows:
 
-| Where | Test |
-|---|---|
-| [`app/acl.ts`](src/components/app/acl.ts) | Changing the catalogue needs the grant to update products. Every component below inherits the decision: the catalogue hides its actions, a row its edit link, the editor locks its fields. |
-| [`product/remove-link/acl.ts`](src/components/product/remove-link/acl.ts) | One link, inside every row and the product dialog, narrower: it needs the grant to delete. |
-| [`product/remove/acl.ts`](src/components/product/remove/acl.ts) | The same for the dialog, which an address (`?remove=4`) can open for anyone. |
-| [`bulk-price/acl.ts`](src/components/bulk-price/acl.ts) | The backend's limit on a price change, against the percentage in the form: the decision changes as it is typed. |
-| [`product/editor/state.ts`](src/components/product/editor/state.ts) | The chart's declaration: a read-only editor has no `save` at all. Declared again when the decision changes, it keeps its place. |
-| [`bulk-price/state.ts`](src/components/bulk-price/state.ts) | Declared with `apply` only under the grant to update prices; a guard reads the limit's decision when `apply` arrives. |
-| [`session/props.ts`](src/components/session/props.ts) | The role in the header is the snapshot's. |
-| [`product/remove-link/acl.ts`](src/components/product/remove-link/acl.ts), [`product/remove/acl.ts`](src/components/product/remove/acl.ts) | The `deletions` flag, a kill switch, read inside the rule: paused deletions are not allowed, and the dialog says why. |
+| Where                                                                                                                                      | Test                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`app/acl.ts`](src/components/app/acl.ts)                                                                                                  | Changing the catalogue needs the grant to update products. Every component below inherits the decision: the catalogue hides its actions, a row its edit link, the editor locks its fields. |
+| [`product/remove-link/acl.ts`](src/components/product/remove-link/acl.ts)                                                                  | One link, inside every row and the product dialog, narrower: it needs the grant to delete.                                                                                                 |
+| [`product/remove/acl.ts`](src/components/product/remove/acl.ts)                                                                            | The same for the dialog, which an address (`?remove=4`) can open for anyone.                                                                                                               |
+| [`bulk-price/acl.ts`](src/components/bulk-price/acl.ts)                                                                                    | The backend's limit on a price change, against the percentage in the form: the decision changes as it is typed.                                                                            |
+| [`product/editor/state.ts`](src/components/product/editor/state.ts)                                                                        | The chart's declaration: a read-only editor has no `save` at all. Declared again when the decision changes, it keeps its place.                                                            |
+| [`bulk-price/state.ts`](src/components/bulk-price/state.ts)                                                                                | Declared with `apply` only under the grant to update prices; a guard reads the limit's decision when `apply` arrives.                                                                      |
+| [`session/props.ts`](src/components/session/props.ts)                                                                                      | The role in the header is the snapshot's.                                                                                                                                                  |
+| [`product/remove-link/acl.ts`](src/components/product/remove-link/acl.ts), [`product/remove/acl.ts`](src/components/product/remove/acl.ts) | The `deletions` flag, a kill switch, read inside the rule: paused deletions are not allowed, and the dialog says why.                                                                      |
 
 Each component follows only the parts of the snapshot it reads, so a sign-in renders again only the components whose answer changed.
 
@@ -125,9 +132,9 @@ An operation receives the clients and returns a function:
 export const save =
   ({ clients: { api, local } }) =>
   async ({ id, changes, version }) => {
-    await api.put(`/auth/products/${id}`, changes, { auth: true })
-    return { id, version: await local.edit(id, changes, version) }
-  }
+    await api.put(`/auth/products/${id}`, changes, { auth: true });
+    return { id, version: await local.edit(id, changes, version) };
+  };
 ```
 
 [`meta.ts`](src/services/products/meta.ts) is the whole cache policy:
@@ -144,7 +151,7 @@ export default ({ clients: { local }, services: { products } }) => ({
     ],
   },
   // …
-})
+});
 ```
 
 The catalogue's `async.ts` calls `services.products.search`. The framework records that, so when a save succeeds anywhere, the page of the catalogue on screen reads again. No component declares a dependency, and no component calls an invalidation.
@@ -157,14 +164,14 @@ The catalogue's `async.ts` calls `services.products.search`. The framework recor
 
 Clients are injected, never imported by components or by each other's callers. That is how tests, agents and people change the world a component sees.
 
-| Client | What it is |
-|---|---|
-| [`dummyjson`](src/clients/dummyjson) | `fetch` with the access token, one shared token refresh on a 401 (one across tabs too, under a Web Lock), retries with backoff for 5xx and 429, `AbortSignal` honoured, and the network lab's faults. The session is the browser's: every tab shares it. |
-| [`memory`](src/clients/memory) | The same client code on another wire: a function that answers DummyJSON's endpoints from fixtures. Its session and local changes are kept apart from the real world's, under `memory:` in localStorage, so its tabs share them as the real world's do. The reads of the session and of the products follow the `storage` event, so another tab's change is read once it can be. |
-| [`api`](src/clients/api) | What services use. One line chooses between the two above. |
-| [`local`](src/clients/local) | A browser store for what DummyJSON does not keep. It echoes writes and persists nothing, so edits, creations and deletions are kept here as an overlay, with a version per product. |
-| [`tracker`](src/clients/tracker) | A destination for the framework's pipelines: interactions and failures, for the network lab to show. |
-| [`flags`](src/clients/flags) | OpenFeature. In the DummyJSON world, with GrowthBook's client key in the build (`VITE_GROWTHBOOK_CLIENT_KEY`), GrowthBook serves the flags and streams every change made in its dashboard to every tab, through a small provider on its SDK ([`growthbook.ts`](src/clients/flags/growthbook.ts)), loaded only then. Otherwise OpenFeature's in-memory provider serves the flags of [`definitions.ts`](src/clients/flags/definitions.ts), each with the ways it can be served: stock counting to admins first, deletions on or paused, and the bulk change asking again above 10% for moderators. In memory, the way each is served is kept in localStorage, so every tab's provider hears a change, as each would hear GrowthBook's stream. |
+| Client                               | What it is                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`dummyjson`](src/clients/dummyjson) | `fetch` with the access token, one shared token refresh on a 401 (one across tabs too, under a Web Lock), retries with backoff for 5xx and 429, `AbortSignal` honoured, and the network lab's faults. The session is the browser's: every tab shares it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| [`memory`](src/clients/memory)       | The same client code on another wire: a function that answers DummyJSON's endpoints from fixtures. Its session and local changes are kept apart from the real world's, under `memory:` in localStorage, so its tabs share them as the real world's do. The reads of the session and of the products follow the `storage` event, so another tab's change is read once it can be.                                                                                                                                                                                                                                                                                                                                                             |
+| [`api`](src/clients/api)             | What services use. One line chooses between the two above.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| [`local`](src/clients/local)         | A browser store for what DummyJSON does not keep. It echoes writes and persists nothing, so edits, creations and deletions are kept here as an overlay, with a version per product.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [`tracker`](src/clients/tracker)     | A destination for the framework's pipelines: interactions and failures, for the network lab to show.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [`flags`](src/clients/flags)         | OpenFeature. In the DummyJSON world, with GrowthBook's client key in the build (`VITE_GROWTHBOOK_CLIENT_KEY`), GrowthBook serves the flags and streams every change made in its dashboard to every tab, through a small provider on its SDK ([`growthbook.ts`](src/clients/flags/growthbook.ts)), loaded only then. Otherwise OpenFeature's in-memory provider serves the flags of [`definitions.ts`](src/clients/flags/definitions.ts), each with the ways it can be served: stock counting to admins first, deletions on or paused, and the bulk change asking again above 10% for moderators. In memory, the way each is served is kept in localStorage, so every tab's provider hears a change, as each would hear GrowthBook's stream. |
 
 Add `?world=memory` to the address and the app runs with no network: same services, same flows, same components. The unit tests and the end-to-end tests use that world, so CI does not depend on DummyJSON being up.
 
@@ -232,22 +239,22 @@ The end-to-end tests ([`e2e/flows.spec.ts`](e2e/flows.spec.ts)) drive the produc
 
 "Network lab" in the header opens a panel that changes the API client's settings while the app runs. It stays usable while a dialog is open.
 
-| Try | Watch |
-|---|---|
-| Latency at 1500 ms, then change a filter | The page keeps showing while the next one is read; a bar moves under the header. Open a product: the dialog has its placeholder, and its reviews have their own. |
-| "Requests that fail" at 50% | The API client's list shows retries with backoff. Most reads still succeed. |
-| "Every request answers 500", then change a filter | The catalogue's `error.tsx` shows, with "Try again". The failure arrives once in the pipeline, as a toast tagged with the layer and the operation. |
-| The bulk price change with failures on | Per-product progress, the failed ones listed, and "Try the failed again". |
-| Sign in, then wait | The access token lives one minute. The header counts it down and refreshes it 15 seconds before it expires. |
-| "Expire the access token", then save an edit | The save meets a 401, the client refreshes once, and the save goes again. The list shows all three requests. |
-| "Revoke the refresh token" as well | The save's refresh is refused: it fails with "Your session has expired", and the editor keeps the changes. When the header's own refresh comes due, the session ends there too, and the sign-in dialog opens over the editor. |
-| "Sell out the product being edited", then save | A conflict: somebody else saved meanwhile. Keep yours, or take theirs. Two tabs on the same product do the same thing for real. |
-| The "Inspector" tab, after pressing a row's + | What the press did, as the pipelines carried it: the handler with the file and line where it was written, the write it sent, the change shown at once, the list worked out again from the cache, the write done, the reads it made stale and read again, and the message to the other tabs. No render contains tracking code; the Vite plugin rewrites them. |
-| "Every request answers 500", then press a row's + | The count moves at once, then goes back when the server refuses it; the inspector shows the change taken back, and the toast the failure. |
-| Two tabs, signed in in one | The other follows: who is signed in, what they may do, every count and save. Sign out in either, and both are. |
-| The "Flags" tab: stock count served to "Nobody" | The rows' − and + go, in every tab, and nothing else renders. "Admins only" brings them back for Emily; sign in as Olivia and they are not hers. |
-| The "Flags" tab: deletions "Paused" | The delete links go, and a delete dialog opened from its address says deletions are paused. The rule is in `acl.ts`, so everything below follows `acl.allowed` without reading the flag. |
-| Bulk change by 15%, as Olivia | Moderators are asked a second time above 10%, others above 50% (the `largeChangeAt` flag, read by the chart's guard). |
+| Try                                               | Watch                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Latency at 1500 ms, then change a filter          | The page keeps showing while the next one is read; a bar moves under the header. Open a product: the dialog has its placeholder, and its reviews have their own.                                                                                                                                                                                             |
+| "Requests that fail" at 50%                       | The API client's list shows retries with backoff. Most reads still succeed.                                                                                                                                                                                                                                                                                  |
+| "Every request answers 500", then change a filter | The catalogue's `error.tsx` shows, with "Try again". The failure arrives once in the pipeline, as a toast tagged with the layer and the operation.                                                                                                                                                                                                           |
+| The bulk price change with failures on            | Per-product progress, the failed ones listed, and "Try the failed again".                                                                                                                                                                                                                                                                                    |
+| Sign in, then wait                                | The access token lives one minute. The header counts it down and refreshes it 15 seconds before it expires.                                                                                                                                                                                                                                                  |
+| "Expire the access token", then save an edit      | The save meets a 401, the client refreshes once, and the save goes again. The list shows all three requests.                                                                                                                                                                                                                                                 |
+| "Revoke the refresh token" as well                | The save's refresh is refused: it fails with "Your session has expired", and the editor keeps the changes. When the header's own refresh comes due, the session ends there too, and the sign-in dialog opens over the editor.                                                                                                                                |
+| "Sell out the product being edited", then save    | A conflict: somebody else saved meanwhile. Keep yours, or take theirs. Two tabs on the same product do the same thing for real.                                                                                                                                                                                                                              |
+| The "Inspector" tab, after pressing a row's +     | What the press did, as the pipelines carried it: the handler with the file and line where it was written, the write it sent, the change shown at once, the list worked out again from the cache, the write done, the reads it made stale and read again, and the message to the other tabs. No render contains tracking code; the Vite plugin rewrites them. |
+| "Every request answers 500", then press a row's + | The count moves at once, then goes back when the server refuses it; the inspector shows the change taken back, and the toast the failure.                                                                                                                                                                                                                    |
+| Two tabs, signed in in one                        | The other follows: who is signed in, what they may do, every count and save. Sign out in either, and both are.                                                                                                                                                                                                                                               |
+| The "Flags" tab: stock count served to "Nobody"   | The rows' − and + go, in every tab, and nothing else renders. "Admins only" brings them back for Emily; sign in as Olivia and they are not hers.                                                                                                                                                                                                             |
+| The "Flags" tab: deletions "Paused"               | The delete links go, and a delete dialog opened from its address says deletions are paused. The rule is in `acl.ts`, so everything below follows `acl.allowed` without reading the flag.                                                                                                                                                                     |
+| Bulk change by 15%, as Olivia                     | Moderators are asked a second time above 10%, others above 50% (the `largeChangeAt` flag, read by the chart's guard).                                                                                                                                                                                                                                        |
 
 DummyJSON allows about 100 requests in a window it does not state, so sustained stress can earn a real 429. The client retries those too.
 
@@ -271,6 +278,7 @@ Two rules hold for every render:
 - **Handlers are stable.** Each handler keeps one function for the instance's life, which calls the last committed closure. A function in the JSX that uses nothing of the render (a list's `{(item) => <Item … />}`) is made once, outside it; one that reads the render's values is kept while those values are the same.
 
 [`perf/`](perf/README.md) measures this. `npm run perf` drives a visit of 29 steps, and ten more beyond it, through a profiling build. It counts every render, the ones that changed nothing on the page, and the ones React threw away. Its README holds the numbers after each change. For the last one:
+
 - framework components re-rendered 246 times, 5 of them changing nothing (248 and 9 two changes before);
 - a product's modal opens once, with its skeleton inside it (it opened twice);
 - the network lab, open and idle, renders nothing (two renders a second before);
@@ -298,18 +306,19 @@ npm run dev        # http://localhost:5180, on DummyJSON
 
 GrowthBook serves the DummyJSON world's flags when `.env.local` holds its client key, `VITE_GROWTHBOOK_CLIENT_KEY=sdk-…` (GrowthBook's wizard, `npx @growthbook/wizard --language react`, writes it). Without it, the in-memory provider serves them.
 
-| Script | What it does |
-|---|---|
-| `npm run dev` | The dev server. |
-| `npm run build`, `npm run preview` | The production build, and a server for it on port 5181. |
-| `npm run typecheck` | Writes the component folders' declarations, runs `tsc` for the tooling, and runs the framework's checker for the app: TypeScript with the injected types, plus the convention checks. |
-| `npm test` | The unit tests: pure functions, flows, services on the memory client, the API client, and the framework's runtime. |
-| `npm run check` | `typecheck`, `test` and `build`. |
-| `npm run e2e` | Builds, serves, and drives the main flows in Chromium (and WebKit in CI). Run `npx playwright install chromium` once. |
-| `npm run perf` | Builds with React's profiling build and counts the renders of each step of a flow ([`perf/`](perf/README.md)). |
-| `npm run storybook`, `npm run build-storybook` | Storybook, on port 6006, and its static build in `storybook-static/`. `npm run stories` writes the story files alone; `typecheck` runs it and checks them. |
+| Script                                         | What it does                                                                                                                                                                                                                                                                                                      |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`                                  | The dev server.                                                                                                                                                                                                                                                                                                   |
+| `npm run build`, `npm run preview`             | The production build, and a server for it on port 5181.                                                                                                                                                                                                                                                           |
+| `npm run typecheck`                            | Writes the component folders' declarations, runs `tsc` for the tooling, and runs the framework's checker for the app: TypeScript with the injected types, plus the convention checks.                                                                                                                             |
+| `npm test`                                     | The unit tests: pure functions, flows, services on the memory client, the API client, and the framework's runtime.                                                                                                                                                                                                |
+| `npm run lint`, `npm run format`               | ESLint orders the code: imports in three groups (packages, `framework` and `@/…`, relative), a blank line between them, and keys, props, destructuring and types alphabetically, except where order means something (`eslint.config.mjs`). Prettier lays it out (`.prettierrc`, as in Cape). `format` fixes both. |
+| `npm run check`                                | `lint`, Prettier's check, `typecheck`, `test` and `build`.                                                                                                                                                                                                                                                        |
+| `npm run e2e`                                  | Builds, serves, and drives the main flows in Chromium (and WebKit in CI). Run `npx playwright install chromium` once.                                                                                                                                                                                             |
+| `npm run perf`                                 | Builds with React's profiling build and counts the renders of each step of a flow ([`perf/`](perf/README.md)).                                                                                                                                                                                                    |
+| `npm run storybook`, `npm run build-storybook` | Storybook, on port 6006, and its static build in `storybook-static/`. `npm run stories` writes the story files alone; `typecheck` runs it and checks them.                                                                                                                                                        |
 
-For editor support, use the workspace's TypeScript ("TypeScript: Select TypeScript Version" in VS Code), so that the language-service plugin in `tsconfig.json` loads. See [the framework's README](framework/README.md#editors).
+In VS Code, `.vscode/` sorts and formats a file on save (with the ESLint and Prettier extensions it recommends), and offers the workspace's TypeScript, so that the language-service plugin in `tsconfig.json` loads. See [the framework's README](framework/README.md#editors).
 
 ## Review
 
@@ -331,13 +340,13 @@ Nothing here depends on React or on TypeScript in particular. The same contracts
 
 Several ecosystems have all three:
 
-| Ecosystem | Read and rewrite | Teach the editor |
-|---|---|---|
-| C# | Roslyn source generators | Roslyn analyzers, which run in the IDE and in the build |
-| Kotlin | KSP processors, compiler plugins | The same compiler plugins, in the IDE |
-| Rust | Procedural macros | rust-analyzer expands them |
-| Swift | Swift macros | SourceKit expands them |
-| Python | `ast`, import hooks | A type-checker plugin (mypy), or stubs generated beside the sources |
+| Ecosystem | Read and rewrite                 | Teach the editor                                                    |
+| --------- | -------------------------------- | ------------------------------------------------------------------- |
+| C#        | Roslyn source generators         | Roslyn analyzers, which run in the IDE and in the build             |
+| Kotlin    | KSP processors, compiler plugins | The same compiler plugins, in the IDE                               |
+| Rust      | Procedural macros                | rust-analyzer expands them                                          |
+| Swift     | Swift macros                     | SourceKit expands them                                              |
+| Python    | `ast`, import hooks              | A type-checker plugin (mypy), or stubs generated beside the sources |
 
 The mechanism differs. The idea carries: give each kind of decision one place, type the seams between the places, and let the build do the wiring.
 
@@ -367,4 +376,6 @@ src/
 e2e/                The end-to-end flows.
 perf/               Render cycles, step by step, against a baseline.
 .storybook/         Which folders Storybook shows, and the stage its stories render on.
+.vscode/            Sorting and formatting on save, and the workspace's TypeScript.
+eslint.config.mjs   What is sorted, and what keeps its order.
 ```

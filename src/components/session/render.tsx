@@ -1,18 +1,40 @@
-import { Button, Dialog, Form, Heading, Input, Label, Modal, ModalOverlay, TextField } from 'react-aria-components'
-import { go } from '@/address'
+import { Button, Dialog, Form, Heading, Input, Label, Modal, ModalOverlay, TextField } from 'react-aria-components';
 
-export default ({ className, i18n, send, values, set, signedIn, name, picture, role, token, refreshing, dialogOpen, signingIn, notice, accounts, error }) => (
+import { go } from '@/address';
+
+export default ({
+  accounts,
+  className,
+  dialogOpen,
+  error,
+  i18n,
+  name,
+  notice,
+  picture,
+  refreshing,
+  role,
+  send,
+  set,
+  signedIn,
+  signingIn,
+  token,
+  values,
+}) => (
   <div className={className}>
     {signedIn ? (
       <>
         <div className="who">
-          {picture ? <img src={picture} alt="" width="30" height="30" /> : <span className="icon" data-icon="user" />}
+          {picture ? <img alt="" height="30" src={picture} width="30" /> : <span className="icon" data-icon="user" />}
           <div>
             <strong>
               {name}
-              {role && <span className="badge" data-tone="accent">{role}</span>}
+              {role && (
+                <span className="badge" data-tone="accent">
+                  {role}
+                </span>
+              )}
             </strong>
-            <span className="token" data-refreshing={refreshing || undefined} role="timer" aria-live="off">
+            <span aria-live="off" className="token" data-refreshing={refreshing || undefined} role="timer">
               {token}
             </span>
           </div>
@@ -30,7 +52,13 @@ export default ({ className, i18n, send, values, set, signedIn, name, picture, r
 
     {/* Signing in can be asked for while another dialog opens (a change that needs a session).
         Marked top layer, it stays usable and above that dialog, whichever of the two opened last. */}
-    <ModalOverlay className="react-aria-ModalOverlay above" data-react-aria-top-layer="true" isOpen={dialogOpen} isDismissable={!signingIn} onOpenChange={(open) => !open && send({ type: 'cancel' })}>
+    <ModalOverlay
+      className="react-aria-ModalOverlay above"
+      data-react-aria-top-layer="true"
+      isDismissable={!signingIn}
+      isOpen={dialogOpen}
+      onOpenChange={(open) => !open && send({ type: 'cancel' })}
+    >
       <Modal className={`react-aria-Modal ${className} dialog`} data-size="small">
         <Dialog>
           <Heading slot="title">{i18n.dialog.title}</Heading>
@@ -43,15 +71,29 @@ export default ({ className, i18n, send, values, set, signedIn, name, picture, r
           <Form
             id="sign-in"
             onSubmit={(event) => {
-              event.preventDefault()
-              send({ type: 'signIn' })
+              event.preventDefault();
+              send({ type: 'signIn' });
             }}
           >
-            <TextField name="username" value={values.username} onChange={(value) => set('username', value)} isRequired autoFocus autoComplete="username">
+            <TextField
+              autoComplete="username"
+              autoFocus
+              isRequired
+              name="username"
+              onChange={(value) => set('username', value)}
+              value={values.username}
+            >
               <Label>{i18n.dialog.username}</Label>
               <Input />
             </TextField>
-            <TextField name="password" type="password" value={values.password} onChange={(value) => set('password', value)} isRequired autoComplete="current-password">
+            <TextField
+              autoComplete="current-password"
+              isRequired
+              name="password"
+              onChange={(value) => set('password', value)}
+              type="password"
+              value={values.password}
+            >
               <Label>{i18n.dialog.password}</Label>
               <Input />
             </TextField>
@@ -60,7 +102,11 @@ export default ({ className, i18n, send, values, set, signedIn, name, picture, r
             <p>{i18n.dialog.hint}</p>
             <div className="accounts">
               {accounts.map((account) => (
-                <Button key={account.username} className="react-aria-Link" onPress={() => send({ type: 'fillDemo', username: account.username })}>
+                <Button
+                  className="react-aria-Link"
+                  key={account.username}
+                  onPress={() => send({ type: 'fillDemo', username: account.username })}
+                >
                   {account.label}
                 </Button>
               ))}
@@ -76,8 +122,8 @@ export default ({ className, i18n, send, values, set, signedIn, name, picture, r
             <Button isDisabled={signingIn} onPress={() => send({ type: 'cancel' })}>
               {i18n.dialog.cancel}
             </Button>
-            <Button type="submit" form="sign-in" data-variant="primary" isPending={signingIn}>
-              {signingIn && <span className="spinner" aria-hidden="true" />}
+            <Button data-variant="primary" form="sign-in" isPending={signingIn} type="submit">
+              {signingIn && <span aria-hidden="true" className="spinner" />}
               {i18n.dialog.submit}
             </Button>
           </footer>
@@ -85,4 +131,4 @@ export default ({ className, i18n, send, values, set, signedIn, name, picture, r
       </Modal>
     </ModalOverlay>
   </div>
-)
+);

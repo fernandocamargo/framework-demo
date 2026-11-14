@@ -1,6 +1,6 @@
-import { Button } from 'react-aria-components'
+import { Button } from 'react-aria-components';
 
-export default ({ className, i18n, error, resetErrorBoundary }) => (
+export default ({ className, error, i18n, resetErrorBoundary }) => (
   <section className={className}>
     <div className="top">
       <h2>{i18n.title}</h2>
@@ -15,4 +15,4 @@ export default ({ className, i18n, error, resetErrorBoundary }) => (
       </div>
     </div>
   </section>
-)
+);

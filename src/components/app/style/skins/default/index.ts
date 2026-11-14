@@ -1,5 +1,5 @@
-import { css } from 'framework'
-import Lab from '@/components/lab'
+import Lab from '@/components/lab';
+import { css } from 'framework';
 
 export default css`
   & {
@@ -82,4 +82,4 @@ export default css`
       display: none;
     }
   }
-`
+`;

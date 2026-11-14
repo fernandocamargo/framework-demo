@@ -21,13 +21,13 @@ After the visit's 29 steps come ten more, counted apart (`further`): the lab lef
 
 Before the i18n, ACL and other layers (`a54f01e`), Chromium, one run:
 
-| | |
-|---|---|
-| steps, misses | 24, 0 |
-| render calls | 200 |
+|                      |                                                             |
+| -------------------- | ----------------------------------------------------------- |
+| steps, misses        | 24, 0                                                       |
+| render calls         | 200                                                         |
 | framework components | 81 mounted, 135 rendered again, 38 of them changing nothing |
-| other components | 4,389 rendered again, 2,201 of them changing nothing |
-| render time | 128.8 ms, 32.1 ms of it changing nothing |
+| other components     | 4,389 rendered again, 2,201 of them changing nothing        |
+| render time          | 128.8 ms, 32.1 ms of it changing nothing                    |
 
 The costliest step is typing six keys in the editor's title: 602 react-aria components render again, 366 of them changing nothing, because the editor's render is one function of every value of the form.
 
@@ -35,13 +35,13 @@ The costliest step is typing six keys in the editor's title: 602 react-aria comp
 
 The flow gains two steps, a switch to Brazilian Portuguese and back. Chromium, one run:
 
-| | baseline | i18n |
-|---|---|---|
-| steps, misses | 24, 0 | 26, 0 |
-| render calls | 200 | 235 |
-| framework components rendered again (changing nothing) | 135 (38) | 171 (40) |
-| other components rendered again (changing nothing) | 4,389 (2,201) | 5,594 (2,568) |
-| render time (changing nothing) | 128.8 ms (32.1 ms) | 150.9 ms (36.0 ms) |
+|                                                        | baseline           | i18n               |
+| ------------------------------------------------------ | ------------------ | ------------------ |
+| steps, misses                                          | 24, 0              | 26, 0              |
+| render calls                                           | 200                | 235                |
+| framework components rendered again (changing nothing) | 135 (38)           | 171 (40)           |
+| other components rendered again (changing nothing)     | 4,389 (2,201)      | 5,594 (2,568)      |
+| render time (changing nothing)                         | 128.8 ms (32.1 ms) | 150.9 ms (36.0 ms) |
 
 - Each switch of locale renders the 18 framework components on screen that read the locale, every one of them changing the page, in one commit; the components that read none of it do not render.
 - Without the two new steps, the other components render again 4,310 times (2,034 changing nothing), fewer than the baseline's 4,389 (2,201): what the render gets now keeps the identity of every part that did not change, and a render that would get the same is not called.
@@ -50,13 +50,13 @@ The flow gains two steps, a switch to Brazilian Portuguese and back. Chromium, o
 
 Every row now holds a delete link of its own (`product/remove-link`), with a rule of its own; the session reads who is signed in from the profile. Chromium, one run, the same 26 steps:
 
-| | i18n | ACL |
-|---|---|---|
-| misses | 0 | 0 |
-| render calls | 235 | 353 |
-| framework components mounted; rendered again (changing nothing) | 82; 171 (40) | 155; 220 (48) |
-| other components rendered again (changing nothing) | 5,594 (2,568) | 5,601 (2,575) |
-| render time (changing nothing) | 150.9 ms (36.0 ms) | 151.9 ms (35.0 ms) |
+|                                                                 | i18n               | ACL                |
+| --------------------------------------------------------------- | ------------------ | ------------------ |
+| misses                                                          | 0                  | 0                  |
+| render calls                                                    | 235                | 353                |
+| framework components mounted; rendered again (changing nothing) | 82; 171 (40)       | 155; 220 (48)      |
+| other components rendered again (changing nothing)              | 5,594 (2,568)      | 5,601 (2,575)      |
+| render time (changing nothing)                                  | 150.9 ms (36.0 ms) | 151.9 ms (35.0 ms) |
 
 - The new calls and mounts are the 12 delete links each list shows.
 - A sign-in or a sign-out decides every rule again. The delete link's rule reads only `user` and `acl`, so it is decided where the user read answers, and no link renders unless its answer changes: signing in renders 5 framework components again (3 of them changing nothing), against 17 (15) when each link read the user itself.
@@ -90,7 +90,6 @@ The data layer's events go to the pipelines, and the lab's tracker listens from 
 ## After the states gallery
 
 The header has a "States" link; nothing else in the visit changes. 0 misses, 385 render calls, framework components rendered again 226 times (28 changing nothing). A component's form and chart read whether they are pinned once per render, from a context nothing changes outside the gallery.
-
 
 ## After flags
 
@@ -134,14 +133,14 @@ The recorder first, since two of its answers were wrong:
 
 With the recorder corrected, the visit's 29 steps:
 
-| | before (`62d5dee`) | after |
-|---|---|---|
-| misses, in 5 runs | 0 | 0 |
-| render calls, thrown away | 420, 20 | 417 to 420, 17 to 20 |
-| framework components rendered again (changing nothing) | 248 (9) | 246 (7) |
-| other components rendered again (changing nothing) | 4,991 (2,228) | 4,722 (1,957) |
-| of those changing nothing: in a commit where a component of ours rendered | 736 | 465 |
-| of those changing nothing: react-aria alone, and the shell | 1,430 and 62 | 1,430 and 62 |
+|                                                                           | before (`62d5dee`) | after                |
+| ------------------------------------------------------------------------- | ------------------ | -------------------- |
+| misses, in 5 runs                                                         | 0                  | 0                    |
+| render calls, thrown away                                                 | 420, 20            | 417 to 420, 17 to 20 |
+| framework components rendered again (changing nothing)                    | 248 (9)            | 246 (7)              |
+| other components rendered again (changing nothing)                        | 4,991 (2,228)      | 4,722 (1,957)        |
+| of those changing nothing: in a commit where a component of ours rendered | 736                | 465                  |
+| of those changing nothing: react-aria alone, and the shell                | 1,430 and 62       | 1,430 and 62         |
 
 WebKit, the same steps: 0 misses in 5 runs, 418 render calls (17 thrown away), framework 247 (7), other 4,484 (1,762); before, 248 (9) and 4,722 (2,002).
 
@@ -166,17 +165,16 @@ Beyond the visit, measured once: fifteen navigations left before they answer, at
 
 Four of the round's options, built. The same 39 steps, before and after on one day; Chromium three runs, WebKit three.
 
-| | Chromium before | after | WebKit before | after |
-|---|---|---|---|---|
-| misses | 0 | 0 | 0 | 0 |
-| render calls, thrown away | 417, 17 | 419, 17 | 418, 17 | 417, 14 |
-| framework rendered again (changing nothing) | 246 (7) | 246 (5) | 247 (7) | 247 (5) |
-| other rendered again (changing nothing) | 4,650 (1,895) | 4,573 to 4,687 (1,834 to 1,925) | 4,484 (1,762) | 4,451 (1,728) |
-| further steps: framework (changing nothing) | 34 (2) | 34 (4) | 34 (1) | 34 (3) |
-| further steps: other (changing nothing) | 741 (371) | 579 (229) | 744 (362) | 582 (220) |
+|                                             | Chromium before | after                           | WebKit before | after         |
+| ------------------------------------------- | --------------- | ------------------------------- | ------------- | ------------- |
+| misses                                      | 0               | 0                               | 0             | 0             |
+| render calls, thrown away                   | 417, 17         | 419, 17                         | 418, 17       | 417, 14       |
+| framework rendered again (changing nothing) | 246 (7)         | 246 (5)                         | 247 (7)       | 247 (5)       |
+| other rendered again (changing nothing)     | 4,650 (1,895)   | 4,573 to 4,687 (1,834 to 1,925) | 4,484 (1,762) | 4,451 (1,728) |
+| further steps: framework (changing nothing) | 34 (2)          | 34 (4)                          | 34 (1)        | 34 (3)        |
+| further steps: other (changing nothing)     | 741 (371)       | 579 (229)                       | 744 (362)     | 582 (220)     |
 
 - **A view follows the route fields its files read.** The lab's "sell out" button is a component of its own that reads `route.edit`; the lab reads none of the address. The editor opening and closing no longer renders the lab (2 of the 7).
 - **The lab's sliders keep the keyboard.** A `key` that changed with the setting mounted them again at each step. They now hold their own value, as the editor's fields do. The further steps' slider steps focus once and press twice. The lab still renders once when its setting changes, to learn it, and shows nothing new: those are the further steps' two more "changing nothing", against 162 fewer of react-aria's re-renders.
 - **A function that reads the render is kept** while what it reads is the same (`keep`). The sliders' outputs now get the messages themselves, which stay the same.
 - **A product's modal opens once.** `components/modal` holds the overlay and has no read; the product's placeholder, content and error are each its `Dialog` inside it. One overlay mounts and the modal animates in once (twice before). React still holds the content 300 ms after the skeleton shows: the renders thrown away at "open a product" are 11 in every run after, and 11 to 14 before, by how many of react-aria's commits fall in the wait. Its react-aria re-renders are 113 (45) in every run after, and between 88 (30) and 128 (53) before.
-

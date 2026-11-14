@@ -1,6 +1,6 @@
-import { Button } from 'react-aria-components'
+import { Button } from 'react-aria-components';
 
-export default ({ className, i18n, error, resetErrorBoundary }) => (
+export default ({ className, error, i18n, resetErrorBoundary }) => (
   <div className={className}>
     <main>
       <div className="notice" data-tone="danger" role="alert">
@@ -14,4 +14,4 @@ export default ({ className, i18n, error, resetErrorBoundary }) => (
       </div>
     </main>
   </div>
-)
+);

@@ -1,12 +1,57 @@
-import { Button, Dialog, FieldError, Form, Group, Heading, Input, Label, ListBox, ListBoxItem, Modal, ModalOverlay, NumberField, Popover, Select, SelectValue, TextArea, TextField } from 'react-aria-components'
+import {
+  Button,
+  Dialog,
+  FieldError,
+  Form,
+  Group,
+  Heading,
+  Input,
+  Label,
+  ListBox,
+  ListBoxItem,
+  Modal,
+  ModalOverlay,
+  NumberField,
+  Popover,
+  Select,
+  SelectValue,
+  TextArea,
+  TextField,
+} from 'react-aria-components';
 
-export default ({ className, i18n, send, initial, set, categories, currency, heading, saveText, problems, loading, unavailable, formShown, locked, readOnly, busy, conflict, failed, confirmingDiscard, error }) => (
-  <ModalOverlay isOpen isDismissable={!busy} isKeyboardDismissDisabled={busy} onOpenChange={(open) => !open && send({ type: 'close' })}>
+export default ({
+  busy,
+  categories,
+  className,
+  confirmingDiscard,
+  conflict,
+  currency,
+  error,
+  failed,
+  formShown,
+  heading,
+  i18n,
+  initial,
+  loading,
+  locked,
+  problems,
+  readOnly,
+  saveText,
+  send,
+  set,
+  unavailable,
+}) => (
+  <ModalOverlay
+    isDismissable={!busy}
+    isKeyboardDismissDisabled={busy}
+    isOpen
+    onOpenChange={(open) => !open && send({ type: 'close' })}
+  >
     <Modal className={`react-aria-Modal ${className}`}>
       <Dialog>
         <header>
           <Heading slot="title">{heading}</Heading>
-          <Button data-variant="icon" aria-label={i18n.close} isDisabled={busy} onPress={() => send({ type: 'close' })}>
+          <Button aria-label={i18n.close} data-variant="icon" isDisabled={busy} onPress={() => send({ type: 'close' })}>
             <span className="icon" data-icon="close" />
           </Button>
         </header>
@@ -42,23 +87,42 @@ export default ({ className, i18n, send, initial, set, categories, currency, hea
         {formShown && (
           <Form
             id="product"
-            validationErrors={problems}
             onSubmit={(event) => {
-              event.preventDefault()
-              send({ type: 'save' })
+              event.preventDefault();
+              send({ type: 'save' });
             }}
+            validationErrors={problems}
           >
             <div className="fields">
-              <TextField className="react-aria-TextField wide" name="title" defaultValue={initial.title} onChange={(value) => set('title', value)} isReadOnly={locked} autoFocus>
+              <TextField
+                autoFocus
+                className="react-aria-TextField wide"
+                defaultValue={initial.title}
+                isReadOnly={locked}
+                name="title"
+                onChange={(value) => set('title', value)}
+              >
                 <Label>{i18n.fields.title}</Label>
                 <Input />
                 <FieldError />
               </TextField>
-              <TextField className="react-aria-TextField wide" name="description" defaultValue={initial.description} onChange={(value) => set('description', value)} isReadOnly={locked}>
+              <TextField
+                className="react-aria-TextField wide"
+                defaultValue={initial.description}
+                isReadOnly={locked}
+                name="description"
+                onChange={(value) => set('description', value)}
+              >
                 <Label>{i18n.fields.description}</Label>
                 <TextArea />
               </TextField>
-              <Select name="category" defaultSelectedKey={initial.category || null} onSelectionChange={(key) => set('category', String(key))} isDisabled={locked} placeholder={i18n.fields.choose}>
+              <Select
+                defaultSelectedKey={initial.category || null}
+                isDisabled={locked}
+                name="category"
+                onSelectionChange={(key) => set('category', String(key))}
+                placeholder={i18n.fields.choose}
+              >
                 <Label>{i18n.fields.category}</Label>
                 <Button>
                   <SelectValue />
@@ -66,14 +130,29 @@ export default ({ className, i18n, send, initial, set, categories, currency, hea
                 </Button>
                 <FieldError />
                 <Popover>
-                  <ListBox items={categories}>{(category) => <ListBoxItem id={category.slug}>{category.name}</ListBoxItem>}</ListBox>
+                  <ListBox items={categories}>
+                    {(category) => <ListBoxItem id={category.slug}>{category.name}</ListBoxItem>}
+                  </ListBox>
                 </Popover>
               </Select>
-              <TextField name="brand" defaultValue={initial.brand} onChange={(value) => set('brand', value)} isReadOnly={locked}>
+              <TextField
+                defaultValue={initial.brand}
+                isReadOnly={locked}
+                name="brand"
+                onChange={(value) => set('brand', value)}
+              >
                 <Label>{i18n.fields.brand}</Label>
                 <Input />
               </TextField>
-              <NumberField name="price" defaultValue={initial.price} onChange={(value) => set('price', value)} minValue={0} step={0.01} formatOptions={currency} isReadOnly={locked}>
+              <NumberField
+                defaultValue={initial.price}
+                formatOptions={currency}
+                isReadOnly={locked}
+                minValue={0}
+                name="price"
+                onChange={(value) => set('price', value)}
+                step={0.01}
+              >
                 <Label>{i18n.fields.price}</Label>
                 <Group>
                   <Input />
@@ -82,7 +161,14 @@ export default ({ className, i18n, send, initial, set, categories, currency, hea
                 </Group>
                 <FieldError />
               </NumberField>
-              <NumberField name="stock" defaultValue={initial.stock} onChange={(value) => set('stock', value)} minValue={0} step={1} isReadOnly={locked}>
+              <NumberField
+                defaultValue={initial.stock}
+                isReadOnly={locked}
+                minValue={0}
+                name="stock"
+                onChange={(value) => set('stock', value)}
+                step={1}
+              >
                 <Label>{i18n.fields.stock}</Label>
                 <Group>
                   <Input />
@@ -130,8 +216,8 @@ export default ({ className, i18n, send, initial, set, categories, currency, hea
             <Button isDisabled={busy} onPress={() => send({ type: 'close' })}>
               {i18n.cancel}
             </Button>
-            <Button type="submit" form="product" data-variant="primary" isPending={busy} isDisabled={readOnly}>
-              {busy && <span className="spinner" aria-hidden="true" />}
+            <Button data-variant="primary" form="product" isDisabled={readOnly} isPending={busy} type="submit">
+              {busy && <span aria-hidden="true" className="spinner" />}
               {saveText}
             </Button>
           </footer>
@@ -156,4 +242,4 @@ export default ({ className, i18n, send, initial, set, categories, currency, hea
       </ModalOverlay>
     </Modal>
   </ModalOverlay>
-)
+);

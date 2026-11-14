@@ -1,14 +1,14 @@
-import { Link } from 'react-aria-components'
+import { Link } from 'react-aria-components';
 
-export default ({ className, i18n, charts }) => (
-  <main className={className} aria-labelledby="states-title">
+export default ({ charts, className, i18n }) => (
+  <main aria-labelledby="states-title" className={className}>
     <header>
       <Link href="#/products">{i18n.back}</Link>
       <h1 id="states-title">{i18n.title}</h1>
       <p>{i18n.intro}</p>
     </header>
     {charts.map((chart) => (
-      <section key={chart.path} aria-label={chart.path}>
+      <section aria-label={chart.path} key={chart.path}>
         <h2>
           <code>{chart.file}</code> <small>{chart.count}</small>
         </h2>
@@ -18,7 +18,7 @@ export default ({ className, i18n, charts }) => (
             <li key={state.path}>
               <figure>
                 <div className="frame">
-                  <iframe src={state.src} title={state.title} loading="lazy" tabIndex={-1} />
+                  <iframe loading="lazy" src={state.src} tabIndex={-1} title={state.title} />
                 </div>
                 <figcaption>
                   <strong>{state.path}</strong>
@@ -32,4 +32,4 @@ export default ({ className, i18n, charts }) => (
       </section>
     ))}
   </main>
-)
+);

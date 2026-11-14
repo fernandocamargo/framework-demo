@@ -3,10 +3,10 @@
 // It is given the fields it shows, not the filters whole: another page of the same list is not
 // another filter bar.
 
-import type { Filters } from '@/address'
-import type { Category, SortKey } from '@/services/products/types'
+import type { Filters } from '@/address';
+import type { Category, SortKey } from '@/services/products/types';
 
-export type Props = Pick<Filters, 'q' | 'category' | 'sort' | 'order'> & { categories: Category[] }
+export type Props = Pick<Filters, 'category' | 'order' | 'q' | 'sort'> & { categories: Category[] };
 
 /** The sorts offered, as the address's two fields. */
 export const SORTS = [
@@ -15,30 +15,35 @@ export const SORTS = [
   ['price', 'desc'],
   ['rating', 'desc'],
   ['stock', 'asc'],
-] as const satisfies readonly (readonly [SortKey, 'asc' | 'desc'])[]
+] as const satisfies readonly (readonly [SortKey, 'asc' | 'desc'])[];
 
 /** A sort option's id, as the address's two fields. */
 export const sorting = (id: string) => {
-  const [sort, order] = id.split(':') as [SortKey, 'asc' | 'desc']
-  return { sort, order }
-}
+  const [sort, order] = id.split(':') as [SortKey, 'asc' | 'desc'];
+  return { order, sort };
+};
 
-export default ({ i18n, q, category, sort, order, categories }) => ({
+export default ({ categories, category, i18n, order, q, sort }) => ({
+  categories: [{ name: i18n.category.all, slug: 'all' }, ...categories],
+  category: category || 'all',
   i18n,
   q,
-  category: category || 'all',
-  categories: [{ slug: 'all', name: i18n.category.all }, ...categories],
   sort: `${sort}:${order}`,
-  sorts: SORTS.map(([field, order]) => ({ id: `${field}:${order}`, label: (i18n.sort[field] as Record<string, string>)[order] })),
-})
+  sorts: SORTS.map(([field, order]) => ({
+    id: `${field}:${order}`,
+    label: (i18n.sort[field] as Record<string, string>)[order],
+  })),
+});
 
 const CATEGORIES = [
-  { slug: 'audio', name: 'Audio' },
-  { slug: 'lighting', name: 'Lighting' },
-]
+  { name: 'Audio', slug: 'audio' },
+  { name: 'Lighting', slug: 'lighting' },
+];
 
 /** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
 export const examples = {
-  'Every product': { props: { q: '', category: '', sort: 'title', order: 'asc', categories: CATEGORIES } },
-  'Searched and sorted': { props: { q: 'lamp', category: 'lighting', sort: 'price', order: 'desc', categories: CATEGORIES } },
-}
+  'Every product': { props: { categories: CATEGORIES, category: '', order: 'asc', q: '', sort: 'title' } },
+  'Searched and sorted': {
+    props: { categories: CATEGORIES, category: 'lighting', order: 'desc', q: 'lamp', sort: 'price' },
+  },
+};

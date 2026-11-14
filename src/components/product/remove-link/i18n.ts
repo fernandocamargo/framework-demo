@@ -2,4 +2,4 @@
 export default {
   label: 'Delete {title}',
   text: 'Delete',
-}
+};

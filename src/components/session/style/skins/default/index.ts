@@ -1,4 +1,4 @@
-import { css } from 'framework'
+import { css } from 'framework';
 
 // Two elements carry this component's class: the widget in the header, and the sign-in dialog's
 // modal, which renders in a portal (marked "dialog").
@@ -72,4 +72,4 @@ export default css`
       display: none;
     }
   }
-`
+`;

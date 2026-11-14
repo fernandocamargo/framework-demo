@@ -1,12 +1,12 @@
-export default ({ className, label, heading, reviews }) => (
-  <section className={className} aria-label={label}>
+export default ({ className, heading, label, reviews }) => (
+  <section aria-label={label} className={className}>
     <h3>{heading}</h3>
     <ul>
       {reviews.map((review) => (
         <li key={review.key}>
-          <span className="stars" role="img" aria-label={review.rating}>
+          <span aria-label={review.rating} className="stars" role="img">
             {review.stars.map((lit, index) => (
-              <span key={index} className="icon" data-icon="star" data-lit={lit || undefined} />
+              <span className="icon" data-icon="star" data-lit={lit || undefined} key={index} />
             ))}
           </span>
           <p>{review.comment}</p>
@@ -15,4 +15,4 @@ export default ({ className, label, heading, reviews }) => (
       ))}
     </ul>
   </section>
-)
+);

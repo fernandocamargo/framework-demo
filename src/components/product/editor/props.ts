@@ -2,38 +2,45 @@
 // start from the seeded values and hold what is typed, so a key renders its field alone; the
 // values are read only to say what is wrong with them, once a save was tried.
 
-import { CURRENCY } from '@/format'
-import { problems } from './form'
+import { CURRENCY } from '@/format';
 
-export default ({ state, form, i18n, acl, async: { default: categories } }) => {
-  const { context } = state
-  const busy = state.saving || state.creating || state.overwriting
+import { problems } from './form';
+
+export default ({ acl, async: { default: categories }, form, i18n, state }) => {
+  const { context } = state;
+  const busy = state.saving || state.creating || state.overwriting;
   return {
-    i18n,
-    send: state.send,
-    initial: form.initial,
-    set: form.set,
+    busy,
     categories,
-    currency: { style: 'currency', currency: CURRENCY } as const,
-    heading: context.creating ? i18n.heading.create : context.title ? i18n.heading.edit({ title: context.title }) : i18n.heading.untitled,
-    saveText: context.creating ? i18n.save.create : i18n.save.edit,
-    problems: context.checked ? Object.fromEntries(problems(form.values).map((field) => [field, i18n.problems[field]])) : {},
-    loading: state.loading || state.starting,
-    unavailable: state.unavailable,
+    confirmingDiscard: state.confirmingDiscard,
+    conflict: state.conflict,
+    currency: { currency: CURRENCY, style: 'currency' } as const,
+    error: context.error ?? '',
+    failed: state.failed,
     // The form stays on screen, and locked, while a save runs or a question is open over it.
     formShown: !(state.loading || state.starting || state.unavailable),
+    heading: context.creating
+      ? i18n.heading.create
+      : context.title
+        ? i18n.heading.edit({ title: context.title })
+        : i18n.heading.untitled,
+    i18n,
+    initial: form.initial,
+    loading: state.loading || state.starting,
     locked: busy || state.conflict || state.confirmingDiscard || !acl.allowed,
+    problems: context.checked
+      ? Object.fromEntries(problems(form.values).map((field) => [field, i18n.problems[field]]))
+      : {},
     readOnly: !acl.allowed,
-    busy,
-    conflict: state.conflict,
-    failed: state.failed,
-    confirmingDiscard: state.confirmingDiscard,
-    error: context.error ?? '',
-  }
-}
+    saveText: context.creating ? i18n.save.create : i18n.save.edit,
+    send: state.send,
+    set: form.set,
+    unavailable: state.unavailable,
+  };
+};
 
 /** The address each story Storybook shows of this folder needs (framework/storybook). */
 export const examples = {
-  'Editing a product': { route: { edit: 22 } },
   'A new product': { route: { create: true } },
-}
+  'Editing a product': { route: { edit: 22 } },
+};

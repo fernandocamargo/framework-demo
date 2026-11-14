@@ -6,20 +6,25 @@
 // It listens from the moment the app loads, as such a destination must, so what happened before
 // the lab first opened is there too. It leaves out the lab's own reading of it.
 
-import { connect, consent, onData, onFailure, type DataEvent, type Failure, type Interaction } from 'framework'
+import { connect, consent, type DataEvent, type Failure, type Interaction, onData, onFailure } from 'framework';
 
 /** One thing the app did, as the pipelines carried it, with the time it was seen. */
-export type Tracked = { at: number; event: Interaction | Failure | DataEvent }
+export type Tracked = { at: number; event: DataEvent | Failure | Interaction };
 
-let entries: Tracked[] = []
+let entries: Tracked[] = [];
 const add = (event: Tracked['event']) => {
-  entries = [{ at: Date.now(), event }, ...entries].slice(0, 80)
-}
-consent.grant('diagnostics')
-connect({ name: 'lab', purpose: 'diagnostics', map: (interaction: Interaction) => interaction, send: (batch) => batch.forEach(add) })
-onFailure(add)
+  entries = [{ at: Date.now(), event }, ...entries].slice(0, 80);
+};
+consent.grant('diagnostics');
+connect({
+  map: (interaction: Interaction) => interaction,
+  name: 'lab',
+  purpose: 'diagnostics',
+  send: (batch) => batch.forEach(add),
+});
+onFailure(add);
 onData((event) => {
-  if (event.path !== 'lab.activity') add(event)
-})
+  if (event.path !== 'lab.activity') add(event);
+});
 
-export default ({ env: _ }) => ({ recent: (): Tracked[] => entries })
+export default ({ env: _ }) => ({ recent: (): Tracked[] => entries });

@@ -1,9 +1,24 @@
-import { Link } from 'react-aria-components'
-import Filters from './components/filters'
-import ProductRow from './components/product-row'
+import { Link } from 'react-aria-components';
 
-export default ({ className, i18n, filters, categories, items, canChange, summary, empty, emptyText, clearHref, createHref, bulkHref, paging }) => (
-  <section className={className} aria-labelledby="catalogue-title">
+import Filters from './components/filters';
+import ProductRow from './components/product-row';
+
+export default ({
+  bulkHref,
+  canChange,
+  categories,
+  className,
+  clearHref,
+  createHref,
+  empty,
+  emptyText,
+  filters,
+  i18n,
+  items,
+  paging,
+  summary,
+}) => (
+  <section aria-labelledby="catalogue-title" className={className}>
     <div className="top">
       <div>
         <h2 id="catalogue-title">{i18n.title}</h2>
@@ -13,11 +28,11 @@ export default ({ className, i18n, filters, categories, items, canChange, summar
       </div>
       {canChange && (
         <div className="actions">
-          <Link href={bulkHref} data-variant="secondary">
+          <Link data-variant="secondary" href={bulkHref}>
             <span className="icon" data-icon="tag" />
             {i18n.actions.bulk}
           </Link>
-          <Link href={createHref} data-variant="primary">
+          <Link data-variant="primary" href={createHref}>
             <span className="icon" data-icon="plus" />
             {i18n.actions.create}
           </Link>
@@ -30,29 +45,35 @@ export default ({ className, i18n, filters, categories, items, canChange, summar
         {i18n.readOnly}
       </p>
     )}
-    <Filters q={filters.q} category={filters.category} sort={filters.sort} order={filters.order} categories={categories} />
+    <Filters
+      categories={categories}
+      category={filters.category}
+      order={filters.order}
+      q={filters.q}
+      sort={filters.sort}
+    />
     {empty ? (
       <div className="empty">
         <p>{emptyText}</p>
         {clearHref && <Link href={clearHref}>{i18n.empty.clear}</Link>}
       </div>
     ) : (
-      <ul className="rows" aria-label={i18n.list}>
+      <ul aria-label={i18n.list} className="rows">
         {items.map((product) => (
-          <ProductRow key={product.id} product={product} filters={filters} />
+          <ProductRow filters={filters} key={product.id} product={product} />
         ))}
       </ul>
     )}
     {paging.shown && (
-      <nav className="paging" aria-label={i18n.paging.label}>
-        <Link href={paging.previousHref ?? undefined} isDisabled={!paging.previousHref} data-variant="secondary">
+      <nav aria-label={i18n.paging.label} className="paging">
+        <Link data-variant="secondary" href={paging.previousHref ?? undefined} isDisabled={!paging.previousHref}>
           {i18n.paging.previous}
         </Link>
         <span>{paging.text}</span>
-        <Link href={paging.nextHref ?? undefined} isDisabled={!paging.nextHref} data-variant="secondary">
+        <Link data-variant="secondary" href={paging.nextHref ?? undefined} isDisabled={!paging.nextHref}>
           {i18n.paging.next}
         </Link>
       </nav>
     )}
   </section>
-)
+);

@@ -6,4 +6,4 @@ export default {
   // The states gallery is a page of frames, each a page of the app's own shell (`#/states/…`),
   // which Storybook does not have; each of those states is a story here.
   skip: ['components/states'],
-}
+};

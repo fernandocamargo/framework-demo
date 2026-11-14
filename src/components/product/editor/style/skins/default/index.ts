@@ -1,4 +1,4 @@
-import { css } from 'framework'
+import { css } from 'framework';
 
 export default css`
   .fields {
@@ -14,4 +14,4 @@ export default css`
       grid-template-columns: 1fr;
     }
   }
-`
+`;

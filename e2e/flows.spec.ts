@@ -3,543 +3,587 @@
 // resolves when no read or write is pending, no view or skin is loading, no operation is
 // running and no placeholder is on screen.
 
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test';
 
 declare global {
   interface Window {
-    __framework: { idle(): Promise<void>; fromTab(): Promise<void> }
+    __framework: { fromTab(): Promise<void>; idle(): Promise<void> };
   }
 }
 
-const idle = (page: Page) => page.evaluate(() => window.__framework.idle())
+const idle = (page: Page) => page.evaluate(() => window.__framework.idle());
 
 /** Does something, then waits until the app has nothing pending. */
 async function act(page: Page, action: () => Promise<unknown>) {
-  await action()
-  await idle(page)
+  await action();
+  await idle(page);
 }
 
-const open = (page: Page, hash = '#/products') => act(page, () => page.goto(`./?world=memory${hash}`))
-const rows = (page: Page, name = 'Products') => page.getByRole('list', { name }).getByRole('listitem')
-const titles = (page: Page) => rows(page).getByRole('link').filter({ hasNotText: /^$/ }).allInnerTexts()
-const summary = (page: Page) => page.getByRole('status').first().innerText()
-const dialog = (page: Page, name: string | RegExp) => page.getByRole('dialog', { name }).or(page.getByRole('alertdialog', { name }))
-const visible = (locator: Locator) => locator.isVisible()
+const open = (page: Page, hash = '#/products') => act(page, () => page.goto(`./?world=memory${hash}`));
+const rows = (page: Page, name = 'Products') => page.getByRole('list', { name }).getByRole('listitem');
+const titles = (page: Page) => rows(page).getByRole('link').filter({ hasNotText: /^$/ }).allInnerTexts();
+const summary = (page: Page) => page.getByRole('status').first().innerText();
+const dialog = (page: Page, name: RegExp | string) =>
+  page.getByRole('dialog', { name }).or(page.getByRole('alertdialog', { name }));
+const visible = (locator: Locator) => locator.isVisible();
 /** react-aria keeps a radio's or a checkbox's real input visually hidden inside its label, so the label is what a person clicks. */
-const choose = (locator: Locator) => locator.locator('xpath=ancestor::label').click()
+const choose = (locator: Locator) => locator.locator('xpath=ancestor::label').click();
 
 async function signIn(page: Page, account = 'Emily') {
-  const form = dialog(page, 'Sign in')
-  await act(page, () => form.getByRole('button', { name: new RegExp(`^${account},`) }).click())
-  await act(page, () => form.getByRole('button', { name: 'Sign in' }).click())
+  const form = dialog(page, 'Sign in');
+  await act(page, () => form.getByRole('button', { name: new RegExp(`^${account},`) }).click());
+  await act(page, () => form.getByRole('button', { name: 'Sign in' }).click());
 }
 
 test.beforeEach(({ page }) => {
   page.on('pageerror', (error) => {
-    throw error
-  })
-})
+    throw error;
+  });
+});
 
 test('the catalogue follows the address: search, category, sort and page', async ({ page }) => {
-  await open(page)
-  expect(await summary(page)).toBe('37 products')
-  expect(await rows(page).count()).toBe(12)
+  await open(page);
+  expect(await summary(page)).toBe('37 products');
+  expect(await rows(page).count()).toBe(12);
 
   await act(page, async () => {
-    await page.getByRole('searchbox', { name: 'Search products' }).fill('lamp')
-    await page.keyboard.press('Enter')
-  })
-  expect(page.url()).toContain('q=lamp')
-  expect(await summary(page)).toBe('3 products matching “lamp”')
-  expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp'])
+    await page.getByRole('searchbox', { name: 'Search products' }).fill('lamp');
+    await page.keyboard.press('Enter');
+  });
+  expect(page.url()).toContain('q=lamp');
+  expect(await summary(page)).toBe('3 products matching “lamp”');
+  expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp']);
 
   await act(page, async () => {
-    await page.getByRole('button', { name: /Sort/ }).click()
-    await page.getByRole('option', { name: 'Price, high to low' }).click()
-  })
-  expect(page.url()).toContain('sort=price&order=desc')
-  expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp'])
+    await page.getByRole('button', { name: /Sort/ }).click();
+    await page.getByRole('option', { name: 'Price, high to low' }).click();
+  });
+  expect(page.url()).toContain('sort=price&order=desc');
+  expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp']);
 
-  await open(page, '#/products?category=desks&page=1')
-  expect(await summary(page)).toBe('10 products in Desks')
+  await open(page, '#/products?category=desks&page=1');
+  expect(await summary(page)).toBe('10 products in Desks');
 
-  await open(page, '#/products?page=4')
-  expect(await rows(page).count()).toBe(1)
-  await act(page, () => page.goBack())
-  expect(await summary(page)).toBe('10 products in Desks')
-})
+  await open(page, '#/products?page=4');
+  expect(await rows(page).count()).toBe(1);
+  await act(page, () => page.goBack());
+  expect(await summary(page)).toBe('10 products in Desks');
+});
 
 test('a product opens with its reviews, each from its own read', async ({ page }) => {
-  await open(page)
-  await act(page, () => page.getByRole('link', { name: 'Audio Interface', exact: true }).click())
-  expect(page.url()).toContain('view=4')
-  const detail = dialog(page, 'Audio Interface')
-  expect(await visible(detail)).toBe(true)
-  expect(await detail.getByRole('region', { name: 'Reviews' }).getByRole('listitem').count()).toBe(3)
-  await act(page, () => page.keyboard.press('Escape'))
-  expect(page.url()).not.toContain('view=')
-})
+  await open(page);
+  await act(page, () => page.getByRole('link', { exact: true, name: 'Audio Interface' }).click());
+  expect(page.url()).toContain('view=4');
+  const detail = dialog(page, 'Audio Interface');
+  expect(await visible(detail)).toBe(true);
+  expect(await detail.getByRole('region', { name: 'Reviews' }).getByRole('listitem').count()).toBe(3);
+  await act(page, () => page.keyboard.press('Escape'));
+  expect(page.url()).not.toContain('view=');
+});
 
 test('editing needs a session; a save makes the list read again', async ({ page }) => {
-  await open(page)
-  await act(page, () => page.getByRole('link', { name: 'Edit Audio Interface' }).click())
-  expect(await dialog(page, 'Sign in').innerText()).toContain('Sign in to change the catalogue.')
-  await signIn(page)
+  await open(page);
+  await act(page, () => page.getByRole('link', { name: 'Edit Audio Interface' }).click());
+  expect(await dialog(page, 'Sign in').innerText()).toContain('Sign in to change the catalogue.');
+  await signIn(page);
 
-  const editor = dialog(page, 'Edit Audio Interface')
-  expect(await visible(editor)).toBe(true)
-  await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill('Audio Interface Mk II'))
-  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click())
-  expect(await visible(editor)).toBe(false)
-  expect(await rows(page).nth(1).innerText()).toContain('Audio Interface Mk II')
-  expect(await rows(page).nth(1).innerText()).toContain('Edited')
-})
+  const editor = dialog(page, 'Edit Audio Interface');
+  expect(await visible(editor)).toBe(true);
+  await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill('Audio Interface Mk II'));
+  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click());
+  expect(await visible(editor)).toBe(false);
+  expect(await rows(page).nth(1).innerText()).toContain('Audio Interface Mk II');
+  expect(await rows(page).nth(1).innerText()).toContain('Edited');
+});
 
 test('closing with unsaved changes asks first; a form with problems is not sent', async ({ page }) => {
-  await open(page, '#/products?edit=4')
-  await signIn(page)
-  const editor = dialog(page, 'Edit Audio Interface')
-  await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill(''))
-  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click())
-  expect(await editor.innerText()).toContain('A product needs a title.')
+  await open(page, '#/products?edit=4');
+  await signIn(page);
+  const editor = dialog(page, 'Edit Audio Interface');
+  await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill(''));
+  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click());
+  expect(await editor.innerText()).toContain('A product needs a title.');
 
-  await act(page, () => page.keyboard.press('Escape'))
-  const question = dialog(page, 'Discard your changes?')
-  expect(await visible(question)).toBe(true)
-  await act(page, () => question.getByRole('button', { name: 'Keep editing' }).click())
-  expect(await visible(editor)).toBe(true)
-  await act(page, () => page.keyboard.press('Escape'))
-  await act(page, () => question.getByRole('button', { name: 'Discard' }).click())
-  expect(page.url()).not.toContain('edit=')
-  expect(await rows(page).nth(1).innerText()).toContain('Audio Interface')
-})
+  await act(page, () => page.keyboard.press('Escape'));
+  const question = dialog(page, 'Discard your changes?');
+  expect(await visible(question)).toBe(true);
+  await act(page, () => question.getByRole('button', { name: 'Keep editing' }).click());
+  expect(await visible(editor)).toBe(true);
+  await act(page, () => page.keyboard.press('Escape'));
+  await act(page, () => question.getByRole('button', { name: 'Discard' }).click());
+  expect(page.url()).not.toContain('edit=');
+  expect(await rows(page).nth(1).innerText()).toContain('Audio Interface');
+});
 
 test('a save after somebody else saved is a conflict, and the person chooses', async ({ page }) => {
-  await open(page)
-  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click())
-  await act(page, () => page.getByRole('link', { name: 'Edit Boom Arm' }).click())
-  await signIn(page)
-  const editor = dialog(page, 'Edit Boom Arm')
-  await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill('Boom Arm, long'))
-  await act(page, () => page.getByRole('button', { name: 'Sell out the product being edited' }).click())
-  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click())
-  expect(await editor.innerText()).toContain('Somebody else changed this product')
+  await open(page);
+  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
+  await act(page, () => page.getByRole('link', { name: 'Edit Boom Arm' }).click());
+  await signIn(page);
+  const editor = dialog(page, 'Edit Boom Arm');
+  await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill('Boom Arm, long'));
+  await act(page, () => page.getByRole('button', { name: 'Sell out the product being edited' }).click());
+  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click());
+  expect(await editor.innerText()).toContain('Somebody else changed this product');
 
   // Taking the newer version reads the product again: the title is back, and the stock is gone.
-  await act(page, () => editor.getByRole('button', { name: 'Discard mine and reload' }).click())
-  expect(await editor.getByRole('textbox', { name: 'Title' }).inputValue()).toBe('Boom Arm')
-  expect(await editor.getByRole('textbox', { name: 'Stock' }).inputValue()).toBe('0')
+  await act(page, () => editor.getByRole('button', { name: 'Discard mine and reload' }).click());
+  expect(await editor.getByRole('textbox', { name: 'Title' }).inputValue()).toBe('Boom Arm');
+  expect(await editor.getByRole('textbox', { name: 'Stock' }).inputValue()).toBe('0');
 
   // The same change again, now on the newer version, is saved.
-  await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill('Boom Arm, long'))
-  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click())
-  expect(await visible(editor)).toBe(false)
-  expect(await rows(page).filter({ hasText: 'Boom Arm, long' }).innerText()).toContain('Out of stock')
-})
+  await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill('Boom Arm, long'));
+  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click());
+  expect(await visible(editor)).toBe(false);
+  expect(await rows(page).filter({ hasText: 'Boom Arm, long' }).innerText()).toContain('Out of stock');
+});
 
 test('a product is created, then deleted after a confirmation', async ({ page }) => {
-  await open(page, '#/products?signin=1')
-  await signIn(page)
-  await act(page, () => page.getByRole('link', { name: 'New product' }).click())
-  const editor = dialog(page, 'New product')
-  await editor.getByRole('textbox', { name: 'Title' }).fill('Cork Coaster')
-  await editor.getByRole('button', { name: /Category/ }).click()
-  await page.getByRole('option', { name: 'Desks' }).click()
-  await editor.getByRole('textbox', { name: 'Price' }).fill('7.5')
-  await act(page, () => editor.getByRole('button', { name: 'Create product' }).click())
-  expect(await summary(page)).toBe('38 products')
-  expect(await rows(page).first().innerText()).toContain('Cork Coaster')
-  expect(await rows(page).first().innerText()).toContain('New')
+  await open(page, '#/products?signin=1');
+  await signIn(page);
+  await act(page, () => page.getByRole('link', { name: 'New product' }).click());
+  const editor = dialog(page, 'New product');
+  await editor.getByRole('textbox', { name: 'Title' }).fill('Cork Coaster');
+  await editor.getByRole('button', { name: /Category/ }).click();
+  await page.getByRole('option', { name: 'Desks' }).click();
+  await editor.getByRole('textbox', { name: 'Price' }).fill('7.5');
+  await act(page, () => editor.getByRole('button', { name: 'Create product' }).click());
+  expect(await summary(page)).toBe('38 products');
+  expect(await rows(page).first().innerText()).toContain('Cork Coaster');
+  expect(await rows(page).first().innerText()).toContain('New');
 
-  await act(page, () => page.getByRole('link', { name: 'Delete Cork Coaster' }).click())
-  const question = dialog(page, 'Delete Cork Coaster?')
-  expect(await visible(question)).toBe(true)
-  await act(page, () => question.getByRole('button', { name: 'Delete' }).click())
-  expect(await summary(page)).toBe('37 products')
-  expect(await titles(page)).not.toContain('Cork Coaster')
-})
+  await act(page, () => page.getByRole('link', { name: 'Delete Cork Coaster' }).click());
+  const question = dialog(page, 'Delete Cork Coaster?');
+  expect(await visible(question)).toBe(true);
+  await act(page, () => question.getByRole('button', { name: 'Delete' }).click());
+  expect(await summary(page)).toBe('37 products');
+  expect(await titles(page)).not.toContain('Cork Coaster');
+});
 
 test('the bulk price change applies a rule, lists what failed, and sends the failed ones again', async ({ page }) => {
-  await open(page, '#/products?category=keyboards&signin=1')
-  await signIn(page)
-  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click())
-  const lab = page.getByRole('complementary', { name: 'Network lab' })
-  await act(page, () => page.getByRole('link', { name: 'Bulk price change' }).click())
-  const wizard = dialog(page, 'Bulk price change')
+  await open(page, '#/products?category=keyboards&signin=1');
+  await signIn(page);
+  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
+  const lab = page.getByRole('complementary', { name: 'Network lab' });
+  await act(page, () => page.getByRole('link', { name: 'Bulk price change' }).click());
+  const wizard = dialog(page, 'Bulk price change');
 
   await act(page, async () => {
-    await wizard.getByRole('button', { name: /Category/ }).click()
-    await page.getByRole('option', { name: 'Keyboards' }).click()
-  })
-  expect(await wizard.innerText()).toContain('9 of 9 products selected')
-  await act(page, () => choose(wizard.getByRole('checkbox', { name: /Coiled Cable/ })))
-  await act(page, () => wizard.getByRole('button', { name: 'Next: the rule' }).click())
-  await act(page, () => wizard.getByRole('textbox', { name: 'By' }).fill('20'))
-  await act(page, () => wizard.getByRole('button', { name: 'Next: preview' }).click())
-  expect(await wizard.getByRole('row').count()).toBe(9)
+    await wizard.getByRole('button', { name: /Category/ }).click();
+    await page.getByRole('option', { name: 'Keyboards' }).click();
+  });
+  expect(await wizard.innerText()).toContain('9 of 9 products selected');
+  await act(page, () => choose(wizard.getByRole('checkbox', { name: /Coiled Cable/ })));
+  await act(page, () => wizard.getByRole('button', { name: 'Next: the rule' }).click());
+  await act(page, () => wizard.getByRole('textbox', { name: 'By' }).fill('20'));
+  await act(page, () => wizard.getByRole('button', { name: 'Next: preview' }).click());
+  expect(await wizard.getByRole('row').count()).toBe(9);
 
   // Every request fails while the rule is applied: each product is tried, and each failure kept.
-  await act(page, () => choose(lab.getByRole('radio', { name: '500' })))
-  await act(page, () => wizard.getByRole('button', { name: 'Apply to 8' }).click())
-  expect(await wizard.innerText()).toContain('0 prices changed, 8 failed.')
+  await act(page, () => choose(lab.getByRole('radio', { name: '500' })));
+  await act(page, () => wizard.getByRole('button', { name: 'Apply to 8' }).click());
+  expect(await wizard.innerText()).toContain('0 prices changed, 8 failed.');
 
-  await act(page, () => choose(lab.getByRole('radio', { name: 'As it should' })))
-  await act(page, () => wizard.getByRole('button', { name: 'Try the 8 failed again' }).click())
-  expect(await wizard.innerText()).toContain('8 prices changed.')
-  await act(page, () => wizard.getByRole('button', { name: 'Done' }).click())
+  await act(page, () => choose(lab.getByRole('radio', { name: 'As it should' })));
+  await act(page, () => wizard.getByRole('button', { name: 'Try the 8 failed again' }).click());
+  expect(await wizard.innerText()).toContain('8 prices changed.');
+  await act(page, () => wizard.getByRole('button', { name: 'Done' }).click());
   // Low-Profile Keyboard: $220.99 less 20%.
-  expect(await rows(page).filter({ hasText: 'Low-Profile Keyboard' }).innerText()).toContain('$176.79')
-})
+  expect(await rows(page).filter({ hasText: 'Low-Profile Keyboard' }).innerText()).toContain('$176.79');
+});
 
 test('a failed read shows the error file and reaches the failure pipeline; trying again recovers', async ({ page }) => {
-  await open(page)
-  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click())
-  const lab = page.getByRole('complementary', { name: 'Network lab' })
-  await act(page, () => choose(lab.getByRole('radio', { name: '500' })))
-  await act(page, () => page.goto('./?world=memory#/products?category=audio'))
-  expect(await page.getByRole('alert').first().innerText()).toContain('The catalogue could not be read')
-  expect(await page.getByRole('region', { name: /Failures/ }).innerText()).toContain('service · products.search')
+  await open(page);
+  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
+  const lab = page.getByRole('complementary', { name: 'Network lab' });
+  await act(page, () => choose(lab.getByRole('radio', { name: '500' })));
+  await act(page, () => page.goto('./?world=memory#/products?category=audio'));
+  expect(await page.getByRole('alert').first().innerText()).toContain('The catalogue could not be read');
+  expect(await page.getByRole('region', { name: /Failures/ }).innerText()).toContain('service · products.search');
 
-  await act(page, () => choose(lab.getByRole('radio', { name: 'As it should' })))
-  await act(page, () => page.getByRole('button', { name: 'Try again' }).click())
-  expect(await summary(page)).toBe('9 products in Audio')
-})
+  await act(page, () => choose(lab.getByRole('radio', { name: 'As it should' })));
+  await act(page, () => page.getByRole('button', { name: 'Try again' }).click());
+  expect(await summary(page)).toBe('9 products in Audio');
+});
 
 test('an expired access token is refreshed once, under the save that met it', async ({ page }) => {
-  await open(page, '#/products?signin=1')
-  await signIn(page)
-  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click())
-  const lab = page.getByRole('complementary', { name: 'Network lab' })
-  await act(page, () => lab.getByRole('button', { name: 'Expire the access token' }).click())
-  await act(page, () => page.getByRole('link', { name: 'Edit Boom Arm' }).click())
-  const editor = dialog(page, 'Edit Boom Arm')
-  await act(page, () => editor.getByRole('textbox', { name: 'Brand' }).fill('Northlight Audio'))
-  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click())
-  expect(await visible(editor)).toBe(false)
-  expect(await rows(page).filter({ hasText: 'Boom Arm' }).innerText()).toContain('Northlight Audio')
+  await open(page, '#/products?signin=1');
+  await signIn(page);
+  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
+  const lab = page.getByRole('complementary', { name: 'Network lab' });
+  await act(page, () => lab.getByRole('button', { name: 'Expire the access token' }).click());
+  await act(page, () => page.getByRole('link', { name: 'Edit Boom Arm' }).click());
+  const editor = dialog(page, 'Edit Boom Arm');
+  await act(page, () => editor.getByRole('textbox', { name: 'Brand' }).fill('Northlight Audio'));
+  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click());
+  expect(await visible(editor)).toBe(false);
+  expect(await rows(page).filter({ hasText: 'Boom Arm' }).innerText()).toContain('Northlight Audio');
   // The lab reads the client's activity once a second while it is open.
-  await expect(lab.getByRole('list', { name: "The API client's latest requests" })).toContainText('refreshing the access token')
+  await expect(lab.getByRole('list', { name: "The API client's latest requests" })).toContainText(
+    'refreshing the access token',
+  );
 
   // With the refresh token revoked as well, the next save ends the session.
-  await act(page, () => lab.getByRole('button', { name: 'Expire the access token' }).click())
-  await act(page, () => lab.getByRole('button', { name: 'Revoke the refresh token' }).click())
-  await act(page, () => page.getByRole('link', { name: 'Edit Boom Arm' }).click())
-  await act(page, () => editor.getByRole('textbox', { name: 'Brand' }).fill('Northlight'))
-  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click())
-  expect(await editor.innerText()).toContain('Your session has expired')
-})
+  await act(page, () => lab.getByRole('button', { name: 'Expire the access token' }).click());
+  await act(page, () => lab.getByRole('button', { name: 'Revoke the refresh token' }).click());
+  await act(page, () => page.getByRole('link', { name: 'Edit Boom Arm' }).click());
+  await act(page, () => editor.getByRole('textbox', { name: 'Brand' }).fill('Northlight'));
+  await act(page, () => editor.getByRole('button', { name: 'Save changes' }).click());
+  expect(await editor.innerText()).toContain('Your session has expired');
+});
 
 test('the page speaks Brazilian Portuguese, and changes language in place', async ({ page }) => {
-  await act(page, () => page.goto('./?world=memory&lang=pt-BR#/products'))
-  expect(await page.locator('html').getAttribute('lang')).toBe('pt-BR')
-  expect(await summary(page)).toBe('37 produtos')
+  await act(page, () => page.goto('./?world=memory&lang=pt-BR#/products'));
+  expect(await page.locator('html').getAttribute('lang')).toBe('pt-BR');
+  expect(await summary(page)).toBe('37 produtos');
   // Prices and ratings are written the Brazilian way; DummyJSON's product names are not translated.
-  expect(await rows(page, 'Produtos').first().innerText()).toMatch(/US\$\s273,99/)
-  expect(await rows(page, 'Produtos').first().innerText()).toContain('4,2')
+  expect(await rows(page, 'Produtos').first().innerText()).toMatch(/US\$\s273,99/);
+  expect(await rows(page, 'Produtos').first().innerText()).toContain('4,2');
 
   // A dialog's messages, its reviews' plural and average, and a date the Brazilian way.
-  await act(page, () => page.getByRole('link', { name: 'Audio Interface', exact: true }).click())
-  const reviews = dialog(page, 'Audio Interface').getByRole('region', { name: 'Avaliações' })
-  expect(await reviews.getByRole('heading').innerText()).toMatch(/^3 avaliações, média de \d,\d$/)
-  expect(await dialog(page, 'Audio Interface').getByRole('button', { name: 'Editar' }).count()).toBe(1)
-  await act(page, () => page.keyboard.press('Escape'))
+  await act(page, () => page.getByRole('link', { exact: true, name: 'Audio Interface' }).click());
+  const reviews = dialog(page, 'Audio Interface').getByRole('region', { name: 'Avaliações' });
+  expect(await reviews.getByRole('heading').innerText()).toMatch(/^3 avaliações, média de \d,\d$/);
+  expect(await dialog(page, 'Audio Interface').getByRole('button', { name: 'Editar' }).count()).toBe(1);
+  await act(page, () => page.keyboard.press('Escape'));
 
   await act(page, async () => {
-    await page.getByRole('button', { name: 'Idioma' }).click()
-    await page.getByRole('option', { name: 'English' }).click()
-  })
-  expect(page.url()).toContain('lang=en')
-  expect(await page.locator('html').getAttribute('lang')).toBe('en')
-  expect(await summary(page)).toBe('37 products')
-  expect(await rows(page).first().innerText()).toContain('$273.99')
-})
+    await page.getByRole('button', { name: 'Idioma' }).click();
+    await page.getByRole('option', { name: 'English' }).click();
+  });
+  expect(page.url()).toContain('lang=en');
+  expect(await page.locator('html').getAttribute('lang')).toBe('en');
+  expect(await summary(page)).toBe('37 products');
+  expect(await rows(page).first().innerText()).toContain('$273.99');
+});
 
-test("each role sees what it may do: users browse, moderators edit and change prices by 20% at most, admins also delete", async ({ page }) => {
-  const actions = page.getByRole('link', { name: 'New product' })
-  const editLinks = rows(page).getByRole('link', { name: /^Edit / })
-  const deleteLinks = rows(page).getByRole('link', { name: /^Delete / })
+test('each role sees what it may do: users browse, moderators edit and change prices by 20% at most, admins also delete', async ({
+  page,
+}) => {
+  const actions = page.getByRole('link', { name: 'New product' });
+  const editLinks = rows(page).getByRole('link', { name: /^Edit / });
+  const deleteLinks = rows(page).getByRole('link', { name: /^Delete / });
   const switchTo = async (account: string) => {
-    if (await page.getByRole('button', { name: 'Sign out' }).count()) await act(page, () => page.getByRole('button', { name: 'Sign out' }).click())
-    await act(page, () => page.getByRole('button', { name: 'Sign in' }).click())
-    await signIn(page, account)
-  }
+    if (await page.getByRole('button', { name: 'Sign out' }).count())
+      await act(page, () => page.getByRole('button', { name: 'Sign out' }).click());
+    await act(page, () => page.getByRole('button', { name: 'Sign in' }).click());
+    await signIn(page, account);
+  };
 
-  await open(page)
+  await open(page);
   // Nobody signed in may try: the actions show, and lead to signing in.
-  expect(await actions.count()).toBe(1)
+  expect(await actions.count()).toBe(1);
 
-  await switchTo('Avery')
-  expect(await page.getByRole('banner').innerText()).toContain('User')
-  expect(await actions.count()).toBe(0)
-  expect(await editLinks.count()).toBe(0)
-  expect(await deleteLinks.count()).toBe(0)
-  expect(await page.getByRole('note').first().innerText()).toContain('Changing it needs a permission you do not have.')
+  await switchTo('Avery');
+  expect(await page.getByRole('banner').innerText()).toContain('User');
+  expect(await actions.count()).toBe(0);
+  expect(await editLinks.count()).toBe(0);
+  expect(await deleteLinks.count()).toBe(0);
+  expect(await page.getByRole('note').first().innerText()).toContain('Changing it needs a permission you do not have.');
   // An address that opens the editor anyway shows it read-only, with nothing to save.
-  await open(page, '#/products?edit=4')
-  const editor = dialog(page, 'Edit Audio Interface')
-  expect(await editor.getByRole('note').innerText()).toContain('Changing it needs a permission you do not have.')
-  expect(await editor.getByRole('button', { name: 'Save changes' }).isDisabled()).toBe(true)
-  await act(page, () => page.keyboard.press('Escape'))
+  await open(page, '#/products?edit=4');
+  const editor = dialog(page, 'Edit Audio Interface');
+  expect(await editor.getByRole('note').innerText()).toContain('Changing it needs a permission you do not have.');
+  expect(await editor.getByRole('button', { name: 'Save changes' }).isDisabled()).toBe(true);
+  await act(page, () => page.keyboard.press('Escape'));
 
-  await switchTo('Olivia')
-  expect(await page.getByRole('banner').innerText()).toContain('Moderator')
-  expect(await editLinks.count()).toBe(12)
-  expect(await deleteLinks.count()).toBe(0)
+  await switchTo('Olivia');
+  expect(await page.getByRole('banner').innerText()).toContain('Moderator');
+  expect(await editLinks.count()).toBe(12);
+  expect(await deleteLinks.count()).toBe(0);
   // The bulk change's rule reads the form: up to 20% applies, more does not.
-  await act(page, () => page.getByRole('link', { name: 'Bulk price change' }).click())
-  const wizard = dialog(page, 'Bulk price change')
-  await act(page, () => wizard.getByRole('button', { name: 'Next: the rule' }).click())
+  await act(page, () => page.getByRole('link', { name: 'Bulk price change' }).click());
+  const wizard = dialog(page, 'Bulk price change');
+  await act(page, () => wizard.getByRole('button', { name: 'Next: the rule' }).click());
   // The field commits its value when it loses focus, as a person leaves it.
   await act(page, async () => {
-    await wizard.getByRole('textbox', { name: 'By' }).fill('30')
-    await page.keyboard.press('Tab')
-  })
-  await act(page, () => wizard.getByRole('button', { name: 'Next: preview' }).click())
-  expect(await wizard.getByRole('button', { name: /^Apply to/ }).isDisabled()).toBe(true)
-  expect(await wizard.getByRole('note').innerText()).toContain('You change prices by 20% at most.')
-  await act(page, () => wizard.getByRole('button', { name: 'Back' }).click())
+    await wizard.getByRole('textbox', { name: 'By' }).fill('30');
+    await page.keyboard.press('Tab');
+  });
+  await act(page, () => wizard.getByRole('button', { name: 'Next: preview' }).click());
+  expect(await wizard.getByRole('button', { name: /^Apply to/ }).isDisabled()).toBe(true);
+  expect(await wizard.getByRole('note').innerText()).toContain('You change prices by 20% at most.');
+  await act(page, () => wizard.getByRole('button', { name: 'Back' }).click());
   await act(page, async () => {
-    await wizard.getByRole('textbox', { name: 'By' }).fill('20')
-    await page.keyboard.press('Tab')
-  })
-  await act(page, () => wizard.getByRole('button', { name: 'Next: preview' }).click())
-  expect(await wizard.getByRole('button', { name: /^Apply to/ }).isDisabled()).toBe(false)
-  await act(page, () => page.keyboard.press('Escape'))
+    await wizard.getByRole('textbox', { name: 'By' }).fill('20');
+    await page.keyboard.press('Tab');
+  });
+  await act(page, () => wizard.getByRole('button', { name: 'Next: preview' }).click());
+  expect(await wizard.getByRole('button', { name: /^Apply to/ }).isDisabled()).toBe(false);
+  await act(page, () => page.keyboard.press('Escape'));
   // A deletion asked for by the address is shown, and refused.
-  await open(page, '#/products?remove=4')
-  const question = dialog(page, /^Delete/)
-  expect(await question.getByRole('note').innerText()).toContain('Deleting a product needs a permission you do not have.')
-  expect(await question.getByRole('button', { name: 'Delete' }).isDisabled()).toBe(true)
-  await act(page, () => question.getByRole('button', { name: 'Cancel' }).click())
+  await open(page, '#/products?remove=4');
+  const question = dialog(page, /^Delete/);
+  expect(await question.getByRole('note').innerText()).toContain(
+    'Deleting a product needs a permission you do not have.',
+  );
+  expect(await question.getByRole('button', { name: 'Delete' }).isDisabled()).toBe(true);
+  await act(page, () => question.getByRole('button', { name: 'Cancel' }).click());
 
-  await switchTo('Emily')
-  expect(await page.getByRole('banner').innerText()).toContain('Admin')
-  expect(await deleteLinks.count()).toBe(12)
+  await switchTo('Emily');
+  expect(await page.getByRole('banner').innerText()).toContain('Admin');
+  expect(await deleteLinks.count()).toBe(12);
   // Every rule decided without failing: a rule that throws refuses, and would be reported.
-  const failures = page.getByRole('region', { name: /Failures/ })
-  expect((await failures.count()) ? await failures.innerText() : '').toBe('')
-})
+  const failures = page.getByRole('region', { name: /Failures/ });
+  expect((await failures.count()) ? await failures.innerText() : '').toBe('');
+});
 
 test('keys follow what may be done and where the flow is; `?` lists them, translated', async ({ page }) => {
-  const keys = dialog(page, 'Keyboard shortcuts')
-  const listed = (label: string) => keys.locator('dl > div').filter({ hasText: label }).innerText()
-  const blur = () => page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  const keys = dialog(page, 'Keyboard shortcuts');
+  const listed = (label: string) => keys.locator('dl > div').filter({ hasText: label }).innerText();
+  const blur = () => page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 
-  await open(page)
+  await open(page);
   // `/` goes to the search; typed in it, `n` is a letter, not a key of the app.
-  await act(page, () => page.keyboard.press('/'))
-  const search = page.getByRole('searchbox')
-  expect(await search.evaluate((element) => element === document.activeElement)).toBe(true)
-  await act(page, () => page.keyboard.type('n'))
-  expect(await search.inputValue()).toBe('n')
-  expect(await dialog(page, 'New product').count()).toBe(0)
+  await act(page, () => page.keyboard.press('/'));
+  const search = page.getByRole('searchbox');
+  expect(await search.evaluate((element) => element === document.activeElement)).toBe(true);
+  await act(page, () => page.keyboard.type('n'));
+  expect(await search.inputValue()).toBe('n');
+  expect(await dialog(page, 'New product').count()).toBe(0);
   await act(page, async () => {
-    await search.fill('')
-    await blur()
-  })
+    await search.fill('');
+    await blur();
+  });
 
   // Someone who may only read: creating is listed, as not available now, and the key does nothing.
-  await act(page, () => page.getByRole('button', { name: 'Sign in' }).click())
-  await signIn(page, 'Avery')
-  await act(page, () => page.keyboard.press('?'))
-  expect(await listed('New product')).toContain('Not now')
-  expect(await listed('Next page')).not.toContain('Not now')
-  await act(page, () => page.keyboard.press('Escape'))
-  await act(page, () => page.keyboard.press('n'))
-  expect(await dialog(page, 'New product').count()).toBe(0)
+  await act(page, () => page.getByRole('button', { name: 'Sign in' }).click());
+  await signIn(page, 'Avery');
+  await act(page, () => page.keyboard.press('?'));
+  expect(await listed('New product')).toContain('Not now');
+  expect(await listed('Next page')).not.toContain('Not now');
+  await act(page, () => page.keyboard.press('Escape'));
+  await act(page, () => page.keyboard.press('n'));
+  expect(await dialog(page, 'New product').count()).toBe(0);
   // A read-only editor's chart has no `save`: the key does nothing, and the browser does not save the page.
-  await open(page, '#/products?edit=4')
-  const editor = dialog(page, 'Edit Audio Interface')
-  await act(page, () => page.keyboard.press('ControlOrMeta+s'))
-  expect(await editor.getByText('A product needs a title.').count()).toBe(0)
-  await act(page, () => page.keyboard.press('Escape'))
+  await open(page, '#/products?edit=4');
+  const editor = dialog(page, 'Edit Audio Interface');
+  await act(page, () => page.keyboard.press('ControlOrMeta+s'));
+  expect(await editor.getByText('A product needs a title.').count()).toBe(0);
+  await act(page, () => page.keyboard.press('Escape'));
 
   // An admin: `n` opens the editor, and the editor's key saves.
-  await act(page, () => page.getByRole('button', { name: 'Sign out' }).click())
-  await act(page, () => page.getByRole('button', { name: 'Sign in' }).click())
-  await signIn(page)
-  await act(page, () => page.keyboard.press(']'))
-  expect(page.url()).toContain('page=2')
-  await act(page, () => page.keyboard.press('['))
-  expect(page.url()).not.toContain('page=')
-  await act(page, () => page.getByRole('link', { name: 'Edit Audio Interface' }).click())
-  await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill('Audio Interface Mk III'))
-  await act(page, () => page.keyboard.press('ControlOrMeta+s'))
-  expect(await visible(editor)).toBe(false)
-  expect(await rows(page).nth(1).innerText()).toContain('Audio Interface Mk III')
+  await act(page, () => page.getByRole('button', { name: 'Sign out' }).click());
+  await act(page, () => page.getByRole('button', { name: 'Sign in' }).click());
+  await signIn(page);
+  await act(page, () => page.keyboard.press(']'));
+  expect(page.url()).toContain('page=2');
+  await act(page, () => page.keyboard.press('['));
+  expect(page.url()).not.toContain('page=');
+  await act(page, () => page.getByRole('link', { name: 'Edit Audio Interface' }).click());
+  await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill('Audio Interface Mk III'));
+  await act(page, () => page.keyboard.press('ControlOrMeta+s'));
+  expect(await visible(editor)).toBe(false);
+  expect(await rows(page).nth(1).innerText()).toContain('Audio Interface Mk III');
 
   // The list speaks the page's language.
-  await act(page, () => page.goto('./?world=memory&lang=pt-BR#/products'))
-  await act(page, () => page.keyboard.press('?'))
-  expect(await dialog(page, 'Atalhos de teclado').innerText()).toContain('Buscar no catálogo')
-})
+  await act(page, () => page.goto('./?world=memory&lang=pt-BR#/products'));
+  await act(page, () => page.keyboard.press('?'));
+  expect(await dialog(page, 'Atalhos de teclado').innerText()).toContain('Buscar no catálogo');
+});
 
 test('a count shows at once, before the server answers; one the server refuses is taken back', async ({ page }) => {
-  await open(page, '#/products?signin=1')
-  await signIn(page)
-  const lamp = rows(page).filter({ hasText: 'Arc Floor Lamp' })
-  const more = lamp.getByRole('button', { name: 'One more in stock' })
-  expect(await lamp.innerText()).toContain('58 in stock')
-  await act(page, () => more.click())
-  expect(await lamp.innerText()).toContain('59 in stock')
+  await open(page, '#/products?signin=1');
+  await signIn(page);
+  const lamp = rows(page).filter({ hasText: 'Arc Floor Lamp' });
+  const more = lamp.getByRole('button', { name: 'One more in stock' });
+  expect(await lamp.innerText()).toContain('58 in stock');
+  await act(page, () => more.click());
+  expect(await lamp.innerText()).toContain('59 in stock');
 
   // Every request now waits a second and is refused, retries included.
-  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click())
-  const lab = page.getByRole('complementary', { name: 'Network lab' })
+  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
+  const lab = page.getByRole('complementary', { name: 'Network lab' });
   await act(page, async () => {
     // Four steps of 250 ms.
-    await lab.getByRole('slider', { name: 'Latency' }).focus()
-    for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowRight')
-  })
-  await act(page, () => choose(lab.getByRole('radio', { name: '500' })))
-  await more.click()
+    await lab.getByRole('slider', { name: 'Latency' }).focus();
+    for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowRight');
+  });
+  await act(page, () => choose(lab.getByRole('radio', { name: '500' })));
+  await more.click();
   // While the write is on its way, the page is not idle: this is the one look before `idle()`.
-  await expect(lamp).toContainText('60 in stock', { timeout: 900 })
-  await idle(page)
-  expect(await lamp.innerText()).toContain('59 in stock')
-  expect(await page.getByRole('region', { name: /Failures/ }).innerText()).toContain('service · products.setStock')
-})
+  await expect(lamp).toContainText('60 in stock', { timeout: 900 });
+  await idle(page);
+  expect(await lamp.innerText()).toContain('59 in stock');
+  expect(await page.getByRole('region', { name: /Failures/ }).innerText()).toContain('service · products.setStock');
+});
 
-test('the tabs share the session and the catalogue: a sign-in, a count and a sign-out in one reach the other', async ({ context }) => {
-  const one = await context.newPage()
-  const other = await context.newPage()
-  for (const page of [one, other]) page.on('pageerror', (error) => { throw error })
-  await open(one)
-  await open(other)
+test('the tabs share the session and the catalogue: a sign-in, a count and a sign-out in one reach the other', async ({
+  context,
+}) => {
+  const one = await context.newPage();
+  const other = await context.newPage();
+  for (const page of [one, other])
+    page.on('pageerror', (error) => {
+      throw error;
+    });
+  await open(one);
+  await open(other);
   // What another tab does arrives in its own time, twice: its message on the channel, and the
   // storage they share, which the app's reads follow. A test waits until the app has handled the
   // message and the storage has changed (the app's listener runs first), then for idle.
   const listen = (page: Page) =>
     page.evaluate(() => {
-      const stored = new Promise<void>((resolve) => window.addEventListener('storage', () => resolve(), { once: true }))
-      ;(window as unknown as { heard: Promise<unknown> }).heard = Promise.all([window.__framework.fromTab(), stored])
-    })
+      const stored = new Promise<void>((resolve) =>
+        window.addEventListener('storage', () => resolve(), { once: true }),
+      );
+      (window as unknown as { heard: Promise<unknown> }).heard = Promise.all([window.__framework.fromTab(), stored]);
+    });
   const heard = async (page: Page) => {
-    await page.evaluate(() => (window as unknown as { heard: Promise<void> }).heard)
-    await idle(page)
-  }
+    await page.evaluate(() => (window as unknown as { heard: Promise<void> }).heard);
+    await idle(page);
+  };
 
-  await listen(other)
-  await act(one, () => one.getByRole('button', { name: 'Sign in' }).click())
-  await signIn(one)
-  await heard(other)
-  expect(await other.getByRole('banner').innerText()).toContain('Emily Johnson')
+  await listen(other);
+  await act(one, () => one.getByRole('button', { name: 'Sign in' }).click());
+  await signIn(one);
+  await heard(other);
+  expect(await other.getByRole('banner').innerText()).toContain('Emily Johnson');
   // What the person may do followed too: the counts are offered.
-  const lamp = (page: Page) => rows(page).filter({ hasText: 'Arc Floor Lamp' })
-  expect(await lamp(other).getByRole('button', { name: 'One more in stock' }).count()).toBe(1)
+  const lamp = (page: Page) => rows(page).filter({ hasText: 'Arc Floor Lamp' });
+  expect(await lamp(other).getByRole('button', { name: 'One more in stock' }).count()).toBe(1);
 
-  await listen(other)
-  await act(one, () => lamp(one).getByRole('button', { name: 'One more in stock' }).click())
-  await heard(other)
-  expect(await lamp(other).innerText()).toContain('59 in stock')
+  await listen(other);
+  await act(one, () => lamp(one).getByRole('button', { name: 'One more in stock' }).click());
+  await heard(other);
+  expect(await lamp(other).innerText()).toContain('59 in stock');
 
-  await listen(one)
-  await act(other, () => other.getByRole('button', { name: 'Sign out' }).click())
-  await heard(one)
-  expect(await one.getByRole('banner').innerText()).not.toContain('Emily Johnson')
-  expect(await lamp(one).getByRole('button', { name: 'One more in stock' }).count()).toBe(0)
-})
+  await listen(one);
+  await act(other, () => other.getByRole('button', { name: 'Sign out' }).click());
+  await heard(one);
+  expect(await one.getByRole('banner').innerText()).not.toContain('Emily Johnson');
+  expect(await lamp(one).getByRole('button', { name: 'One more in stock' }).count()).toBe(0);
+});
 
-test('flags are for the person signed in; one served another way in the lab reaches every tab, and only what reads it', async ({ context }) => {
-  const one = await context.newPage()
-  const other = await context.newPage()
-  for (const page of [one, other]) page.on('pageerror', (error) => { throw error })
-  await open(one)
-  await open(other)
-  const lamp = (page: Page) => rows(page).filter({ hasText: 'Arc Floor Lamp' })
-  const counts = (page: Page) => lamp(page).getByRole('button', { name: 'One more in stock' }).count()
-  const deletes = (page: Page) => lamp(page).getByRole('link', { name: /^Delete / }).count()
+test('flags are for the person signed in; one served another way in the lab reaches every tab, and only what reads it', async ({
+  context,
+}) => {
+  const one = await context.newPage();
+  const other = await context.newPage();
+  for (const page of [one, other])
+    page.on('pageerror', (error) => {
+      throw error;
+    });
+  await open(one);
+  await open(other);
+  const lamp = (page: Page) => rows(page).filter({ hasText: 'Arc Floor Lamp' });
+  const counts = (page: Page) => lamp(page).getByRole('button', { name: 'One more in stock' }).count();
+  const deletes = (page: Page) =>
+    lamp(page)
+      .getByRole('link', { name: /^Delete / })
+      .count();
   // Another tab hears a flag served another way when its storage says so.
   const listen = (page: Page) =>
     page.evaluate(() => {
-      ;(window as unknown as { heard: Promise<void> }).heard = new Promise<void>((resolve) => window.addEventListener('storage', () => resolve(), { once: true }))
-    })
+      (window as unknown as { heard: Promise<void> }).heard = new Promise<void>((resolve) =>
+        window.addEventListener('storage', () => resolve(), { once: true }),
+      );
+    });
   const heard = async (page: Page) => {
-    await page.evaluate(() => (window as unknown as { heard: Promise<void> }).heard)
-    await idle(page)
-  }
+    await page.evaluate(() => (window as unknown as { heard: Promise<void> }).heard);
+    await idle(page);
+  };
 
   // Counting stock is rolled out to admins first.
-  await act(one, () => one.getByRole('button', { name: 'Sign in' }).click())
-  await signIn(one, 'Emily')
-  await idle(other)
-  expect(await counts(one)).toBe(1)
+  await act(one, () => one.getByRole('button', { name: 'Sign in' }).click());
+  await signIn(one, 'Emily');
+  await idle(other);
+  expect(await counts(one)).toBe(1);
 
-  await act(one, () => one.getByRole('button', { name: /Network lab/ }).click())
-  const lab = one.getByRole('complementary', { name: 'Network lab' })
-  await act(one, () => lab.getByRole('tab', { name: 'Flags' }).click())
-  const flags = lab.getByRole('region', { name: 'Feature flags' })
-  expect(await flags.getByRole('radiogroup', { name: /Stock count/ }).innerText()).toContain('For you: on')
+  await act(one, () => one.getByRole('button', { name: /Network lab/ }).click());
+  const lab = one.getByRole('complementary', { name: 'Network lab' });
+  await act(one, () => lab.getByRole('tab', { name: 'Flags' }).click());
+  const flags = lab.getByRole('region', { name: 'Feature flags' });
+  expect(await flags.getByRole('radiogroup', { name: /Stock count/ }).innerText()).toContain('For you: on');
 
-  await listen(other)
-  await act(one, () => choose(flags.getByRole('radiogroup', { name: /Stock count/ }).getByRole('radio', { name: 'Nobody' })))
-  await heard(other)
-  expect(await counts(one)).toBe(0)
-  expect(await counts(other)).toBe(0)
+  await listen(other);
+  await act(one, () =>
+    choose(flags.getByRole('radiogroup', { name: /Stock count/ }).getByRole('radio', { name: 'Nobody' })),
+  );
+  await heard(other);
+  expect(await counts(one)).toBe(0);
+  expect(await counts(other)).toBe(0);
 
   // A kill switch read inside acl.ts: the links go, and the dialog says why.
-  expect(await deletes(other)).toBe(1)
-  await listen(other)
-  await act(one, () => choose(flags.getByRole('radiogroup', { name: /Deletions/ }).getByRole('radio', { name: 'Paused' })))
-  await heard(other)
-  expect(await deletes(one)).toBe(0)
-  expect(await deletes(other)).toBe(0)
-  await open(other, '#/products?remove=1')
-  const question = other.getByRole('alertdialog')
-  expect(await question.getByRole('note').innerText()).toBe('Deleting products is paused for now.')
-  expect(await question.getByRole('button', { name: 'Delete' }).isDisabled()).toBe(true)
+  expect(await deletes(other)).toBe(1);
+  await listen(other);
+  await act(one, () =>
+    choose(flags.getByRole('radiogroup', { name: /Deletions/ }).getByRole('radio', { name: 'Paused' })),
+  );
+  await heard(other);
+  expect(await deletes(one)).toBe(0);
+  expect(await deletes(other)).toBe(0);
+  await open(other, '#/products?remove=1');
+  const question = other.getByRole('alertdialog');
+  expect(await question.getByRole('note').innerText()).toBe('Deleting products is paused for now.');
+  expect(await question.getByRole('button', { name: 'Delete' }).isDisabled()).toBe(true);
 
   // Back to admins only, then a moderator signs in: the flags are read again, for them.
-  await act(one, () => choose(flags.getByRole('radiogroup', { name: /Stock count/ }).getByRole('radio', { name: 'Admins only' })))
-  expect(await counts(one)).toBe(1)
-  await act(one, () => one.getByRole('button', { name: 'Close the network lab' }).click())
-  await act(one, () => one.getByRole('button', { name: 'Sign out' }).click())
-  await act(one, () => one.getByRole('button', { name: 'Sign in' }).click())
-  await signIn(one, 'Olivia')
-  expect(await one.getByRole('banner').innerText()).toContain('Moderator')
-  expect(await counts(one)).toBe(0)
-})
+  await act(one, () =>
+    choose(flags.getByRole('radiogroup', { name: /Stock count/ }).getByRole('radio', { name: 'Admins only' })),
+  );
+  expect(await counts(one)).toBe(1);
+  await act(one, () => one.getByRole('button', { name: 'Close the network lab' }).click());
+  await act(one, () => one.getByRole('button', { name: 'Sign out' }).click());
+  await act(one, () => one.getByRole('button', { name: 'Sign in' }).click());
+  await signIn(one, 'Olivia');
+  expect(await one.getByRole('banner').innerText()).toContain('Moderator');
+  expect(await counts(one)).toBe(0);
+});
 
-test('the inspector shows what a press did: the write, its optimistic change, the answer worked out from the cache, and what went stale', async ({ page }) => {
-  await open(page, '#/products?signin=1')
-  await signIn(page)
-  await act(page, () => rows(page).filter({ hasText: 'Arc Floor Lamp' }).getByRole('button', { name: 'One more in stock' }).click())
-  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click())
-  const lab = page.getByRole('complementary', { name: 'Network lab' })
-  await act(page, () => lab.getByRole('tab', { name: 'Inspector' }).click())
-  const inspector = lab.getByRole('list', { name: 'What the app did, latest first' })
+test('the inspector shows what a press did: the write, its optimistic change, the answer worked out from the cache, and what went stale', async ({
+  page,
+}) => {
+  await open(page, '#/products?signin=1');
+  await signIn(page);
+  await act(page, () =>
+    rows(page).filter({ hasText: 'Arc Floor Lamp' }).getByRole('button', { name: 'One more in stock' }).click(),
+  );
+  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
+  const lab = page.getByRole('complementary', { name: 'Network lab' });
+  await act(page, () => lab.getByRole('tab', { name: 'Inspector' }).click());
+  const inspector = lab.getByRole('list', { name: 'What the app did, latest first' });
   // The lab reads what the pipelines carried once a second while it is open.
-  await expect(inspector).toContainText('products.setStock sent by Button.onPress (components/catalogue/components/product-row/render.tsx:')
-  const text = await inspector.innerText()
-  expect(text).toContain('shows its change to products.search and products.get now')
-  expect(text).toContain('worked out again from the cache: products.search changed')
-  expect(text).toContain('products.setStock done')
-  expect(text).toContain('products.search and products.get, by products.setStock')
-  expect(text).toContain('Form.onSubmit')
-})
+  await expect(inspector).toContainText(
+    'products.setStock sent by Button.onPress (components/catalogue/components/product-row/render.tsx:',
+  );
+  const text = await inspector.innerText();
+  expect(text).toContain('shows its change to products.search and products.get now');
+  expect(text).toContain('worked out again from the cache: products.search changed');
+  expect(text).toContain('products.setStock done');
+  expect(text).toContain('products.search and products.get, by products.setStock');
+  expect(text).toContain('Form.onSubmit');
+});
 
-test('the states gallery shows every chart in each of its states; a frame holds its component in one state, with its example', async ({ page }) => {
-  await act(page, () => page.goto('./?world=memory#/states'))
-  expect(await page.getByRole('heading', { level: 1 }).innerText()).toBe('States')
-  expect(await page.getByRole('region').count()).toBe(6)
-  const editor = page.getByRole('region', { name: 'components/product/editor' })
-  expect(await editor.locator('iframe').count()).toBe(11)
-  expect(await editor.innerText()).toContain('Somebody else saved this product meanwhile.')
+test('the states gallery shows every chart in each of its states; a frame holds its component in one state, with its example', async ({
+  page,
+}) => {
+  await act(page, () => page.goto('./?world=memory#/states'));
+  expect(await page.getByRole('heading', { level: 1 }).innerText()).toBe('States');
+  expect(await page.getByRole('region').count()).toBe(6);
+  const editor = page.getByRole('region', { name: 'components/product/editor' });
+  expect(await editor.locator('iframe').count()).toBe(11);
+  expect(await editor.innerText()).toContain('Somebody else saved this product meanwhile.');
 
   // One frame on its own: the editor held in a conflict, the question over the form it keeps.
-  await act(page, () => page.goto('./?world=memory#/states/components%2Fproduct%2Feditor/conflict'))
-  const held = dialog(page, 'Edit Arc Floor Lamp')
-  expect(await held.getByRole('alert').innerText()).toContain('Somebody else changed this product')
-  expect(await held.getByRole('textbox', { name: 'Title' }).inputValue()).toBe('Arc Floor Lamp')
+  await act(page, () => page.goto('./?world=memory#/states/components%2Fproduct%2Feditor/conflict'));
+  const held = dialog(page, 'Edit Arc Floor Lamp');
+  expect(await held.getByRole('alert').innerText()).toContain('Somebody else changed this product');
+  expect(await held.getByRole('textbox', { name: 'Title' }).inputValue()).toBe('Arc Floor Lamp');
   // Nothing moves: the chart is not started.
-  await act(page, () => held.getByRole('button', { name: 'Save mine anyway' }).click())
-  expect(await held.getByRole('alert').count()).toBe(1)
+  await act(page, () => held.getByRole('button', { name: 'Save mine anyway' }).click());
+  expect(await held.getByRole('alert').count()).toBe(1);
 
   // A question shown with the dialog it asks about sits above it, though the page added it first.
-  await act(page, () => page.goto('./?world=memory#/states/components%2Fproduct%2Feditor/confirmingDiscard'))
+  await act(page, () => page.goto('./?world=memory#/states/components%2Fproduct%2Feditor/confirmingDiscard'));
   // (A frame is a picture: the gallery lets no pointer reach it.)
   const layers = await page.evaluate(() =>
-    Object.fromEntries(Array.from(document.querySelectorAll('.react-aria-ModalOverlay')).map((overlay) => [overlay.querySelector('[role=alertdialog]') ? 'question' : 'dialog', Number(getComputedStyle(overlay).zIndex)])),
-  )
-  expect(layers['question']).toBeGreaterThan(layers['dialog']!)
-})
+    Object.fromEntries(
+      Array.from(document.querySelectorAll('.react-aria-ModalOverlay')).map((overlay) => [
+        overlay.querySelector('[role=alertdialog]') ? 'question' : 'dialog',
+        Number(getComputedStyle(overlay).zIndex),
+      ]),
+    ),
+  );
+  expect(layers['question']).toBeGreaterThan(layers['dialog']!);
+});

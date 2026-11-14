@@ -3,16 +3,17 @@
 // framework knows of them, and a story per example and per state, and writes them again while
 // Storybook runs, as folders and files come and go.
 
-import type { StorybookConfig } from '@storybook/react-vite'
-import { resolveStoriesOptions, storiesPlugin, writeStories } from '../framework/storybook/stories.mjs'
-import options from './stories.mjs'
+import type { StorybookConfig } from '@storybook/react-vite';
 
-const stories = resolveStoriesOptions(options)
-writeStories(stories)
+import { resolveStoriesOptions, storiesPlugin, writeStories } from '../framework/storybook/stories.mjs';
+import options from './stories.mjs';
+
+const stories = resolveStoriesOptions(options);
+writeStories(stories);
 
 export default {
+  addons: ['@storybook/addon-docs'],
   framework: '@storybook/react-vite',
   stories: ['../framework-stories/**/*.stories.tsx'],
-  addons: ['@storybook/addon-docs'],
   viteFinal: (config) => ({ ...config, plugins: [...(config.plugins ?? []), storiesPlugin(stories)] }),
-} satisfies StorybookConfig
+} satisfies StorybookConfig;

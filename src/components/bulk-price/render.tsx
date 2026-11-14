@@ -1,7 +1,60 @@
-import { Button, Checkbox, CheckboxGroup, Dialog, Group, Heading, Input, Label, ListBox, ListBoxItem, Modal, ModalOverlay, NumberField, Popover, ProgressBar, Radio, RadioGroup, Select, SelectValue } from 'react-aria-components'
+import {
+  Button,
+  Checkbox,
+  CheckboxGroup,
+  Dialog,
+  Group,
+  Heading,
+  Input,
+  Label,
+  ListBox,
+  ListBoxItem,
+  Modal,
+  ModalOverlay,
+  NumberField,
+  Popover,
+  ProgressBar,
+  Radio,
+  RadioGroup,
+  Select,
+  SelectValue,
+} from 'react-aria-components';
 
-export default ({ className, i18n, state, set, values, step, steps, stepText, categories, items, selectedIds, selectionText, loadError, ruleProblem, applies, largeTitle, largeText, preview, applyText, canApply, limitText, progress, current, results, summaryText, retryText, failedCount }) => (
-  <ModalOverlay isOpen isDismissable={!state.applying} isKeyboardDismissDisabled={state.applying} onOpenChange={(open) => !open && state.send({ type: 'close' })}>
+export default ({
+  applies,
+  applyText,
+  canApply,
+  categories,
+  className,
+  current,
+  failedCount,
+  i18n,
+  items,
+  largeText,
+  largeTitle,
+  limitText,
+  loadError,
+  preview,
+  progress,
+  results,
+  retryText,
+  ruleProblem,
+  selectedIds,
+  selectionText,
+  set,
+  state,
+  step,
+  steps,
+  stepText,
+  summaryText,
+  values,
+}) => (
+  <ModalOverlay
+    isDismissable={!state.applying}
+    isKeyboardDismissDisabled={state.applying}
+    isOpen
+    onOpenChange={(open) => !open && state.send({ type: 'close' })}
+  >
     <Modal className={`react-aria-Modal ${className}`} data-size="large">
       <Dialog>
         <header>
@@ -9,13 +62,18 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
             <Heading slot="title">{i18n.title}</Heading>
             <p className="step-text">{stepText}</p>
           </div>
-          <Button data-variant="icon" aria-label={i18n.close} isDisabled={state.applying} onPress={() => state.send({ type: 'close' })}>
+          <Button
+            aria-label={i18n.close}
+            data-variant="icon"
+            isDisabled={state.applying}
+            onPress={() => state.send({ type: 'close' })}
+          >
             <span className="icon" data-icon="close" />
           </Button>
         </header>
-        <ol className="steps" aria-hidden="true">
+        <ol aria-hidden="true" className="steps">
           {steps.map((step) => (
-            <li key={step.label} data-current={step.current || undefined} data-done={step.done || undefined}>
+            <li data-current={step.current || undefined} data-done={step.done || undefined} key={step.label}>
               {step.label}
             </li>
           ))}
@@ -24,8 +82,8 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
         {step === 1 && (
           <>
             <Select
+              onSelectionChange={(key) => state.send({ category: String(key), type: 'categoryChanged' })}
               selectedKey={values.category}
-              onSelectionChange={(key) => state.send({ type: 'categoryChanged', category: String(key) })}
             >
               <Label>{i18n.choose.category}</Label>
               <Button>
@@ -33,11 +91,18 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
                 <span className="icon" data-icon="chevron" />
               </Button>
               <Popover>
-                <ListBox items={categories}>{(category) => <ListBoxItem id={category.slug}>{category.name}</ListBoxItem>}</ListBox>
+                <ListBox items={categories}>
+                  {(category) => <ListBoxItem id={category.slug}>{category.name}</ListBoxItem>}
+                </ListBox>
               </Popover>
             </Select>
             {state.loadingProducts ? (
-              <div className="skeleton" style={{ blockSize: '12rem' }} aria-busy="true" aria-label={i18n.choose.loading} />
+              <div
+                aria-busy="true"
+                aria-label={i18n.choose.loading}
+                className="skeleton"
+                style={{ blockSize: '12rem' }}
+              />
             ) : loadError ? (
               <div className="notice" data-tone="danger" role="alert">
                 <span className="icon" data-icon="alert" />
@@ -49,7 +114,7 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
                 </div>
               </div>
             ) : (
-              <CheckboxGroup value={selectedIds} onChange={(ids) => set('selected', ids.map(Number))}>
+              <CheckboxGroup onChange={(ids) => set('selected', ids.map(Number))} value={selectedIds}>
                 <Label>{selectionText}</Label>
                 <div className="choose">
                   {items.map((item) => (
@@ -66,7 +131,11 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
             )}
             <footer>
               <Button onPress={() => state.send({ type: 'close' })}>{i18n.cancel}</Button>
-              <Button data-variant="primary" isDisabled={!state.choosing || selectedIds.length === 0} onPress={() => state.send({ type: 'next' })}>
+              <Button
+                data-variant="primary"
+                isDisabled={!state.choosing || selectedIds.length === 0}
+                onPress={() => state.send({ type: 'next' })}
+              >
                 {i18n.choose.next}
               </Button>
             </footer>
@@ -76,14 +145,24 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
         {step === 2 && (
           <>
             <div className="rule">
-              <RadioGroup value={values.direction} onChange={(value) => set('direction', value as 'decrease' | 'increase')}>
+              <RadioGroup
+                onChange={(value) => set('direction', value as 'decrease' | 'increase')}
+                value={values.direction}
+              >
                 <Label>{i18n.rule.direction}</Label>
                 <div className="choices">
                   <Radio value="decrease">{i18n.rule.decrease}</Radio>
                   <Radio value="increase">{i18n.rule.increase}</Radio>
                 </div>
               </RadioGroup>
-              <NumberField value={values.percent} onChange={(value) => set('percent', value)} minValue={0} step={1} formatOptions={{ style: 'unit', unit: 'percent' }} isInvalid={Boolean(ruleProblem)}>
+              <NumberField
+                formatOptions={{ style: 'unit', unit: 'percent' }}
+                isInvalid={Boolean(ruleProblem)}
+                minValue={0}
+                onChange={(value) => set('percent', value)}
+                step={1}
+                value={values.percent}
+              >
                 <Label>{i18n.rule.by}</Label>
                 <Group>
                   <Input />
@@ -99,7 +178,11 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
             )}
             <footer>
               <Button onPress={() => state.send({ type: 'back' })}>{i18n.back}</Button>
-              <Button data-variant="primary" isDisabled={Boolean(ruleProblem)} onPress={() => state.send({ type: 'next' })}>
+              <Button
+                data-variant="primary"
+                isDisabled={Boolean(ruleProblem)}
+                onPress={() => state.send({ type: 'next' })}
+              >
                 {i18n.rule.next}
               </Button>
             </footer>
@@ -108,7 +191,11 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
 
         {step === 3 && (
           <>
-            <p>{applies((chunks) => <strong>{chunks}</strong>)}</p>
+            <p>
+              {applies((chunks) => (
+                <strong>{chunks}</strong>
+              ))}
+            </p>
             <table>
               <thead>
                 <tr>
@@ -152,7 +239,7 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
                 <p>{summaryText}</p>
               </div>
             ) : (
-              <ProgressBar value={progress.value} maxValue={progress.total} aria-label={i18n.progress.label}>
+              <ProgressBar aria-label={i18n.progress.label} maxValue={progress.total} value={progress.value}>
                 {({ percentage }) => (
                   <>
                     <span>{current ?? progress.text}</span>
@@ -163,9 +250,9 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
                 )}
               </ProgressBar>
             )}
-            <ul className="results" aria-label={i18n.results}>
+            <ul aria-label={i18n.results} className="results">
               {results.map((result) => (
-                <li key={result.id} data-failed={result.error !== null || undefined}>
+                <li data-failed={result.error !== null || undefined} key={result.id}>
                   <span className="icon" data-icon={result.error === null ? 'check' : 'alert'} />
                   <span className="title">{result.title}</span>
                   {result.error === null ? (
@@ -194,7 +281,11 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
         <Modal data-size="small">
           <Dialog role="alertdialog">
             <Heading slot="title">{largeTitle}</Heading>
-            <p>{largeText((chunks) => <strong>{chunks}</strong>)}</p>
+            <p>
+              {largeText((chunks) => (
+                <strong>{chunks}</strong>
+              ))}
+            </p>
             <footer>
               <Button autoFocus onPress={() => state.send({ type: 'back' })}>
                 {i18n.large.back}
@@ -208,4 +299,4 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
       </ModalOverlay>
     </Modal>
   </ModalOverlay>
-)
+);

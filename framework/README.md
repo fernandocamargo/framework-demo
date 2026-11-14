@@ -29,7 +29,7 @@ The plugin reads one root folder (here `src`), which holds `clients/`, `services
     search: { reads: true },
     categories: { reads: true, freshFor: 5 * 60_000 },
     save: { invalidates: [products.search, products.get] },
-  })
+  });
   ```
 
 - A read whose source can change outside the app follows it: `follows` gets a `stale` callback to call whenever the source says so (a flag provider's push, a socket's message), and the read is read again, with every component that read it. The meta file gets the clients too:
@@ -37,27 +37,27 @@ The plugin reads one root folder (here `src`), which holds `clients/`, `services
   ```ts
   export default ({ clients: { flags } }) => ({
     evaluate: { reads: true, follows: (stale) => flags.changed(stale) },
-  })
+  });
   ```
 
 ### Component folders
 
 A folder under `components/` with a `render` file and no `index` is a component. Importing the folder (`./components/filters`, or `@/components/…`) gives the component, which the plugin writes from the folder's files.
 
-| File | Job |
-|---|---|
-| `render.tsx` | Places markup and interpolates. Called as a plain function, with no hooks. Receives what `props.ts` returns, or the props with `className`, `async`, `state` and `form`. |
-| `props.ts` | A plain function from what the render would get to what it gets: derived values, texts, which actions a person may take. `export type Props` states what a parent passes. `examples` says, by name, what a parent passes and the address it needs, for Storybook. |
-| `async.ts` | The default export is the read before the first render. Named exports are operations. |
-| `state.ts` | The flow, as a statechart. `examples` says what each state needs on screen in the states gallery and in Storybook. |
-| `form.ts` | `seed` (server data to values) and `payload` (values to a request). |
-| `placeholder.tsx` | Shows while the view loads and reads. Adds a `Suspense`. |
-| `error.tsx` | Shows when the view fails. Adds an error boundary around both. |
-| `acl.ts` | Whether what the component offers may be done: a function of what `props.ts` gets, the route, and the backend's snapshot with what is inherited, returning a boolean. The component and everything below it get it as `acl.allowed`. |
-| `shortcuts.ts` | The keys the component answers while it is on screen: a function of what `props.ts` gets, returning each key with its label and what it does (send a chart's event, focus an element, run a function). |
-| `i18n.ts` | The component's messages, in the source language: an object of any shape whose leaves are ICU messages or functions. |
-| `i18n/<locale>.json` | A translation of them, keyed by the folder's path and the message's path. Loaded on demand. |
-| `style/skins/<name>/index.ts` | The component's CSS for a skin. |
+| File                          | Job                                                                                                                                                                                                                                                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `render.tsx`                  | Places markup and interpolates. Called as a plain function, with no hooks. Receives what `props.ts` returns, or the props with `className`, `async`, `state` and `form`.                                                                                          |
+| `props.ts`                    | A plain function from what the render would get to what it gets: derived values, texts, which actions a person may take. `export type Props` states what a parent passes. `examples` says, by name, what a parent passes and the address it needs, for Storybook. |
+| `async.ts`                    | The default export is the read before the first render. Named exports are operations.                                                                                                                                                                             |
+| `state.ts`                    | The flow, as a statechart. `examples` says what each state needs on screen in the states gallery and in Storybook.                                                                                                                                                |
+| `form.ts`                     | `seed` (server data to values) and `payload` (values to a request).                                                                                                                                                                                               |
+| `placeholder.tsx`             | Shows while the view loads and reads. Adds a `Suspense`.                                                                                                                                                                                                          |
+| `error.tsx`                   | Shows when the view fails. Adds an error boundary around both.                                                                                                                                                                                                    |
+| `acl.ts`                      | Whether what the component offers may be done: a function of what `props.ts` gets, the route, and the backend's snapshot with what is inherited, returning a boolean. The component and everything below it get it as `acl.allowed`.                              |
+| `shortcuts.ts`                | The keys the component answers while it is on screen: a function of what `props.ts` gets, returning each key with its label and what it does (send a chart's event, focus an element, run a function).                                                            |
+| `i18n.ts`                     | The component's messages, in the source language: an object of any shape whose leaves are ICU messages or functions.                                                                                                                                              |
+| `i18n/<locale>.json`          | A translation of them, keyed by the folder's path and the message's path. Loaded on demand.                                                                                                                                                                       |
+| `style/skins/<name>/index.ts` | The component's CSS for a skin.                                                                                                                                                                                                                                   |
 
 What the framework guarantees about them:
 
@@ -77,7 +77,7 @@ export default {
   title: 'Products',
   summary: '{count, plural, one {# product} other {# products}}{filter, select, q { matching “{q}”} other {}}',
   empty: { title: 'Nothing matches', actions: { clear: 'Clear the filters' } },
-}
+};
 ```
 
 - The component gets `i18n`, the same shape. A message with no arguments is a string. One with arguments or tags is a function of their values, typed from the ICU: `i18n.summary({ count, filter, q })` takes `{ count: number; filter: string; q: string | number }`, and a missing value is a type error. A tag (`<b>…</b>`) takes a function that says what it becomes, and gives React nodes. A function leaf `(values, intl) => …` is called with its values.
@@ -97,19 +97,22 @@ The app does not own its permissions: the backend sends a snapshot of them, and 
 
   ```ts
   // components/app/acl.ts: everything below inherits it
-  export default ({ acl }) => acl.role === 'guest' || acl.grants.products.includes('update')
+  export default ({ acl }) => acl.role === 'guest' || acl.grants.products.includes('update');
   // components/product/remove-link/acl.ts: one link, deep in a row, narrower
-  export default ({ acl }) => acl.allowed && (acl.role === 'guest' || acl.grants.products.includes('delete'))
+  export default ({ acl }) => acl.allowed && (acl.role === 'guest' || acl.grants.products.includes('delete'));
   // components/bulk-price/acl.ts: the backend's limit against what the form says
-  export default ({ acl, form }) => acl.role === 'guest' || (acl.grants.prices.includes('update') && (acl.limits.priceChange === null || form.values.percent <= acl.limits.priceChange))
+  export default ({ acl, form }) =>
+    acl.role === 'guest' ||
+    (acl.grants.prices.includes('update') &&
+      (acl.limits.priceChange === null || form.values.percent <= acl.limits.priceChange));
   ```
 
 - A render or a `props.ts` branches on it (hide an action, lock a form). A chart's guard reads it when the event arrives. A chart's declaration reads it too, so the chart's shape follows it: a read-only editor has no `save`.
 
   ```ts
   export default ({ services, acl }) => ({
-    editing: { on: { ...(acl.allowed && { save: [ /* … */ ] }), close: [ /* … */ ] } },
-  })
+    editing: { on: { ...(acl.allowed && { save: [/* … */] }), close: [/* … */] } },
+  });
   ```
 
 - A chart is also told when a source its file reads changes (`user`, `acl`, `flags`, `locale`), by an event of that name, after the component has rendered with the new value, so a guard reads it. The session's chart reads `user`: on `{ type: 'user' }` it reads the session again when someone signed in in another tab, and leaves when they signed out.
@@ -139,12 +142,16 @@ A component folder's `shortcuts.ts` says which keys the component answers while 
 export default ({ i18n, acl, async: { default: answer } }) => ({
   '/': { label: i18n.keys.search, focus: 'input[type=search]' },
   n: { label: i18n.keys.create, run: () => go({ create: true }), when: acl.allowed },
-  ']': { label: i18n.keys.next, run: () => go({ page: answer.page.page + 1 }), when: answer.page.page < answer.page.pages },
-})
+  ']': {
+    label: i18n.keys.next,
+    run: () => go({ page: answer.page.page + 1 }),
+    when: answer.page.page < answer.page.pages,
+  },
+});
 // components/product/editor/shortcuts.ts
 export default ({ i18n }) => ({
   'mod+s': { label: i18n.keys.save, send: 'save' },
-})
+});
 ```
 
 - `send` sends an event of the component's chart, and works only while the chart takes it in the state it is in (`state.can`, guards included). The editor's key does nothing in a read-only editor, whose chart has no `save`, nor while a save runs. The TypeScript plugin types `send` with the chart's events, so `send: 'sav'` is an error.
@@ -166,7 +173,7 @@ Every service operation goes through it.
 **Optimistic writes.** A write's rule may say how it changes the answers of some reads, by reference, before the server confirms it:
 
 ```ts
-import { update } from 'framework'
+import { update } from 'framework';
 
 export default ({ services: { products } }) => ({
   setStock: {
@@ -176,7 +183,7 @@ export default ({ services: { products } }) => ({
       update(products.get, (product, { id, stock }) => (product.id === id ? edited(product, { stock }) : product)),
     ],
   },
-})
+});
 ```
 
 - `update` types each change by its read (`page` is a `Page`) and by the write (`{ id, stock }` is what `setStock` takes): a mistyped field is an error.
@@ -213,11 +220,11 @@ Tests wait on it instead of sleeping or polling selectors. It does not see timer
 `framework/testing` runs a `state.ts` without React:
 
 ```ts
-const form = formOf(editorForm)
-const flow = startFlow(editor, { services: { products: { get, save } }, form, route, navigation })
-flow.send({ type: 'save' })
-await flow.settled()
-expect(flow.states).toEqual(['saved'])
+const form = formOf(editorForm);
+const flow = startFlow(editor, { services: { products: { get, save } }, form, route, navigation });
+flow.send({ type: 'save' });
+await flow.settled();
+expect(flow.states).toEqual(['saved']);
 ```
 
 ### The states gallery
@@ -232,7 +239,7 @@ Every component folder with a `state.ts`, in each state of its chart, from the f
   export const examples = {
     conflict: { context: { title: 'Arc Floor Lamp' }, values: { ...lamp, price: 249.99 } },
     failed: { context: { title: 'Arc Floor Lamp', error: 'The server answered 500.' }, values: lamp },
-  }
+  };
   ```
 
 The demo's page is `#/states`: one frame per state, each the app alone in the memory world, in the locale on screen, at half its size. A frame per state keeps each one's dialogs to itself. A state's description is its chart's, as `state.ts` writes it.
@@ -272,6 +279,7 @@ One `EventTarget` carries three kinds of event.
   - the DOM event's type, and never values.
 
   `data-track="off"` opts an element out. Destinations plug in with `connect({ name, purpose, accept, map, send, batch })` and wait for consent.
+
 - **Failures.** Each layer reports what it catches, once, tagged with layer, path and what was running: services and component queries, async operations, handlers, charts, `props.ts`, `acl.ts`, `shortcuts.ts`, render errors, and the window's `error` and `unhandledrejection` as unidentified. `onFailure(listener)` listens to all of them.
 - **Data.** What the data layer does: each read the server answers, with how long it took; each component's default read, with the reads it called; each write, sent and ended, with the interaction whose handler sent it; each optimistic change shown and each one taken back; each component answer worked out again from the cache; the reads each write made stale; each message to and from the other tabs. `onData(listener)` listens to them. The demo's network lab shows them, with the interactions and failures, as an inspector.
 
@@ -286,18 +294,18 @@ One `EventTarget` carries three kinds of event.
 
 Nobody writes them. The TypeScript plugin shows TypeScript each layer file with its first parameters annotated:
 
-| File | Functions annotated | With |
-|---|---|---|
-| `render` | the default export | what `props.ts` returns, or the props with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags`, `keyboard` |
-| `shortcuts` | the default export, and what it returns | what `props.ts` gets; keys whose `send` takes the chart's events |
-| `props`, `acl` | the default export | the file's own `Props`, with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags` |
-| `async` | the default and every named export | the injection, the route, a `signal` |
-| `state` | the default export; every exported function | the injection with `acl`, `user`, `flags` and the locale; `context`, `event`, the route, the form… |
-| `placeholder`, `error` | the default export | the props, and `i18n`, `intl` and `locale` when the folder has an `i18n.ts`; the `error` and `resetErrorBoundary` |
-| `i18n` | its default export is read `as const` | each message's own text, which `I18n<…>` reads as ICU |
-| `services/**/index` | every export | the injection |
-| `services/**/meta` | the default export, and what it returns | the injection; the service's own operations |
-| `clients/*/index` | the default export | `env` |
+| File                   | Functions annotated                         | With                                                                                                                                                    |
+| ---------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `render`               | the default export                          | what `props.ts` returns, or the props with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags`, `keyboard` |
+| `shortcuts`            | the default export, and what it returns     | what `props.ts` gets; keys whose `send` takes the chart's events                                                                                        |
+| `props`, `acl`         | the default export                          | the file's own `Props`, with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags`                           |
+| `async`                | the default and every named export          | the injection, the route, a `signal`                                                                                                                    |
+| `state`                | the default export; every exported function | the injection with `acl`, `user`, `flags` and the locale; `context`, `event`, the route, the form…                                                      |
+| `placeholder`, `error` | the default export                          | the props, and `i18n`, `intl` and `locale` when the folder has an `i18n.ts`; the `error` and `resetErrorBoundary`                                       |
+| `i18n`                 | its default export is read `as const`       | each message's own text, which `I18n<…>` reads as ICU                                                                                                   |
+| `services/**/index`    | every export                                | the injection                                                                                                                                           |
+| `services/**/meta`     | the default export, and what it returns     | the injection; the service's own operations                                                                                                             |
+| `clients/*/index`      | the default export                          | `env`                                                                                                                                                   |
 
 The services and clients in those types are the app's, read from the folders. Hovers show what things are, not how the types were computed: `fetchSave: Operation<Saved>`, `services: { products: { search: (query: Query) => Promise<Page>; … } }`. An app declares its `Env`, `Entity`, `Route`, `Flags` and `Navigation` by augmenting the runtime's interfaces (`src/env.d.ts`). In editors, positions are mapped back to the file as written.
 

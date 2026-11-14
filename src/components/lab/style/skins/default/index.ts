@@ -1,4 +1,4 @@
-import { css } from 'framework'
+import { css } from 'framework';
 
 export default css`
   > .react-aria-Button {
@@ -114,4 +114,4 @@ export default css`
       display: none;
     }
   }
-`
+`;

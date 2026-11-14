@@ -29,47 +29,59 @@ export interface User {}
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Acl {}
 /** The snapshot as a component gets it: with `allowed`, the decision of the nearest `acl.ts` at or above it. */
-export type Allowed = Acl & { readonly allowed: boolean }
+export type Allowed = Acl & { readonly allowed: boolean };
 /** How components move between routes (a stand-in for a routing layer). */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Navigation {}
 
-export { Root, type RootProps } from './root'
-export { createQueryClient, update } from './data'
-export { whenIdle } from './activity'
-export { chartAt, charts, type Chart, type ChartState } from './gallery'
-export { Pinned, type Example } from './pin'
-export { component, type Spec } from './component'
-export type { I18n, Intl, Message } from './i18n-types'
-export { css, selector } from './style'
-export { keep, track } from './track'
-export type { Keyboard } from './shortcuts'
-export { connect, consent, onData, onFailure, pipeline, type DataEvent, type Destination, type Failure, type Interaction, type Layer, type Site } from './pipeline'
-export type { ServiceRule } from './data'
+export { whenIdle } from './activity';
+export { component, type Spec } from './component';
+export { createQueryClient, update } from './data';
+export type { ServiceRule } from './data';
+export { type Chart, chartAt, charts, type ChartState } from './gallery';
+export type { I18n, Intl, Message } from './i18n-types';
+export { type Example, Pinned } from './pin';
+export {
+  connect,
+  consent,
+  type DataEvent,
+  type Destination,
+  type Failure,
+  type Interaction,
+  type Layer,
+  onData,
+  onFailure,
+  pipeline,
+  type Site,
+} from './pipeline';
+export { Root, type RootProps } from './root';
+export type { Keyboard } from './shortcuts';
+export { css, selector } from './style';
+export { keep, track } from './track';
 export type {
+  Access,
   AsyncInjection,
   AsyncProps,
+  ChartInjection,
   Client,
   ClientInjection,
   Clients,
   ErrorProps,
   FormProps,
-  Access,
-  ChartInjection,
-  Language,
   Injection,
+  Language,
   Operation,
   OperationState,
   OperationWith,
   PlaceholderProps,
   RenderProps,
-  ShapedProps,
-  Shortcut,
-  Shortcuts,
   ServiceMeta,
   ServiceNode,
   ServiceTree,
+  ShapedProps,
+  Shortcut,
+  Shortcuts,
   StateArgs,
   StateProps,
   Url,
-} from './types'
+} from './types';

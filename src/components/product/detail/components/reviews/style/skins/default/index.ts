@@ -1,4 +1,4 @@
-import { css } from 'framework'
+import { css } from 'framework';
 
 export default css`
   & {
@@ -24,4 +24,4 @@ export default css`
     color: var(--muted);
     font-size: 0.87rem;
   }
-`
+`;

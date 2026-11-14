@@ -4,18 +4,19 @@
  * Every service operation runs through the data layer (data.ts).
  */
 
-import clientModules from 'virtual:framework/clients'
-import serviceModules from 'virtual:framework/services'
-import { name, type DataLayer, type ServiceRule } from './data'
-import type { Entity, Env } from './index'
-import type { Injection, Url } from './types'
+import clientModules from 'virtual:framework/clients';
+import serviceModules from 'virtual:framework/services';
 
-export type { Injection }
+import { type DataLayer, name, type ServiceRule } from './data';
+import type { Entity, Env } from './index';
+import type { Injection, Url } from './types';
+
+export type { Injection };
 
 // The runtime builds the trees without knowing their shape; the TypeScript plugin types them
 // for authors.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Tree = any
+type Tree = any;
 
 /** A folder name as a property name: `socket.io` → `socketIo`, `single-file` → `singleFile`. */
 export const camelCase = (segment: string) =>
@@ -23,29 +24,29 @@ export const camelCase = (segment: string) =>
     .split(/[^A-Za-z0-9]+/)
     .filter(Boolean)
     .map((word, index) => (index === 0 ? word.charAt(0).toLowerCase() : word.charAt(0).toUpperCase()) + word.slice(1))
-    .join('')
+    .join('');
 
 const lazy = <T>(create: () => T) => {
-  let created = false
-  let value: T
+  let created = false;
+  let value: T;
   return () => {
     if (!created) {
-      value = create()
-      created = true
+      value = create();
+      created = true;
     }
-    return value
-  }
-}
+    return value;
+  };
+};
 
 /** `clients.<name>`: each folder's factory, called with the environment on first use. */
 export function createClients(env: Env): Tree {
-  const clients: Record<string, unknown> = {}
-  for (const { folder, module, meta } of clientModules) {
-    const name = meta?.default?.().exportAs ?? camelCase(folder)
-    const get = lazy(() => module.default({ env }))
-    Object.defineProperty(clients, name, { get, enumerable: true })
+  const clients: Record<string, unknown> = {};
+  for (const { folder, meta, module } of clientModules) {
+    const name = meta?.default?.().exportAs ?? camelCase(folder);
+    const get = lazy(() => module.default({ env }));
+    Object.defineProperty(clients, name, { enumerable: true, get });
   }
-  return clients
+  return clients;
 }
 
 /**
@@ -55,81 +56,88 @@ export function createClients(env: Env): Tree {
  * subfolders is callable and has properties.
  */
 export function createServices(base: Omit<Injection, 'services'>, data: DataLayer): Tree {
-  const root: Record<string, unknown> = {}
-  const injection: Injection = { ...base, services: root }
+  const root: Record<string, unknown> = {};
+  const injection: Injection = { ...base, services: root };
   const callable = new Set(
-    serviceModules.filter(({ module }) => typeof module['default'] === 'function').map(({ segments }) => segments.map(camelCase).join('.')),
-  )
+    serviceModules
+      .filter(({ module }) => typeof module['default'] === 'function')
+      .map(({ segments }) => segments.map(camelCase).join('.')),
+  );
 
   const nodeAt = (keys: string[], create: (key: string) => unknown) => {
-    let node = root as Record<string, unknown>
+    let node = root as Record<string, unknown>;
     keys.forEach((key, index) => {
-      if (!(key in node)) Object.defineProperty(node, key, { value: create(keys.slice(0, index + 1).join('.')), enumerable: true })
-      node = node[key] as Record<string, unknown>
-    })
-    return node
-  }
+      if (!(key in node))
+        Object.defineProperty(node, key, { enumerable: true, value: create(keys.slice(0, index + 1).join('.')) });
+      node = node[key] as Record<string, unknown>;
+    });
+    return node;
+  };
 
-  const operations = new Map<string, () => (...args: unknown[]) => unknown>()
+  const operations = new Map<string, () => (...args: unknown[]) => unknown>();
   const operation = (key: string, factory: unknown) => {
-    if (typeof factory !== 'function') throw new Error(`services.${key} is not a function of the injection`)
-    operations.set(key, lazy(() => factory(injection)))
-  }
+    if (typeof factory !== 'function') throw new Error(`services.${key} is not a function of the injection`);
+    operations.set(
+      key,
+      lazy(() => factory(injection)),
+    );
+  };
   // Each operation is named by its path, so `meta.ts` can refer to it, and runs through the data layer.
   const run = (key: string) => {
     const operation = (...args: unknown[]) => {
-      const get = operations.get(key)
-      if (!get) throw new Error(`services.${key} has no operation`)
-      readRules()
-      return data.call(key, get(), args)
-    }
-    name(operation, key)
-    return operation
-  }
+      const get = operations.get(key);
+      if (!get) throw new Error(`services.${key} has no operation`);
+      readRules();
+      return data.call(key, get(), args);
+    };
+    name(operation, key);
+    return operation;
+  };
 
   // A folder's `meta.ts` says which operations read and what writes make stale. It refers to
   // operations by reference, so it is read once the tree exists, on first use.
-  let rulesRead = false
+  let rulesRead = false;
   const readRules = () => {
-    if (rulesRead) return
-    rulesRead = true
-    for (const { segments, meta } of serviceModules) {
-      if (typeof meta?.default !== 'function') continue
-      const path = segments.map(camelCase).join('.')
-      const rules = meta.default(injection) as Record<string, ServiceRule>
-      for (const [exported, rule] of Object.entries(rules)) data.rule(exported === 'default' ? path : `${path}.${exported}`, rule)
+    if (rulesRead) return;
+    rulesRead = true;
+    for (const { meta, segments } of serviceModules) {
+      if (typeof meta?.default !== 'function') continue;
+      const path = segments.map(camelCase).join('.');
+      const rules = meta.default(injection) as Record<string, ServiceRule>;
+      for (const [exported, rule] of Object.entries(rules))
+        data.rule(exported === 'default' ? path : `${path}.${exported}`, rule);
     }
-  }
+  };
 
-  for (const { segments, module } of serviceModules) {
-    const keys = segments.map(camelCase)
-    const path = keys.join('.')
-    const node = nodeAt(keys, (key) => (callable.has(key) ? run(key) : {}))
-    if (typeof module['default'] === 'function') operation(path, module['default'])
+  for (const { module, segments } of serviceModules) {
+    const keys = segments.map(camelCase);
+    const path = keys.join('.');
+    const node = nodeAt(keys, (key) => (callable.has(key) ? run(key) : {}));
+    if (typeof module['default'] === 'function') operation(path, module['default']);
     for (const [name, factory] of Object.entries(module)) {
-      if (name === 'default') continue
-      const key = `${path}.${name}`
-      operation(key, factory)
-      Object.defineProperty(node, name, { value: run(key), enumerable: true })
+      if (name === 'default') continue;
+      const key = `${path}.${name}`;
+      operation(key, factory);
+      Object.defineProperty(node, name, { enumerable: true, value: run(key) });
     }
   }
 
-  return root
+  return root;
 }
 
 export const createUrl = (): Url => ({
   params: {
     merge: (extra) => {
-      const params = new URLSearchParams(window.location.search)
-      for (const [key, value] of Object.entries(extra)) params.set(key, String(value))
-      return params
+      const params = new URLSearchParams(window.location.search);
+      for (const [key, value] of Object.entries(extra)) params.set(key, String(value));
+      return params;
     },
   },
-})
+});
 
 export function createInjection(env: Env, entity: Entity, data: DataLayer): Injection {
-  const clients = createClients(env)
-  const url = createUrl()
-  const services = createServices({ env, entity, clients, url }, data)
-  return { env, entity, clients, services, url }
+  const clients = createClients(env);
+  const url = createUrl();
+  const services = createServices({ clients, entity, env, url }, data);
+  return { clients, entity, env, services, url };
 }

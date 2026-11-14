@@ -28,32 +28,45 @@
     if (typeof a !== typeof b || a === null || b === null) return false;
     if (typeof a === 'function') return a.toString() === b.toString();
     if (typeof a !== 'object' || depth > 4) return false;
-    if (a.$$typeof && a.$$typeof === b.$$typeof) return a.type === b.type && a.key === b.key && equal(a.props, b.props, depth + 1);
+    if (a.$$typeof && a.$$typeof === b.$$typeof)
+      return a.type === b.type && a.key === b.key && equal(a.props, b.props, depth + 1);
     if (Array.isArray(a) !== Array.isArray(b)) return false;
     const keys = Object.keys(a);
     if (keys.length !== Object.keys(b).length) return false;
     return keys.every((key) => key !== '_owner' && equal(a[key], b[key], depth + 1));
   };
   const kindOf = (value) =>
-    typeof value === 'function' ? 'function' : value && value.$$typeof ? 'element' : Array.isArray(value) ? 'array' : typeof value;
+    typeof value === 'function'
+      ? 'function'
+      : value && value.$$typeof
+        ? 'element'
+        : Array.isArray(value)
+          ? 'array'
+          : typeof value;
   const why = (fiber) => {
     const previous = fiber.alternate.memoizedProps;
     const next = fiber.memoizedProps;
     if (previous === next) {
       // Which of its hooks hold something new (effects aside), and which contexts it read changed.
       const hooks = [];
-      for (let a = fiber.alternate.memoizedState, b = fiber.memoizedState, index = 0; a && b; a = a.next, b = b.next, index++) {
+      for (
+        let a = fiber.alternate.memoizedState, b = fiber.memoizedState, index = 0;
+        a && b;
+        a = a.next, b = b.next, index++
+      ) {
         const value = b.memoizedState;
         const effect = value && typeof value === 'object' && 'create' in value && 'tag' in value;
         if (!effect && !Object.is(a.memoizedState, value)) hooks.push(index);
       }
       const before = new Map();
-      for (let dependency = fiber.alternate.dependencies?.firstContext; dependency; dependency = dependency.next) before.set(dependency.context, dependency.memoizedValue);
+      for (let dependency = fiber.alternate.dependencies?.firstContext; dependency; dependency = dependency.next)
+        before.set(dependency.context, dependency.memoizedValue);
       const contexts = [];
       for (let dependency = fiber.dependencies?.firstContext; dependency; dependency = dependency.next) {
-        if (before.has(dependency.context) && !Object.is(before.get(dependency.context), dependency.memoizedValue)) contexts.push(dependency.context.displayName || 'context');
+        if (before.has(dependency.context) && !Object.is(before.get(dependency.context), dependency.memoizedValue))
+          contexts.push(dependency.context.displayName || 'context');
       }
-      return { cause: 'own', hooks, contexts };
+      return { cause: 'own', contexts, hooks };
     }
     const changed = [];
     for (const key of new Set([...Object.keys(previous || {}), ...Object.keys(next || {})])) {
@@ -66,7 +79,14 @@
   // What changed in the page since the last commit, as the fibers it touched and their ancestors.
   const observer = new MutationObserver(() => {});
   // The document itself: as an init script, this runs before the page has an <html> element.
-  observer.observe(document, { subtree: true, childList: true, attributes: true, characterData: true, attributeOldValue: true, characterDataOldValue: true });
+  observer.observe(document, {
+    attributeOldValue: true,
+    attributes: true,
+    characterData: true,
+    characterDataOldValue: true,
+    childList: true,
+    subtree: true,
+  });
   const fiberOf = (node) => {
     for (let current = node; current; current = current.parentNode) {
       const key = Object.keys(current).find((name) => name.startsWith('__reactFiber$'));
@@ -108,7 +128,7 @@
 
   const calls = (window.__calls = []);
   window.__renderCall = (path) => {
-    const call = { phase: window.__phase, path, at: performance.now(), kept: false };
+    const call = { at: performance.now(), kept: false, path, phase: window.__phase };
     calls.push(call);
     return call;
   };
@@ -118,46 +138,45 @@
   // The framework component a fiber is inside of: the nearest view above it.
   const VIEWS = new Set(['StatefulView', 'StatelessView']);
   const withinOf = (fiber) => {
-    for (let node = fiber.return; node; node = node.return) if (typeof node.type === 'function' && VIEWS.has(node.type.name)) return node.type.displayName;
+    for (let node = fiber.return; node; node = node.return)
+      if (typeof node.type === 'function' && VIEWS.has(node.type.name)) return node.type.displayName;
     return '';
   };
-  window.__suspend = (path, on) => calls.push({ phase: window.__phase, path, at: performance.now(), suspend: on });
+  window.__suspend = (path, on) => calls.push({ at: performance.now(), path, phase: window.__phase, suspend: on });
   const commits = (window.__renders = []);
   window.__phase = 'load';
   window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
-    supportsFiber: true,
-    isDisabled: false,
-    renderers: new Map(),
     checkDCE() {},
     inject(renderer) {
       const id = this.renderers.size + 1;
       this.renderers.set(id, renderer);
       return id;
     },
-    onScheduleFiberRoot() {},
-    onCommitFiberUnmount() {},
-    onPostCommitFiberRoot() {},
-    setStrictMode() {},
+    isDisabled: false,
     onCommitFiberRoot(_, root) {
       const touched = touchedBy(observer.takeRecords());
-      const commit = { phase: window.__phase, at: performance.now(), components: [] };
+      const commit = { at: performance.now(), components: [], phase: window.__phase };
       const walk = (parent) => {
         if (parent.alternate && parent.child === parent.alternate.child) return;
         for (let node = parent.child; node; node = node.sibling) {
-          if (COMPONENT_TAGS.has(node.tag) && (node.alternate === null || (node.flags & PERFORMED_WORK) === PERFORMED_WORK)) {
+          if (
+            COMPONENT_TAGS.has(node.tag) &&
+            (node.alternate === null || (node.flags & PERFORMED_WORK) === PERFORMED_WORK)
+          ) {
             const reworked = !(node.alternate && node.child === node.alternate.child);
             let children = 0;
-            if (reworked) for (let child = node.child; child; child = child.sibling) children += child.actualDuration || 0;
+            if (reworked)
+              for (let child = node.child; child; child = child.sibling) children += child.actualDuration || 0;
             commit.components.push({
-              name: nameOf(node),
-              fn: typeof node.type === 'function' ? node.type.name : '',
-              within: withinOf(node),
-              mounted: node.alternate === null,
-              self: Math.max(0, (node.actualDuration || 0) - children),
               // A removal shows in the mutations only at the parent node, outside a component that
               // removes all it rendered (one that now renders nothing), so React's flags say it.
               dom: touched.has(node) || ((node.flags | node.subtreeFlags) & CHILD_DELETION) !== 0,
+              fn: typeof node.type === 'function' ? node.type.name : '',
+              mounted: node.alternate === null,
+              name: nameOf(node),
+              self: Math.max(0, (node.actualDuration || 0) - children),
               why: node.alternate ? why(node) : undefined,
+              within: withinOf(node),
             });
           }
           walk(node);
@@ -166,5 +185,11 @@
       walk(root.current);
       commits.push(commit);
     },
+    onCommitFiberUnmount() {},
+    onPostCommitFiberRoot() {},
+    onScheduleFiberRoot() {},
+    renderers: new Map(),
+    setStrictMode() {},
+    supportsFiber: true,
   };
 })();

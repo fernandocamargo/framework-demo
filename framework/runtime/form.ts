@@ -12,95 +12,98 @@
  * chart's guards and the operations read the latest values when they run, and follow none.
  */
 
-import { useMemo, useRef, useSyncExternalStore } from 'react'
-import { sameParts, tracking } from './reads'
+import { useMemo, useRef, useSyncExternalStore } from 'react';
+
+import { sameParts, tracking } from './reads';
 
 export type FormModule = {
-  seed?: (data: never) => Record<string, unknown>
-  payload?: (values: never) => unknown
-}
+  payload?: (values: never) => unknown;
+  seed?: (data: never) => Record<string, unknown>;
+};
 
-type Values = Record<string, unknown>
-type State = { values: Values; initial: Values }
+type Values = Record<string, unknown>;
+type State = { initial: Values; values: Values };
 
 const same = (a: Values, b: Values) => {
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)])
-  return [...keys].every((key) => Object.is(a[key], b[key]))
-}
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  return [...keys].every((key) => Object.is(a[key], b[key]));
+};
 
 /** `start`: values over the empty ones, for a component held in one state in the states gallery. */
 export function useFormLayer(module: FormModule, start?: Values) {
-  const kept = useRef<{ state: State; listeners: Set<() => void>; shown: { state: State } | null } | null>(null)
+  const kept = useRef<null | { listeners: Set<() => void>; shown: null | { state: State }; state: State }>(null);
   if (!kept.current) {
-    const values = { ...(module.seed ? module.seed(undefined as never) : {}), ...start }
-    kept.current = { state: { values, initial: values }, listeners: new Set(), shown: null }
+    const values = { ...(module.seed ? module.seed(undefined as never) : {}), ...start };
+    kept.current = { state: { initial: values, values }, listeners: new Set(), shown: null };
   }
-  const store = kept.current
+  const store = kept.current;
   // The values this component's files read.
-  const keys = useRef(new Set<string>()).current
+  const keys = useRef(new Set<string>()).current;
 
   // `set` and `seed` stay the same functions for the instance's life, so a part of the form that
   // is given `set` keeps its memo when another field changes.
   const actions = useMemo(() => {
     const change = (state: State) => {
-      store.state = state
-      for (const listener of store.listeners) listener()
-    }
+      store.state = state;
+      for (const listener of store.listeners) listener();
+    };
     return {
-      subscribe: (listener: () => void) => {
-        store.listeners.add(listener)
-        return () => store.listeners.delete(listener)
-      },
-      set: (name: string, value: unknown) => change({ ...store.state, values: { ...store.state.values, [name]: value } }),
-      seed: (data: unknown) => {
-        const values = module.seed ? module.seed(data as never) : {}
-        change({ values, initial: values })
-      },
       payload: () => (module.payload ? module.payload(store.state.values as never) : store.state.values),
-    }
-  }, [module, store])
+      seed: (data: unknown) => {
+        const values = module.seed ? module.seed(data as never) : {};
+        change({ initial: values, values });
+      },
+      set: (name: string, value: unknown) =>
+        change({ ...store.state, values: { ...store.state.values, [name]: value } }),
+      subscribe: (listener: () => void) => {
+        store.listeners.add(listener);
+        return () => store.listeners.delete(listener);
+      },
+    };
+  }, [module, store]);
 
   // What the component shows: the same while the values it read and the seed stay as they were.
   const snapshot = () => {
-    const { state } = store
-    const shown = store.shown
-    if (shown && shown.state.initial === state.initial && sameParts(shown.state.values, state.values, keys)) return shown
-    return (store.shown = { state })
-  }
-  const { state } = useSyncExternalStore(actions.subscribe, snapshot, snapshot)
+    const { state } = store;
+    const shown = store.shown;
+    if (shown && shown.state.initial === state.initial && sameParts(shown.state.values, state.values, keys))
+      return shown;
+    return (store.shown = { state });
+  };
+  const { state } = useSyncExternalStore(actions.subscribe, snapshot, snapshot);
 
   // The render's form: the values it shows, recording which it reads.
   const view = useMemo(
     () => ({
-      values: tracking(state.values, keys),
       initial: state.initial,
-      get unsaved() {
-        keys.add('*')
-        return !same(state.values, state.initial)
-      },
-      set: actions.set,
-      seed: actions.seed,
       payload: actions.payload,
+      seed: actions.seed,
+      set: actions.set,
+      get unsaved() {
+        keys.add('*');
+        return !same(state.values, state.initial);
+      },
+      values: tracking(state.values, keys),
     }),
     [state, keys, actions],
-  )
+  );
   // The chart's and the operations' form: the latest values, when they run.
   const latest = useMemo(
     () => ({
-      get values() {
-        return store.state.values
-      },
       get initial() {
-        return store.state.initial
+        return store.state.initial;
       },
-      get unsaved() {
-        return !same(store.state.values, store.state.initial)
-      },
-      set: actions.set,
-      seed: actions.seed,
       payload: actions.payload,
+      seed: actions.seed,
+      set: actions.set,
+      get unsaved() {
+        return !same(store.state.values, store.state.initial);
+      },
+      get values() {
+        return store.state.values;
+      },
     }),
     [store, actions],
-  )
-  return { view, latest }
+  );
+  return { latest, view };
 }

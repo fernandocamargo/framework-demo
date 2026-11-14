@@ -1,9 +1,10 @@
-import { Button, Label, ListBox, ListBoxItem, Popover, Select, SelectValue } from 'react-aria-components'
-import { speak, type Locale } from '@/locales'
+import { Button, Label, ListBox, ListBoxItem, Popover, Select, SelectValue } from 'react-aria-components';
+
+import { type Locale, speak } from '@/locales';
 
 export default ({ className, label, locale, options }) => (
   <div className={className}>
-    <Select aria-label={label} selectedKey={locale} onSelectionChange={(key) => speak(key as Locale)}>
+    <Select aria-label={label} onSelectionChange={(key) => speak(key as Locale)} selectedKey={locale}>
       <Label className="visually-hidden">{label}</Label>
       <Button>
         <span className="icon" data-icon="globe" />
@@ -21,4 +22,4 @@ export default ({ className, label, locale, options }) => (
       </Popover>
     </Select>
   </div>
-)
+);

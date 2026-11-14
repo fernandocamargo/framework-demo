@@ -1,4 +1,4 @@
-import { css } from 'framework'
+import { css } from 'framework';
 
 export default css`
   & {
@@ -14,4 +14,4 @@ export default css`
       grid-column: 1 / -1;
     }
   }
-`
+`;

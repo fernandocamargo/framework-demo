@@ -8,7 +8,6 @@
 // - Order that means something is kept: a chart's states (the first one is where it starts), a
 //   component's keys (listed as declared), an object under a comment that says its order matters,
 //   the statements of a file, Maps and Sets.
-
 import perfectionist from 'eslint-plugin-perfectionist';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';

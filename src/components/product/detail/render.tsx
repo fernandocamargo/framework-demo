@@ -1,24 +1,39 @@
-import { Button, Dialog, Heading } from 'react-aria-components'
-import { go } from '@/address'
-import RemoveLink from '@/components/product/remove-link'
-import Reviews from './components/reviews'
+import { Button, Dialog, Heading } from 'react-aria-components';
 
-export default ({ className, i18n, id, title, description, origin, price, stock, images, change, canEdit, removeHref }) => (
+import { go } from '@/address';
+import RemoveLink from '@/components/product/remove-link';
+
+import Reviews from './components/reviews';
+
+export default ({
+  canEdit,
+  change,
+  className,
+  description,
+  i18n,
+  id,
+  images,
+  origin,
+  price,
+  removeHref,
+  stock,
+  title,
+}) => (
   <Dialog className={`react-aria-Dialog ${className}`}>
     <header>
       <div>
         <Heading slot="title">{title}</Heading>
         <p className="origin">{origin}</p>
       </div>
-      <Button data-variant="icon" aria-label={i18n.close} onPress={() => go({ view: null })}>
+      <Button aria-label={i18n.close} data-variant="icon" onPress={() => go({ view: null })}>
         <span className="icon" data-icon="close" />
       </Button>
     </header>
     {images.length > 0 && (
-      <ul className="pictures" aria-label={i18n.pictures.label} tabIndex={0}>
+      <ul aria-label={i18n.pictures.label} className="pictures" tabIndex={0}>
         {images.map((image) => (
           <li key={image.src}>
-            <img src={image.src} alt={image.alt} loading="lazy" />
+            <img alt={image.alt} loading="lazy" src={image.src} />
           </li>
         ))}
       </ul>
@@ -39,10 +54,10 @@ export default ({ className, i18n, id, title, description, origin, price, stock,
     <footer>
       <RemoveLink href={removeHref} title={title} variant="text" />
       {canEdit && (
-        <Button data-variant="primary" onPress={() => go({ view: null, edit: id })}>
+        <Button data-variant="primary" onPress={() => go({ edit: id, view: null })}>
           {i18n.actions.edit}
         </Button>
       )}
     </footer>
   </Dialog>
-)
+);

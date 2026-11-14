@@ -1,13 +1,13 @@
-import { Link } from 'react-aria-components'
+import { Link } from 'react-aria-components';
 
-export default ({ className, shown, href, icon, label, text }) =>
+export default ({ className, href, icon, label, shown, text }) =>
   shown &&
   (icon ? (
-    <Link className={`react-aria-Link ${className}`} href={href} data-variant="icon" aria-label={label}>
+    <Link aria-label={label} className={`react-aria-Link ${className}`} data-variant="icon" href={href}>
       <span className="icon" data-icon="trash" />
     </Link>
   ) : (
-    <Link className={`react-aria-Link ${className}`} href={href} data-variant="secondary">
+    <Link className={`react-aria-Link ${className}`} data-variant="secondary" href={href}>
       {text}
     </Link>
-  ))
+  ));

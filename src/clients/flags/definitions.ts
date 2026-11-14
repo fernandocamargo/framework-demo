@@ -6,51 +6,55 @@
 // the ways it can be served: who gets which value. One way is served at a time; the network lab
 // chooses another, as GrowthBook's dashboard would.
 
-import type { Acl, Flags } from 'framework'
+import type { Acl, Flags } from 'framework';
 
 /** Who is asking, as the provider targets them: by id, and by the role the backend gives them. */
-export type Targeting = { targetingKey: string; role: Acl['role'] }
+export type Targeting = { role: Acl['role']; targetingKey: string };
 
 type Definition<Value> = {
+  fallback: Value;
   /** The flag's key at the provider. */
-  key: string
-  variants: Record<string, Value>
-  fallback: Value
-  /** Each way the flag can be served: the variant each person gets. */
-  ways: Record<string, (who: Targeting) => string>
+  key: string;
   /** The way served until the lab chooses another. */
-  served: string
-}
+  served: string;
+  variants: Record<string, Value>;
+  /** Each way the flag can be served: the variant each person gets. */
+  ways: Record<string, (who: Targeting) => string>;
+};
 
 export const definitions = {
-  // Counting stock from the catalogue's rows, with − and +: rolled out to admins first.
-  stockCount: {
-    key: 'stock-count',
-    variants: { on: true, off: false },
-    fallback: false,
-    ways: { admins: ({ role }) => (role === 'admin' ? 'on' : 'off'), everyone: () => 'on', nobody: () => 'off' },
-    served: 'admins',
-  },
   // Whether products may be deleted. Off pauses every deletion: a kill switch.
   deletions: {
     key: 'deletions',
-    variants: { on: true, off: false },
+    variants: { off: false, on: true },
     fallback: true,
-    ways: { on: () => 'on', off: () => 'off' },
+    ways: { off: () => 'off', on: () => 'on' },
     served: 'on',
   },
   // Above which percentage a bulk price change asks a second time: sooner for moderators.
   largeChangeAt: {
-    key: 'large-change-at',
-    variants: { soon: 10, usual: 50 },
     fallback: 50,
-    ways: { moderators: ({ role }) => (role === 'moderator' ? 'soon' : 'usual'), usual: () => 'usual', soon: () => 'soon' },
+    key: 'large-change-at',
     served: 'moderators',
+    variants: { soon: 10, usual: 50 },
+    ways: {
+      moderators: ({ role }) => (role === 'moderator' ? 'soon' : 'usual'),
+      soon: () => 'soon',
+      usual: () => 'usual',
+    },
   },
-} satisfies { [Name in keyof Flags]: Definition<Flags[Name]> }
+  // Counting stock from the catalogue's rows, with − and +: rolled out to admins first.
+  stockCount: {
+    key: 'stock-count',
+    variants: { off: false, on: true },
+    fallback: false,
+    ways: { admins: ({ role }) => (role === 'admin' ? 'on' : 'off'), everyone: () => 'on', nobody: () => 'off' },
+    served: 'admins',
+  },
+} satisfies { [Name in keyof Flags]: Definition<Flags[Name]> };
 
-export type Name = keyof typeof definitions
+export type Name = keyof typeof definitions;
 /** The way each flag is served. */
-export type Served = { [Name in keyof typeof definitions]: keyof (typeof definitions)[Name]['ways'] & string }
+export type Served = { [Name in keyof typeof definitions]: keyof (typeof definitions)[Name]['ways'] & string };
 
-export const names = Object.keys(definitions) as Name[]
+export const names = Object.keys(definitions) as Name[];
