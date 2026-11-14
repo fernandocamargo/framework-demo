@@ -96,3 +96,13 @@ The header has a "States" link; nothing else in the visit changes. 0 misses, 385
 - A flag served another way renders only what reads it: stock count to nobody renders the 12 rows (each loses its buttons); deletions paused renders the 12 delete links (each goes); serving both back renders the 24 again.
 - A component follows only the flags it reads, compared with what it last rendered: the first flag change after a component mounts counts from the keys its render read, not from none.
 - The recorder now counts a component that removes all it rendered (a delete link that renders nothing) as changing the page. React's flags say so, since the removal shows in the mutations only at the parent node.
+
+## After the editor's keystrokes
+
+Two changes for every component, and one for forms. Chromium, one run, the same 29 steps: 0 misses, 422 render calls, framework components rendered again 267 times (28 changing nothing), other components rendered again 4,748 times (1,869 changing nothing), render time 173.0 ms (27.1 ms changing nothing). Before: 426 render calls, 5,976 (2,785) other re-renders, 42.4 ms changing nothing.
+
+- **Shared elements.** A render's output shares with the last one every element equal to the one at the same place, and React skips those. Signing in renders 86 of react-aria's components again instead of 158; signing out, 17 instead of 69; serving a flag another way, none around the rows.
+- **Handlers as events.** Each handler site has one wrapper for the instance's life, calling the closure of the last committed render, so a new closure does not make a new element.
+- **A form that follows what it reads.** The values live in a store per instance; a component follows only the values its files read. The editor's fields hold what is typed and start from `form.initial`. Typing six keys in the title: no framework render (6 before) and 50 of react-aria's components (602 before), 18 of them changing nothing (366 before); 0.8 ms of render time (7.5 ms before). The rest is react-aria's text field, which renders its label, input and error with each key.
+
+Shared elements alone barely moved typing (584, 348): while the editor held the value, each key changed the title field's element and every element around it, and react-aria's `Form`, `Dialog` and `Modal` gave their fields new context values.

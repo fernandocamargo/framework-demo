@@ -182,6 +182,21 @@ export function createQueryClient() {
 
 export type DataLayer = ReturnType<typeof createDataLayer>
 
+/** Who waits for the next message from another tab to be handled. */
+const waiting = new Set<() => void>()
+/**
+ * Resolves once the data layer has handled the next message from another tab, after which
+ * `whenIdle()` waits for what it made stale. For tests that drive two tabs: each channel object
+ * of a page hears a message in its own time, so a test's own channel says nothing about the app's.
+ * It is also `window.__framework.fromTab()`.
+ */
+export const fromTab = () => new Promise<void>((resolve) => waiting.add(resolve))
+
+if (typeof window !== 'undefined') {
+  const global = window as { __framework?: Record<string, unknown> }
+  global.__framework = { ...global.__framework, fromTab }
+}
+
 export function createDataLayer(client: QueryClient, entity: { readonly id: string }) {
   const rules = new Map<string, ServiceRule>()
   // Per client, not per data layer: a change of entity makes a new data layer over the same cache,
@@ -285,6 +300,8 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
         const by = typeof event.data.by === 'string' ? event.data.by : 'another tab'
         emitData({ action: 'tab', path: by, outcome: 'received', reads })
         void hold(invalidatePaths(new Set(reads), by, 'tab'))
+        for (const resolve of waiting) resolve()
+        waiting.clear()
       }
       return () => {
         channel.close()

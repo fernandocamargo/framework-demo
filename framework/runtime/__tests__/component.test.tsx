@@ -131,14 +131,35 @@ test('a new answer keeps the parts equal to the last one shown, so a child given
   expect(childRenders).toHaveLength(1)
 })
 
-test("the form's set and seed stay the same functions when its values change", () => {
-  const module = { seed: () => ({ name: '' }) }
-  const { result } = renderHook(() => useFormLayer(module))
-  const { set, seed } = result.current
+test('the form renders its component only for the values it read, and for a seed; set and seed stay the same functions', () => {
+  const module = { seed: (data?: { name: string; city: string }) => ({ name: data?.name ?? '', city: data?.city ?? '' }) }
+  let renders = 0
+  const { result } = renderHook(() => {
+    renders++
+    return useFormLayer(module)
+  })
+  const { set, seed } = result.current.view
+  // Nothing read yet: a value changes, and the component does not render. The chart sees it.
   act(() => set('name', 'Lisbon'))
-  expect(result.current.values).toEqual({ name: 'Lisbon' })
-  expect(result.current.set).toBe(set)
-  expect(result.current.seed).toBe(seed)
+  expect(renders).toBe(1)
+  expect(result.current.latest.values).toEqual({ name: 'Lisbon', city: '' })
+  expect(result.current.latest.unsaved).toBe(true)
+
+  // It reads `city`: a change of `name` still renders nothing; one of `city` does.
+  expect(result.current.view.values.city).toBe('')
+  act(() => set('name', 'Porto'))
+  expect(renders).toBe(1)
+  act(() => set('city', 'Faro'))
+  expect(renders).toBe(2)
+  expect(result.current.view.values.city).toBe('Faro')
+  expect(result.current.view.set).toBe(set)
+
+  // A seed renders it, with the values a field starts from.
+  act(() => seed({ name: 'Ana', city: 'Braga' }))
+  expect(renders).toBe(3)
+  expect(result.current.view.initial).toEqual({ name: 'Ana', city: 'Braga' })
+  expect(result.current.view.seed).toBe(seed)
+  expect(result.current.latest.unsaved).toBe(false)
 })
 
 test('a chart created by a change of route reads that route, not the one before it', async () => {

@@ -34,7 +34,8 @@ import { report, toError, type Scope } from './pipeline'
 import { RouteContext, useFramework } from './root'
 import { activeSkin, loadSkin, type SkinModule } from './style'
 import { tracked } from './thenable'
-import { chainOf, withScope } from './track'
+import { chainOf, commitHandlers, withScope } from './track'
+import { shareElements } from './elements'
 
 type Props = Record<string, unknown> & { className?: string }
 
@@ -316,8 +317,9 @@ export function component(spec: Spec) {
 
     // A component held in one state in the states gallery starts its form with the example's values.
     const pin = use(PinContext)
-    const form = useFormLayer((module.form ?? NO_LAYER) as FormModule, pin?.path === spec.path ? pin.example?.values : undefined)
-    const withForm = useMemo(() => (module.form ? { ...injected, form } : injected), [injected, form, module.form])
+    // The render follows the values it reads; the chart and the operations read the latest when they run.
+    const { view: form, latest: running } = useFormLayer((module.form ?? NO_LAYER) as FormModule, pin?.path === spec.path ? pin.example?.values : undefined)
+    const withForm = useMemo(() => (module.form ? { ...injected, form: running } : injected), [injected, running, module.form])
     const operations = useOperations(spec.path, module.async, withForm)
     const hasRead = query !== null
     const async = useMemo(() => module.async && { ...operations, ...(hasRead ? { default: initial } : {}) }, [module.async, operations, hasRead, initial])
@@ -371,7 +373,9 @@ export function component(spec: Spec) {
    */
   function show(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, decided?: boolean) {
     const { module, scope, form, async, language, access, judged } = layers
-    const last = useRef<{ inputs: unknown[]; props: Props; shaped: Props; allowed: boolean; element: ReactNode } | null>(null)
+    const last = useRef<{ inputs: unknown[]; props: Props; shaped: Props; allowed: boolean; rendered: ReactNode; element: ReactNode } | null>(null)
+    // The handlers of the render React committed are the ones the instance's wrappers call.
+    useLayoutEffect(() => commitHandlers(scope))
     // The keys this instance answers, registered after each commit while it is mounted.
     const keys = useRef<Entry[] | undefined>(undefined)
     useShortcuts(spec.path, scope, keys)
@@ -391,10 +395,11 @@ export function component(spec: Spec) {
       last.current = { ...last.current, inputs, props }
       return last.current.element
     }
-    const rendered = withScope(scope, () => module.render(shaped))
+    // What did not change since the last output is the element React showed then, and it skips it.
+    const rendered = shareElements(last.current?.rendered, withScope(scope, () => module.render(shaped))) as ReactNode
     // What this folder's acl.ts decided reaches every component below, until one of them decides otherwise.
     const element = createElement(ScopeContext, { value: scope }, module.acl ? createElement(AclContext, { value: allowed }, rendered) : rendered)
-    last.current = { inputs, props, shaped, allowed, element }
+    last.current = { inputs, props, shaped, allowed, rendered, element }
     return element
   }
 

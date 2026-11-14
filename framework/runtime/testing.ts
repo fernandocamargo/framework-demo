@@ -69,6 +69,9 @@ export function formOf<Data, Values extends Record<string, unknown>, Payload>(mo
     get values() {
       return values
     },
+    get initial() {
+      return initial
+    },
     get unsaved() {
       return Object.keys({ ...initial, ...values }).some((key) => !Object.is(initial[key], values[key]))
     },

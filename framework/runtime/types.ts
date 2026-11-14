@@ -192,8 +192,16 @@ type FormData<FormModule> = FormModule extends { seed: (data: infer Data) => unk
 export type FormProps<FormModule> = Shown<FormShape<FormModule>>
 
 type FormShape<FormModule> = {
-  /** The form's values. */
+  /**
+   * The form's values. A component follows those its files read: a field that reads its value
+   * (`value={form.values.title}`) renders the component as a key is pressed.
+   */
   values: FormValues<FormModule>
+  /**
+   * The values as last seeded, for a field that holds what is typed (`defaultValue={form.initial.title}`):
+   * then a key renders that field alone. A field mounted again after a seed starts from it.
+   */
+  initial: FormValues<FormModule>
   /** Sets one value. */
   set: <Name extends keyof FormValues<FormModule>>(name: Name, value: FormValues<FormModule>[Name]) => void
   /** Whether the values changed since the form was last seeded. */
