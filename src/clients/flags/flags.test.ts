@@ -10,8 +10,13 @@ beforeEach(() => window.localStorage.clear());
 
 test('each person gets the flags the way they are served, and a change says so', async () => {
   const flags = createFlags({ env: { world: 'memory' } } as never);
-  expect(await flags.evaluate(admin)).toEqual({ deletions: true, largeChangeAt: 50, stockCount: true });
-  expect(await flags.evaluate(moderator)).toEqual({ deletions: true, largeChangeAt: 10, stockCount: false });
+  expect(await flags.evaluate(admin)).toEqual({ deletions: true, largeChangeAt: 50, liveMap: false, stockCount: true });
+  expect(await flags.evaluate(moderator)).toEqual({
+    deletions: true,
+    largeChangeAt: 10,
+    liveMap: false,
+    stockCount: false,
+  });
 
   const changed = vi.fn();
   const stop = flags.changed(changed);
@@ -31,6 +36,11 @@ test('a flag served another way in another tab reaches this one', async () => {
   window.dispatchEvent(new StorageEvent('storage', { key: 'memory:flags', storageArea: window.localStorage }));
   await vi.waitFor(() => expect(changed).toHaveBeenCalled());
   expect((await flags.evaluate(moderator)).stockCount).toBe(true);
-  expect(flags.lab.served()).toEqual({ deletions: 'on', largeChangeAt: 'moderators', stockCount: 'everyone' });
+  expect(flags.lab.served()).toEqual({
+    deletions: 'on',
+    largeChangeAt: 'moderators',
+    liveMap: 'off',
+    stockCount: 'everyone',
+  });
   stop();
 });

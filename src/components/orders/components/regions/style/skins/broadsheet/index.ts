@@ -1,5 +1,6 @@
 import { css } from 'framework';
 
+import map from '../../map';
 import tiles from '../../tiles';
 
 // The map as a newspaper's election-night map: square tiles with hairline rules, the orders drawn in
@@ -14,6 +15,9 @@ export default css`
     display: grid;
     gap: 0.6rem;
     margin: 0;
+    /* What the live map draws its circles with: pale ink, outlined in ink (the state on screen, heavier). */
+    accent-color: var(--muted);
+    color: var(--text);
   }
   figcaption {
     font-family: var(--serif);
@@ -129,6 +133,21 @@ export default css`
     }
     &:-moz-meter-sub-sub-optimum::-moz-meter-bar {
       background: ${light};
+    }
+  }
+  /* The live map, when it shows: the basemap printed in ink, in a square frame. The circles are on the
+     same canvas, and ink and paper survive the filter. */
+  .maplibregl-map {
+    border: 1px solid var(--text);
+  }
+  .maplibregl-canvas {
+    filter: grayscale(1) contrast(1.15);
+  }
+  ${map}
+  &:has(> .maplibregl-map:not([hidden])) > ol {
+    border: 0;
+    .react-aria-Link {
+      border: 1px solid var(--text);
     }
   }
   &[aria-busy='true'] ol {

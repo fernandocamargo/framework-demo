@@ -122,3 +122,23 @@ test('the orders page is named by schema.org, and the same markup wears every sk
   await idle(page);
   expect(await markup()).toBe(before);
 });
+
+test('the live map is off until the network lab turns it on, and the list of tiles stays', async ({ page }) => {
+  await signIn(page, 'Olivia');
+  await open(page, '#/orders');
+  expect(await page.locator('figure .maplibregl-map').count()).toBe(0);
+  expect(await tiles(page).count()).toBe(51);
+
+  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
+  const flags = page.getByRole('complementary', { name: 'Network lab' }).getByRole('region', { name: 'Feature flags' });
+  await act(page, () => page.getByRole('tab', { name: 'Flags' }).click());
+  await act(page, () =>
+    flags
+      .getByRole('radiogroup', { name: /Live map/ })
+      .getByRole('radio', { name: 'On' })
+      .locator('xpath=ancestor::label')
+      .click(),
+  );
+  expect(await tiles(page).count()).toBe(51);
+  expect(await problems(page)).toEqual([]);
+});

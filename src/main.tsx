@@ -33,7 +33,12 @@ const world: Env['world'] =
     ? 'memory'
     : 'dummyjson';
 // GrowthBook serves the real world's flags when its client key is in the build (.env.local).
-const env: Env = { apiUrl: 'https://dummyjson.com', flagsKey: import.meta.env['VITE_GROWTHBOOK_CLIENT_KEY'], world };
+const env: Env = {
+  apiUrl: 'https://dummyjson.com',
+  flagsKey: import.meta.env['VITE_GROWTHBOOK_CLIENT_KEY'],
+  mapsKey: import.meta.env['VITE_MAPTILER_KEY'],
+  world,
+};
 const entity = { id: world };
 const navigation: Navigation = { go };
 // One cache for the app's life, so a page's reads survive a dialog opening over it.

@@ -8,6 +8,15 @@ import rules from '../default';
 // abbreviation names the state, and the count is the value. Nothing else in the markup changes.
 export default css`
   ${rules}
+  /* The live map's circles are outlined in the ground's navy, which the pale basemap shows; the
+     figure's own words keep the page's text. */
+  & {
+    color: var(--bg);
+  }
+  figcaption,
+  ol {
+    color: var(--text);
+  }
   ol {
     gap: 0.5rem 0.3rem;
   }
@@ -28,6 +37,22 @@ export default css`
     align-content: start;
     min-block-size: 5.2rem;
     font-size: 0.7rem;
+  }
+  /* With the live map the tiles are its legend, in rows: their labels would not fit, and the map has none. */
+  &:has(> .maplibregl-map:not([hidden])) {
+    li {
+      padding-block-start: 0;
+    }
+    meta,
+    [itemprop='geo'] {
+      display: none;
+    }
+    li[itemtype$='/Observation']::before {
+      content: none;
+    }
+    .react-aria-Link {
+      min-block-size: 0;
+    }
   }
   [itemprop='alternateName']::after,
   [itemprop='observationAbout']::after,

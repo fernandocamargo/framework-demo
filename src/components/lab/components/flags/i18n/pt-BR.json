@@ -15,5 +15,8 @@
   "components/lab/components/flags/flags/largeChangeAt/name": "A mudança em massa pergunta de novo acima de",
   "components/lab/components/flags/flags/largeChangeAt/ways/moderators": "Moderação a 10%, os outros a 50%",
   "components/lab/components/flags/flags/largeChangeAt/ways/usual": "Todos a 50%",
-  "components/lab/components/flags/flags/largeChangeAt/ways/soon": "Todos a 10%"
+  "components/lab/components/flags/flags/largeChangeAt/ways/soon": "Todos a 10%",
+  "components/lab/components/flags/flags/liveMap/name": "Mapa ao vivo",
+  "components/lab/components/flags/flags/liveMap/ways/on": "Ligado",
+  "components/lab/components/flags/flags/liveMap/ways/off": "Desligado"
 }

@@ -43,6 +43,15 @@ export const definitions = {
       usual: () => 'usual',
     },
   },
+  // A live map of the orders' states beside the grid of tiles. Served off until the lab turns it on, so the
+  // flows never reach the network for a basemap; GrowthBook has no such flag, so its world gets the fallback.
+  liveMap: {
+    key: 'live-map',
+    variants: { off: false, on: true },
+    fallback: true,
+    ways: { off: () => 'off', on: () => 'on' },
+    served: 'off',
+  },
   // Counting stock from the catalogue's rows, with − and +: rolled out to admins first.
   stockCount: {
     key: 'stock-count',

@@ -6,6 +6,7 @@ export default {
       name: 'Bulk change asks again above',
       ways: { moderators: 'Moderators at 10%, others at 50%', soon: 'Everyone at 10%', usual: 'Everyone at 50%' },
     },
+    liveMap: { name: 'Live map', ways: { off: 'Off', on: 'On' } },
     stockCount: {
       name: 'Stock count in the rows',
       ways: { admins: 'Admins only', everyone: 'Everyone', nobody: 'Nobody' },

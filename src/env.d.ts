@@ -11,6 +11,8 @@ declare module 'framework' {
     apiUrl: string;
     /** GrowthBook's client key, public by design: with it, GrowthBook serves the DummyJSON world's flags. */
     flagsKey?: string;
+    /** MapTiler's key for the live map's basemap, public by design: without it the map uses OpenFreeMap's style. */
+    mapsKey?: string;
     /** Which world the app sees: DummyJSON over the network, or the same API answered in memory. */
     world: 'dummyjson' | 'memory';
   }
@@ -80,6 +82,8 @@ declare module 'framework' {
     deletions: boolean;
     /** The percentage above which a bulk price change asks a second time. */
     largeChangeAt: number;
+    /** A live map of the orders' states beside the grid of tiles, where the browser can draw one. */
+    liveMap: boolean;
     /** Counting stock from the catalogue's rows, with − and +. */
     stockCount: boolean;
   }

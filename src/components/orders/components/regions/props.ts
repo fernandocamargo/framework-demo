@@ -2,12 +2,21 @@
 // selects it (selecting the selected state again clears the choice).
 import { format, HOME } from '@/address';
 import { byRegion } from '@/services/orders/regions';
+import { liveMap } from '@/widgets/live-map';
 
-export default ({ async: { default: orders }, i18n, route }) => {
+export default ({
+  async: {
+    default: { orders, style },
+  },
+  flags,
+  i18n,
+  route,
+}) => {
   const tallies = byRegion(orders);
   return {
     caption: i18n.caption,
     label: i18n.label,
+    map: flags.liveMap ? liveMap(style) : undefined,
     max: Math.max(0, ...tallies.map((tally) => tally.orders)),
     tiles: tallies.map((tally) => {
       const current = route.region === tally.code;

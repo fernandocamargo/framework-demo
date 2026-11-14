@@ -1,5 +1,6 @@
 import { css } from 'framework';
 
+import map from '../../map';
 import tiles from '../../tiles';
 
 // The map as tiles on a grid of the country's shape. Each tile's fill is its meter, stretched behind
@@ -10,6 +11,9 @@ export default css`
     display: grid;
     gap: 0.6rem;
     margin: 0;
+    /* What the live map draws its circles with: the accent, outlined in the page's text (the state on screen, heavier). */
+    accent-color: var(--accent);
+    color: var(--text);
   }
   figcaption {
     color: var(--muted);
@@ -110,6 +114,12 @@ export default css`
       background: color-mix(in oklab, var(--accent) 12%, var(--surface));
     }
   }
+  /* The live map, when it shows: in a rounded frame with the page's border. */
+  .maplibregl-map {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  ${map}
   /* While the orders are read: the map's frame, empty. */
   &[aria-busy='true'] ol {
     min-block-size: 26rem;

@@ -2,8 +2,9 @@ import { Link } from 'react-aria-components';
 
 // The states as a map of tiles, in markup: each one an observation of a state's orders, placed by
 // the skin (style/tiles.ts). Its fill is a meter: the count as a three-step choropleth, with no script.
-export default ({ caption, className, label, max, tiles }) => (
-  <figure className={className}>
+// With the live map on, `ref` hands the figure to widgets/live-map, which reads these same items.
+export default ({ caption, className, label, map, max, tiles }) => (
+  <figure className={className} ref={map}>
     <figcaption>{caption}</figcaption>
     <ol aria-label={label}>
       {tiles.map((tile) => (
