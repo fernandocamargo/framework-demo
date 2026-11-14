@@ -423,6 +423,11 @@ export function component(spec: Spec) {
     }
     // What did not change since the last output is the element React showed then, and it skips it.
     const rendered = shareElements(last.current?.rendered, withScope(scope, () => module.render(shaped))) as ReactNode
+    // The same output with the same decision is the element React showed, and it renders nothing below.
+    if (last.current && rendered === last.current.rendered && allowed === last.current.allowed) {
+      last.current = { ...last.current, inputs, props, shaped }
+      return last.current.element
+    }
     // What this folder's acl.ts decided reaches every component below, until one of them decides otherwise.
     const element = createElement(ScopeContext, { value: scope }, module.acl ? createElement(AclContext, { value: allowed }, rendered) : rendered)
     last.current = { inputs, props, shaped, allowed, rendered, element }
