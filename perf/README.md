@@ -162,3 +162,21 @@ What is left, and why:
 
 Beyond the visit, measured once: fifteen navigations left before they answer, at 750 ms of latency, each end as a fresh load of the same address, in both engines. A save in another tab renders the catalogue and one row. WebKit renders the rows twice at a sign-in from another tab (the permissions and the flags arrive apart), Chromium once. Over 210 rounds of navigation the page keeps 114 more DOM nodes per round: react-aria's `runAfterTransition` holds an element removed while one of its CSS transitions runs, and through it the editor closed by a save. Opening and closing the editor at a person's pace keeps none.
 
+## After the third round's follow-ups
+
+Four of the round's options, built. The same 39 steps, before and after on one day; Chromium three runs, WebKit three.
+
+| | Chromium before | after | WebKit before | after |
+|---|---|---|---|---|
+| misses | 0 | 0 | 0 | 0 |
+| render calls, thrown away | 417, 17 | 419, 17 | 418, 17 | 417, 14 |
+| framework rendered again (changing nothing) | 246 (7) | 246 (5) | 247 (7) | 247 (5) |
+| other rendered again (changing nothing) | 4,650 (1,895) | 4,573 to 4,687 (1,834 to 1,925) | 4,484 (1,762) | 4,451 (1,728) |
+| further steps: framework (changing nothing) | 34 (2) | 34 (4) | 34 (1) | 34 (3) |
+| further steps: other (changing nothing) | 741 (371) | 579 (229) | 744 (362) | 582 (220) |
+
+- **A view follows the route fields its files read.** The lab's "sell out" button is a component of its own that reads `route.edit`; the lab reads none of the address. The editor opening and closing no longer renders the lab (2 of the 7).
+- **The lab's sliders keep the keyboard.** A `key` that changed with the setting mounted them again at each step. They now hold their own value, as the editor's fields do. The further steps' slider steps focus once and press twice. The lab still renders once when its setting changes, to learn it, and shows nothing new: those are the further steps' two more "changing nothing", against 162 fewer of react-aria's re-renders.
+- **A function that reads the render is kept** while what it reads is the same (`keep`). The sliders' outputs now get the messages themselves, which stay the same.
+- **A product's modal opens once.** `components/modal` holds the overlay and has no read; the product's placeholder, content and error are each its `Dialog` inside it. One overlay mounts and the modal animates in once (twice before). React still holds the content 300 ms after the skeleton shows: the renders thrown away at "open a product" are 11 in every run after, and 11 to 14 before, by how many of react-aria's commits fall in the wait. Its react-aria re-renders are 113 (45) in every run after, and between 88 (30) and 128 (53) before.
+
