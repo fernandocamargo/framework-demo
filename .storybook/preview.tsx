@@ -1,6 +1,6 @@
 // Storybook's stage for the app's components: every story renders inside the app's `Root`, as the
-// shell (src/main.tsx) renders the page, in the memory world, with the page's styles. Two
-// toolbars: the page's language, and who is signed in, signed in for real with that role's demo
+// shell (src/main.tsx) renders the page, in the memory world, with the page's styles. Three
+// toolbars: the page's language, the skin it wears, and who is signed in, signed in for real with that role's demo
 // account before the story renders, so the session, what may be done and the flags agree. A story
 // starts at the address its example names, and then follows its links, as the app does.
 
@@ -15,7 +15,9 @@ import memory from '../src/clients/memory';
 import { DEMOS } from '../src/components/session/form';
 import { LOCALES } from '../src/locales';
 import { featureFlags, permissions, whoIsSignedIn } from '../src/reads';
+import { SKINS } from '../src/skins';
 import '../src/base.css';
+import '../src/broadsheet.css';
 
 const env: Env = { apiUrl: 'https://dummyjson.com', world: 'memory' };
 const entity = { id: 'memory' };
@@ -47,7 +49,7 @@ function Stage({ children, start }: { children: (route: Route) => ReactNode; sta
 }
 
 const inRoot: Decorator = (Story, context) => {
-  const { locale, role } = context.globals as { locale: (typeof LOCALES)[number]; role: string };
+  const { locale, role, skin } = context.globals as { locale: (typeof LOCALES)[number]; role: string; skin: string };
   const start = (context.parameters['framework'] as undefined | { route?: Partial<Route> })?.route;
   return (
     <I18nProvider locale={locale}>
@@ -63,6 +65,7 @@ const inRoot: Decorator = (Story, context) => {
             locale={locale}
             navigation={navigation}
             route={route}
+            skin={skin}
             user={whoIsSignedIn}
           >
             <Story />
@@ -97,8 +100,17 @@ export default {
         title: 'Signed in as',
       },
     },
+    skin: {
+      description: 'The skin the page wears',
+      toolbar: {
+        dynamicTitle: true,
+        icon: 'paintbrush',
+        items: SKINS.map((value) => ({ title: value[0]!.toUpperCase() + value.slice(1), value })),
+        title: 'Skin',
+      },
+    },
   },
-  initialGlobals: { locale: 'en', role: 'guest' },
+  initialGlobals: { locale: 'en', role: 'guest', skin: 'default' },
   loaders: [({ globals }) => signInAs(globals['role'] as string)],
   parameters: {
     // Each story of a docs page in a frame of its own: a story's address, its dialogs and its keys

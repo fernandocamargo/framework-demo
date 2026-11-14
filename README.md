@@ -284,6 +284,12 @@ Two rules hold for every render:
 - the network lab, open and idle, renders nothing (two renders a second before);
 - typing six keys in the editor renders no framework component, and 50 of react-aria's (602 at the baseline).
 
+## Two skins, one markup
+
+The same app wears two skins, and `?skin=broadsheet` (or the switch in the header) changes it in place. The default is a quiet back office. Broadsheet sets the shop as a newspaper: a masthead over a double rule, the catalogue as columns of products with greyscale photographs, a product as an article with a drop cap and its reviews as letters, the bulk change as the market page.
+
+Not one element or attribute changes between them; [`e2e/skins.spec.ts`](e2e/skins.spec.ts) checks it. A skin is a sheet per component folder (`style/skins/broadsheet/index.ts`) and one for the page ([`src/broadsheet.css`](src/broadsheet.css), as [`base.css`](src/base.css) is for the default). They style what the markup says each piece is: an `itemprop`, an element, a role. Storybook has the same switch in its toolbar.
+
 ## Storybook
 
 `npm run storybook` shows every component folder at http://localhost:6006, and nobody writes a story. The framework writes one file per folder ([`framework/storybook/`](framework/storybook)), and writes them again as folders and files come and go:
@@ -369,7 +375,9 @@ src/
   env.d.ts          What this app injects: Env, Route, Flags, Navigation.
   address.ts        The address, as the route and back.
   reads.ts          What Root reads for the app: who is signed in, what they may do, their flags.
-  base.css          Design tokens and the look of the controls.
+  base.css          Design tokens and the look of the controls, for the default skin.
+  broadsheet.css    The same, for the Broadsheet skin.
+  skins.ts          The skins, and `?skin=` in the address.
   clients/          Transports.
   services/         Operations, and what makes what stale.
   components/       Component folders.

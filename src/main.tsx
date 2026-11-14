@@ -21,7 +21,9 @@ import App from './components/app';
 import States from './components/states';
 import { currentLocale, type Locale } from './locales';
 import { featureFlags, permissions, whoIsSignedIn } from './reads';
+import { currentSkin, type Skin } from './skins';
 import './base.css';
+import './broadsheet.css';
 
 // `?world=memory` (or a build with VITE_WORLD=memory) swaps the API client for one that answers
 // from fixtures. Nothing else changes: the same services, flows and components run on it.
@@ -131,9 +133,27 @@ function useLocale() {
   return locale;
 }
 
+// The skin is part of the address too (`?skin=broadsheet`, src/skins.ts). A change shows in a
+// transition: the page keeps the old skin until every component on it has its new sheet.
+function useSkin() {
+  const [skin, setSkin] = useState<Skin>(currentSkin);
+  const [, startSwitch] = useTransition();
+  useEffect(() => {
+    const follow = () => startSwitch(() => setSkin(currentSkin()));
+    window.addEventListener('skinchange', follow);
+    window.addEventListener('popstate', follow);
+    return () => {
+      window.removeEventListener('skinchange', follow);
+      window.removeEventListener('popstate', follow);
+    };
+  }, []);
+  return skin;
+}
+
 function Shell() {
   const [route, navigating, hash] = useRoute();
   const locale = useLocale();
+  const skin = useSkin();
   const page = pageOf(hash);
   return (
     <I18nProvider locale={locale}>
@@ -146,6 +166,7 @@ function Shell() {
         locale={locale}
         navigation={navigation}
         route={route}
+        skin={skin}
         sync={`stockroom:${world}`}
         user={whoIsSignedIn}
       >

@@ -286,7 +286,8 @@ One `EventTarget` carries three kinds of event.
 ### Skins
 
 - `style/skins/<name>/index.ts` default-exports plain CSS through `css` (`String.raw`). The runtime nests it under the component's escaped class, in one `<style>`, the first time the component renders with that skin. Each skin is its own lazy chunk.
-- `Root`'s `skin` picks the page's skin; the other skins' sheets stop applying.
+- `Root`'s `skin` picks the page's skin; the other skins' sheets stop applying. The page says which it wears (`<html data-skin>`), for what no component owns: a skin's page-level sheet, and what react-aria renders in portals.
+- A component with no sheet for the page's skin shows unstyled, so a skin has a sheet for every component folder.
 - In `style/` files, the default import of another component folder becomes its escaped selector, so `${Lab} { … }` targets it.
 - Content a component renders in a portal (a dialog) takes the component's class, so the skin reaches it.
 

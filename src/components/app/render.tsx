@@ -11,6 +11,7 @@ import Detail from '@/components/product/detail';
 import Editor from '@/components/product/editor';
 import Remove from '@/components/product/remove';
 import Session from '@/components/session';
+import Skin from '@/components/skin';
 
 // The page, as schema.org names one: its name, the data it is based on (the world it reads), and the
 // catalogue in its main part.
@@ -29,6 +30,7 @@ export default ({ askToSignIn, brand, className, dialogs, navigating, signInReas
       </nav>
       <Lab />
       <Language />
+      <Skin />
       <Keyboard />
       <Session asked={askToSignIn} reason={signInReason} />
     </header>

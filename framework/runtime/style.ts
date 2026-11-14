@@ -31,8 +31,13 @@ const media = (skin: string | undefined) => (skin === active ? 'all' : 'not all'
 /** The page's skin, which a preload loads ahead of the component's first render. */
 export const activeSkin = () => active;
 
-/** Makes `skin` the page's skin: its sheets apply, every other skin's sheets stop applying. */
+/**
+ * Makes `skin` the page's skin: its sheets apply, every other skin's sheets stop applying. The page
+ * says which it is (`<html data-skin>`), for what no component owns: the page's own sheet, and
+ * what react-aria renders in portals.
+ */
 export function activateSkin(skin: string) {
+  document.documentElement.dataset['skin'] = skin;
   if (skin === active) return;
   active = skin;
   for (const sheet of sheets.values()) sheet.media = media(sheet.dataset['skin']);
