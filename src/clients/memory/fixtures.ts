@@ -138,3 +138,99 @@ export const users = [
     username: 'averyp',
   },
 ];
+
+// The memory world's customers and orders. Twelve states, each with two customers in a city of
+// that state, and forty carts of the catalogue's products: DummyJSON's users and carts, by rule.
+const STATES = [
+  { city: 'Austin', code: 'TX', lat: 30.27, lng: -97.74, postalCode: '78701', state: 'Texas' },
+  { city: 'Albany', code: 'NY', lat: 42.65, lng: -73.76, postalCode: '12207', state: 'New York' },
+  { city: 'Tampa', code: 'FL', lat: 27.95, lng: -82.46, postalCode: '33602', state: 'Florida' },
+  { city: 'Chicago', code: 'IL', lat: 41.88, lng: -87.63, postalCode: '60601', state: 'Illinois' },
+  { city: 'Seattle', code: 'WA', lat: 47.61, lng: -122.33, postalCode: '98101', state: 'Washington' },
+  { city: 'Denver', code: 'CO', lat: 39.74, lng: -104.99, postalCode: '80202', state: 'Colorado' },
+  { city: 'Atlanta', code: 'GA', lat: 33.75, lng: -84.39, postalCode: '30303', state: 'Georgia' },
+  { city: 'Boston', code: 'MA', lat: 42.36, lng: -71.06, postalCode: '02108', state: 'Massachusetts' },
+  { city: 'Portland', code: 'OR', lat: 45.52, lng: -122.68, postalCode: '97201', state: 'Oregon' },
+  { city: 'Tucson', code: 'AZ', lat: 32.22, lng: -110.97, postalCode: '85701', state: 'Arizona' },
+  { city: 'Duluth', code: 'MN', lat: 46.79, lng: -92.1, postalCode: '55802', state: 'Minnesota' },
+  { city: 'Provo', code: 'UT', lat: 40.23, lng: -111.66, postalCode: '84601', state: 'Utah' },
+];
+const FIRST_NAMES = [
+  'Amara',
+  'Bruno',
+  'Clara',
+  'Diego',
+  'Elena',
+  'Felix',
+  'Gina',
+  'Hugo',
+  'Ines',
+  'Jonas',
+  'Kira',
+  'Leo',
+];
+const LAST_NAMES = [
+  'Alves',
+  'Brooks',
+  'Chen',
+  'Dubois',
+  'Evans',
+  'Fischer',
+  'Garcia',
+  'Hayes',
+  'Ito',
+  'Jensen',
+  'Kowalski',
+  'Lopes',
+];
+const STREETS = ['Main Street', 'Oak Avenue', 'Lake Road', 'Cedar Lane', 'Market Street', 'River Drive'];
+
+const cents = (value: number) => Math.round(value * 100) / 100;
+
+/** Customer n (0 to 23) lives in state n % 12, so each state has two. Ids 101 to 124. */
+export const customers = Array.from({ length: 24 }, (_, index) => {
+  const place = STATES[index % STATES.length]!;
+  return {
+    address: {
+      address: `${100 + index * 17} ${STREETS[index % STREETS.length]}`,
+      city: place.city,
+      coordinates: { lat: place.lat, lng: place.lng },
+      country: 'United States',
+      postalCode: String(Number(place.postalCode) + Math.floor(index / STATES.length)).padStart(5, '0'),
+      state: place.state,
+      stateCode: place.code,
+    },
+    firstName: FIRST_NAMES[index % FIRST_NAMES.length]!,
+    id: 101 + index,
+    lastName: LAST_NAMES[(index * 5) % LAST_NAMES.length]!,
+  };
+});
+
+/** Cart k (1 to 40) holds 1 to 3 products, 1 to 4 of each, at 5% off; its customer is 101 + (7k % 24). */
+export const carts = Array.from({ length: 40 }, (_, index) => {
+  const k = index + 1;
+  const lines = Array.from({ length: 1 + (k % 3) }, (_, offset) => {
+    const product = products[(k * 5 + offset * 11) % products.length]!;
+    const quantity = 1 + ((k + offset) % 4);
+    const total = cents(product.price * quantity);
+    return {
+      discountedTotal: cents(total * 0.95),
+      discountPercentage: 5,
+      id: product.id,
+      price: product.price,
+      quantity,
+      thumbnail: product.thumbnail,
+      title: product.title,
+      total,
+    };
+  });
+  return {
+    discountedTotal: cents(lines.reduce((sum, line) => sum + line.discountedTotal, 0)),
+    id: k,
+    products: lines,
+    total: cents(lines.reduce((sum, line) => sum + line.total, 0)),
+    totalProducts: lines.length,
+    totalQuantity: lines.reduce((sum, line) => sum + line.quantity, 0),
+    userId: 101 + ((k * 7) % 24),
+  };
+});

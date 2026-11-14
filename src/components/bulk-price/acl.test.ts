@@ -13,7 +13,7 @@ const at = (percent: number) => {
 };
 const snapshot = (role: 'admin' | 'guest' | 'moderator' | 'user', prices: 'update'[], priceChange: null | number) => ({
   allowed: true,
-  grants: { prices, products: ['read' as const] },
+  grants: { customers: [], orders: [], prices, products: ['read' as const] },
   limits: { priceChange },
   role,
 });

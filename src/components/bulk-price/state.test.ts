@@ -22,7 +22,7 @@ const items = [item(1, 100), item(2, 50), item(3, 10)];
 /** The backend's snapshot for someone granted price changes, with the folder's decision on it. */
 const granted = (allowed = true) => ({
   allowed,
-  grants: { prices: ['update'], products: ['read'] },
+  grants: { customers: [], orders: [], prices: ['update'], products: ['read'] },
   limits: { priceChange: null },
   role: 'admin',
 });
@@ -156,7 +156,10 @@ test("an apply the folder's acl.ts refuses goes nowhere, whatever sent it", asyn
 
 test('without the grant to update prices, the chart is declared with no apply at all', async () => {
   const save = vi.fn(async () => ({}));
-  const { flow } = await atPreview(save, { ...granted(), grants: { prices: [], products: ['read'] } });
+  const { flow } = await atPreview(save, {
+    ...granted(),
+    grants: { customers: [], orders: [], prices: [], products: ['read'] },
+  });
   flow.send({ type: 'apply' });
   await flow.settled();
   expect(flow.states).toEqual(['previewing']);

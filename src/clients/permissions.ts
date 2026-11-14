@@ -3,7 +3,12 @@
 // answer it from here: the memory world's server, and a layer over DummyJSON's wire. The app never
 // imports this file; it reads whatever the API answers, and tests its own rules against it.
 export type Permissions = {
-  grants: { prices: 'update'[]; products: ('create' | 'delete' | 'read' | 'update')[] };
+  grants: {
+    customers: 'read'[];
+    orders: 'read'[];
+    prices: 'update'[];
+    products: ('create' | 'delete' | 'read' | 'update')[];
+  };
   /** The largest price change one may apply, in percent; null for no limit. */
   limits: { priceChange: null | number };
   role: 'admin' | 'guest' | 'moderator' | 'user';
@@ -11,12 +16,20 @@ export type Permissions = {
 
 const BY_ROLE: Record<Permissions['role'], Omit<Permissions, 'role'>> = {
   admin: {
-    grants: { prices: ['update'], products: ['read', 'create', 'update', 'delete'] },
+    grants: {
+      customers: ['read'],
+      orders: ['read'],
+      prices: ['update'],
+      products: ['read', 'create', 'update', 'delete'],
+    },
     limits: { priceChange: null },
   },
-  guest: { grants: { prices: [], products: ['read'] }, limits: { priceChange: 0 } },
-  moderator: { grants: { prices: ['update'], products: ['read', 'create', 'update'] }, limits: { priceChange: 20 } },
-  user: { grants: { prices: [], products: ['read'] }, limits: { priceChange: 0 } },
+  guest: { grants: { customers: [], orders: [], prices: [], products: ['read'] }, limits: { priceChange: 0 } },
+  moderator: {
+    grants: { customers: [], orders: ['read'], prices: ['update'], products: ['read', 'create', 'update'] },
+    limits: { priceChange: 20 },
+  },
+  user: { grants: { customers: [], orders: [], prices: [], products: ['read'] }, limits: { priceChange: 0 } },
 };
 
 export const permissionsOf = (role: null | string): Permissions => {

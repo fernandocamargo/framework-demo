@@ -57,7 +57,12 @@ declare module 'framework' {
    * Components get it as `acl`, with `allowed` on it, and test their rules against it.
    */
   interface Acl {
-    grants: { prices: 'update'[]; products: ('create' | 'delete' | 'read' | 'update')[] };
+    grants: {
+      customers: 'read'[];
+      orders: 'read'[];
+      prices: 'update'[];
+      products: ('create' | 'delete' | 'read' | 'update')[];
+    };
     /** The largest price change one may apply, in percent; null for no limit. */
     limits: { priceChange: null | number };
     role: 'admin' | 'guest' | 'moderator' | 'user';

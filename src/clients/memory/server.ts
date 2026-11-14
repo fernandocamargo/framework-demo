@@ -9,7 +9,13 @@ import { permissionsOf } from '../permissions';
 import { sleep } from '../storage';
 import * as fixtures from './fixtures';
 
-type Data = { categories: { name: string; slug: string }[]; products: Product[]; users: typeof fixtures.users };
+type Data = {
+  carts: typeof fixtures.carts;
+  categories: { name: string; slug: string }[];
+  customers: typeof fixtures.customers;
+  products: Product[];
+  users: typeof fixtures.users;
+};
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
@@ -47,13 +53,21 @@ export function createServer({
     const selected = sorted.slice(skip, skip + limit).map((product) => select(product, fields));
     return { limit: selected.length, products: selected, skip, total: items.length };
   };
-  const select = (product: Product, fields?: string[]) =>
+  const select = <T extends { id: number }>(product: T, fields?: string[]) =>
     fields
       ? Object.fromEntries([
           ['id', product.id],
-          ...fields.filter((field) => field in product).map((field) => [field, product[field as keyof Product]]),
+          ...fields.filter((field) => field in product).map((field) => [field, product[field as keyof T]]),
         ])
       : product;
+  // A list of carts or users, paged and selected as the products are; the key names the list.
+  const listing = <T extends { id: number }>(key: string, items: T[], query: URLSearchParams) => {
+    const skip = Number(query.get('skip') ?? 0);
+    const limit = Number(query.get('limit') ?? 30) || items.length;
+    const fields = query.get('select')?.split(',');
+    const selected = items.slice(skip, skip + limit).map((item) => select(item, fields));
+    return { [key]: selected, limit: selected.length, skip, total: items.length };
+  };
 
   const route = (
     method: string,
@@ -126,6 +140,17 @@ export function createServer({
     if (product && method === 'PUT') return json(200, { ...product, ...body });
     if (product && method === 'DELETE')
       return json(200, { ...product, deletedOn: new Date(now()).toISOString(), isDeleted: true });
+
+    if (method === 'GET' && resource === '/carts') return json(200, listing('carts', data.carts, query));
+    if (method === 'GET' && resource === '/users') return json(200, listing('users', data.customers, query));
+    const cartId = /^\/carts\/(\d+)$/.exec(resource);
+    const cart = cartId && data.carts.find((candidate) => candidate.id === Number(cartId[1]));
+    if (cartId && !cart) return json(404, { message: `Cart with id '${cartId[1]}' not found` });
+    if (cart && method === 'GET') return json(200, select(cart, query.get('select')?.split(',')));
+    const userId = /^\/users\/(\d+)$/.exec(resource);
+    const customer = userId && data.customers.find((candidate) => candidate.id === Number(userId[1]));
+    if (userId && !customer) return json(404, { message: `User with id '${userId[1]}' not found` });
+    if (customer && method === 'GET') return json(200, select(customer, query.get('select')?.split(',')));
     return json(404, { message: `No route for ${method} ${path}` });
   };
 
