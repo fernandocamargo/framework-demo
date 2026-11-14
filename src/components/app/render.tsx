@@ -7,6 +7,8 @@ import Keyboard from '@/components/keyboard';
 import Lab from '@/components/lab';
 import Language from '@/components/language';
 import Modal from '@/components/modal';
+import Orders from '@/components/orders';
+import OrderDetail from '@/components/orders/detail';
 import Palette from '@/components/palette';
 import Detail from '@/components/product/detail';
 import Editor from '@/components/product/editor';
@@ -59,11 +61,17 @@ export default ({
     <main id="main" tabIndex={-1}>
       {section === 'products' && <Catalogue />}
       {section === 'report' && <Report />}
+      {section === 'orders' && <Orders />}
     </main>
     {/* The product's modal opens at once; the product's dialog waits for its read inside it. */}
     {dialogs.view !== null && (
       <Modal onClose={() => go({ view: null })}>
         <Detail />
+      </Modal>
+    )}
+    {dialogs.cart !== null && (
+      <Modal onClose={() => go({ cart: null })}>
+        <OrderDetail />
       </Modal>
     )}
     {dialogs.edit !== null && <Editor key={`edit-${dialogs.edit}`} />}

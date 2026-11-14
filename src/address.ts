@@ -11,7 +11,7 @@ export type Filters = Pick<Route, 'category' | 'order' | 'page' | 'q' | 'sort'>;
 export const SORT_KEYS: readonly SortKey[] = ['title', 'price', 'rating', 'stock'];
 
 /** The pages of the app: the first part of the address's path (`#/products`). */
-export const SECTIONS = ['products', 'report'] as const;
+export const SECTIONS = ['products', 'report', 'orders'] as const;
 export type Section = (typeof SECTIONS)[number];
 
 // Its order matters: it is the order of the address's fields.
@@ -22,7 +22,9 @@ export const HOME: Route = {
   sort: 'title',
   order: 'asc',
   page: 1,
+  region: '',
   view: null,
+  cart: null,
   edit: null,
   create: false,
   remove: null,
@@ -33,6 +35,7 @@ export const HOME: Route = {
 /** Every dialog closed. */
 export const CLOSED = {
   bulk: false,
+  cart: null,
   create: false,
   edit: null,
   remove: null,
@@ -49,14 +52,17 @@ export function parse(hash: string): Route {
   const query = new URLSearchParams(hash.split('?')[1] ?? '');
   const sort = query.get('sort') as SortKey;
   const path = hash.replace(/\?.*$/, '').replace(/^#\//, '');
+  const region = query.get('region') ?? '';
   return {
     bulk: query.has('bulk'),
+    cart: id(query.get('cart')),
     category: query.get('category') ?? '',
     create: query.has('create'),
     edit: id(query.get('edit')),
     order: query.get('order') === 'desc' ? 'desc' : 'asc',
     page: id(query.get('page')) ?? 1,
     q: query.get('q') ?? '',
+    region: /^[A-Z]{0,2}$/.test(region) ? region : '',
     remove: id(query.get('remove')),
     section: SECTIONS.find((section) => section === path) ?? HOME.section,
     signin: query.has('signin'),

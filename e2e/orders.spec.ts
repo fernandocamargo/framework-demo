@@ -1,0 +1,124 @@
+// The orders page, in the memory world: who may see it, the map of the states, the ledger of one
+// state and an order's dialog, with what each role sees of the customer. Every step is: act, wait
+// for the framework to say it is idle, then look once.
+
+import { expect, type Page, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+
+import { checkMicrodata, type Vocabulary } from '../framework/microdata/check';
+
+const vocabulary = JSON.parse(
+  readFileSync(new URL('../framework/microdata/vocabulary.json', import.meta.url), 'utf8'),
+) as Vocabulary;
+
+declare global {
+  interface Window {
+    __framework: { fromTab(): Promise<void>; idle(): Promise<void> };
+  }
+}
+
+const idle = (page: Page) => page.evaluate(() => window.__framework.idle());
+/** Does something, then waits until the app has nothing pending. */
+const act = async (page: Page, action: () => Promise<unknown>) => {
+  await action();
+  await idle(page);
+};
+const open = (page: Page, hash: string) => act(page, () => page.goto(`./?world=memory${hash}`));
+const problems = (page: Page) => page.evaluate(checkMicrodata, vocabulary);
+const dialog = (page: Page, name: RegExp | string) => page.getByRole('dialog', { name });
+/** The map's tiles: its list's own items. */
+const tiles = (page: Page) => page.getByRole('list', { name: 'Orders by state' }).locator(':scope > li');
+/** The ledger's rows: its list's own items. */
+const ledger = (page: Page) => page.getByRole('list', { exact: true, name: 'Orders' }).locator(':scope > li');
+/** The address's fields: they follow the hash (`#/orders?region=TX`). */
+const fields = (page: Page) => new URLSearchParams(new URL(page.url()).hash.split('?')[1] ?? '');
+const summary = (page: Page) => page.getByRole('status').first().innerText();
+
+async function signIn(page: Page, account: string) {
+  await open(page, '#/orders?signin=1');
+  const form = dialog(page, 'Sign in');
+  await act(page, () => form.getByRole('button', { name: new RegExp(`^${account},`) }).click());
+  await act(page, () => form.getByRole('button', { name: 'Sign in' }).click());
+}
+
+test.beforeEach(({ page }) => {
+  page.on('pageerror', (error) => {
+    throw error;
+  });
+});
+
+test('as a guest, the orders page holds no map and no ledger, and asks to sign in', async ({ page }) => {
+  await open(page, '#/orders');
+  expect(await page.getByRole('note').innerText()).toContain('Orders are for admins and moderators.');
+  expect(await tiles(page).count()).toBe(0);
+  expect(await ledger(page).count()).toBe(0);
+  expect(await problems(page)).toEqual([]);
+});
+
+test('as a plain user, orders are told not to be theirs, and an order does not open even by its address', async ({
+  page,
+}) => {
+  await signIn(page, 'Avery');
+  await open(page, '#/orders');
+  expect(await page.getByRole('note').innerText()).toBe(
+    'Orders are for admins and moderators, and your account cannot see them.',
+  );
+  expect(await tiles(page).count()).toBe(0);
+
+  await open(page, '#/orders?cart=12');
+  expect(await dialog(page, 'Order 12').count()).toBe(0);
+});
+
+test('as a moderator, the map counts the orders and a state filters the ledger and the address', async ({ page }) => {
+  await signIn(page, 'Olivia');
+  await open(page, '#/orders');
+  expect(await tiles(page).count()).toBe(51);
+  expect(await summary(page)).toBe('40 orders');
+
+  const texas = page.getByRole('link', { name: 'Texas, 3 orders' });
+  await act(page, () => texas.click());
+  expect(fields(page).get('region')).toBe('TX');
+  expect(await texas.getAttribute('aria-current')).toBe('true');
+  expect(await summary(page)).toBe('3 orders to Texas');
+  // Texas's orders are the carts of the two customers who live there (fixtures: customers 101 and 113).
+  expect(await ledger(page).locator('a').allInnerTexts()).toEqual(['Order 12', 'Order 24', 'Order 36']);
+
+  await act(page, () => page.getByRole('link', { exact: true, name: 'Order 12' }).click());
+  const order = dialog(page, 'Order 12');
+  expect(await order.getByRole('list', { name: 'Items' }).locator(':scope > li').count()).toBeGreaterThan(0);
+  expect(await order.locator('[itemprop="addressLocality"]').innerText()).toBe('Austin');
+  expect(await order.locator('[itemprop="addressRegion"]').innerText()).toBe('TX');
+  expect(await order.locator('[itemprop="streetAddress"]').count()).toBe(0);
+  expect(await problems(page)).toEqual([]);
+
+  await act(page, () => page.keyboard.press('Escape'));
+  expect(await dialog(page, 'Order 12').count()).toBe(0);
+  expect(fields(page).get('region')).toBe('TX');
+});
+
+test('as an admin, the same order shows its street and the customer in full', async ({ page }) => {
+  await signIn(page, 'Emily');
+  await open(page, '#/orders?region=TX&cart=12');
+  const order = dialog(page, 'Order 12');
+  expect(await order.locator('[itemprop="streetAddress"]').innerText()).toBe('304 Main Street');
+  expect(await order.locator('[itemprop="name"]').first().innerText()).toBe('Amara Alves');
+  expect(await problems(page)).toEqual([]);
+});
+
+test('the orders page is named by schema.org, and the same markup wears every skin', async ({ page }) => {
+  await signIn(page, 'Olivia');
+  await open(page, '#/orders?region=TX');
+  expect(await problems(page)).toEqual([]);
+
+  // The markup of the page with the pointer out of the way, the ids react-aria generates normalised.
+  const markup = async () => {
+    await page.mouse.move(0, 0);
+    const html = await page.locator('main').evaluate((main) => main.outerHTML);
+    return html.replace(/react-aria\d+-/g, 'react-aria-').replace(/_r_[a-z0-9]+_/g, '_r_');
+  };
+  const before = await markup();
+
+  await page.goto('./?world=memory&skin=broadsheet#/orders?region=TX');
+  await idle(page);
+  expect(await markup()).toBe(before);
+});

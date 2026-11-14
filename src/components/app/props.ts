@@ -7,8 +7,10 @@ export type Props = {
   navigating: boolean;
 };
 
-export default ({ async: { default: page }, i18n, navigating }) => {
-  const { dialogs, session } = page;
+export default ({ acl, async: { default: page }, i18n, navigating }) => {
+  const { session } = page;
+  // An order's dialog is not mounted for someone who may not read orders: its address is not a way round.
+  const dialogs = { ...page.dialogs, cart: acl.grants.orders.includes('read') ? page.dialogs.cart : null };
   const changing = dialogs.edit !== null || dialogs.create || dialogs.remove !== null || dialogs.bulk;
   return {
     askToSignIn: !session && (page.signin || changing),

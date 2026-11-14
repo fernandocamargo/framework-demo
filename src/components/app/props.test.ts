@@ -5,15 +5,28 @@ import { messagesOf } from 'framework/testing';
 import * as messages from './i18n';
 import shape from './props';
 
-type Dialogs = { bulk: boolean; create: boolean; edit: null | number; remove: null | number; view: null | number };
-const closed: Dialogs = { bulk: false, create: false, edit: null, remove: null, view: null };
+type Dialogs = {
+  bulk: boolean;
+  cart: null | number;
+  create: boolean;
+  edit: null | number;
+  remove: null | number;
+  view: null | number;
+};
+const closed: Dialogs = { bulk: false, cart: null, create: false, edit: null, remove: null, view: null };
+const acl = (orders: 'read'[]) => ({ allowed: true, grants: { orders } });
+const admin = acl(['read']);
 const session = {
   expiresAt: 0,
   user: { firstName: 'Emily', id: 1, image: '', lastName: 'Johnson', username: 'emilys' },
 };
 const i18n = messagesOf(messages);
-const page = (answer: { dialogs?: Partial<Dialogs>; session: null | typeof session; signin?: boolean }) =>
+const page = (
+  answer: { dialogs?: Partial<Dialogs>; session: null | typeof session; signin?: boolean },
+  granted = admin,
+) =>
   shape({
+    acl: granted,
     async: {
       default: {
         section: 'products',
@@ -56,6 +69,7 @@ test('the address can ask for the sign-in dialog on its own', () => {
 test("the reason is in the locale's words", () => {
   const translated = messagesOf(messages, 'pt-BR', { 'test/signIn/reason': 'Entre para mudar o catálogo.' });
   const shaped = shape({
+    acl: admin,
     async: {
       default: { dialogs: { ...closed, edit: 4 }, section: 'products', session: null, signin: false, world: 'memory' },
     },
@@ -64,4 +78,12 @@ test("the reason is in the locale's words", () => {
     navigating: false,
   } as never);
   expect(shaped.signInReason).toBe('Entre para mudar o catálogo.');
+});
+
+test('an order opens for someone who may read orders', () => {
+  expect(page({ dialogs: { cart: 24 }, session })).toMatchObject({ dialogs: { cart: 24 } });
+});
+
+test('an order does not open for someone who may not read orders, however the address names it', () => {
+  expect(page({ dialogs: { cart: 24 }, session }, acl([]))).toMatchObject({ dialogs: { cart: null } });
 });

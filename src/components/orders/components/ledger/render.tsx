@@ -1,0 +1,51 @@
+import { Link } from 'react-aria-components';
+
+// The orders, as schema.org names them: each one an order, with its customer, the address it ships
+// to, and its price as the offer it was accepted at.
+export default ({ className, currency, empty, emptyText, i18n, orders, paging, summary }) => (
+  <section aria-label={i18n.label} className={className}>
+    <header>
+      <p role="status">{summary}</p>
+    </header>
+    {empty ? (
+      <p>{emptyText}</p>
+    ) : (
+      <ul aria-label={i18n.list}>
+        {orders.map((order) => (
+          <li itemScope itemType="https://schema.org/Order" key={order.id}>
+            <Link href={order.href}>
+              <span itemProp="orderNumber">{order.number}</span>
+            </Link>
+            <span itemProp="customer" itemScope itemType="https://schema.org/Person">
+              <span itemProp="name">{order.customer}</span>
+            </span>
+            <span itemProp="orderDelivery" itemScope itemType="https://schema.org/ParcelDelivery">
+              <span itemProp="deliveryAddress" itemScope itemType="https://schema.org/PostalAddress">
+                <span itemProp="addressLocality">{order.city}</span>,{' '}
+                <span itemProp="addressRegion">{order.region}</span>
+              </span>
+            </span>
+            <span>{order.items}</span>
+            <span itemProp="acceptedOffer" itemScope itemType="https://schema.org/Offer">
+              <data itemProp="price" value={order.price.value}>
+                {order.price.text}
+              </data>
+              <meta content={currency} itemProp="priceCurrency" />
+            </span>
+          </li>
+        ))}
+      </ul>
+    )}
+    {paging.shown && (
+      <nav aria-label={i18n.paging.label}>
+        <Link href={paging.previousHref ?? undefined} isDisabled={!paging.previousHref}>
+          {i18n.paging.previous}
+        </Link>
+        <span>{paging.text}</span>
+        <Link href={paging.nextHref ?? undefined} isDisabled={!paging.nextHref}>
+          {i18n.paging.next}
+        </Link>
+      </nav>
+    )}
+  </section>
+);

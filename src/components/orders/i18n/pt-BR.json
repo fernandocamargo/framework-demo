@@ -1,0 +1,6 @@
+{
+  "components/orders/title": "Pedidos",
+  "components/orders/restricted": "Pedidos são para administradores e moderadores, e a sua conta não pode vê-los.",
+  "components/orders/guest/note": "Pedidos são para administradores e moderadores.",
+  "components/orders/guest/signIn": "Entre para vê-los."
+}

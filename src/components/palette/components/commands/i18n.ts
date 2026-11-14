@@ -1,7 +1,7 @@
 // The palette's words, in English. Translations: i18n/<locale>.json.
 export default {
   field: 'Command or product',
-  go: { products: 'Products', report: 'Report', states: 'States gallery' },
+  go: { orders: 'Orders', products: 'Products', report: 'Report', states: 'States gallery' },
   none: 'Nothing matches. Type two characters or more to search the products.',
   placeholder: 'Type a command or a product',
   sections: {

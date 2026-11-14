@@ -26,6 +26,8 @@ declare module 'framework' {
   interface Route {
     /** Whether the bulk price change is open. */
     bulk: boolean;
+    /** The order whose details show. */
+    cart: null | number;
     category: string;
     /** Whether a new product is being written. */
     create: boolean;
@@ -34,6 +36,8 @@ declare module 'framework' {
     order: 'asc' | 'desc';
     page: number;
     q: string;
+    /** The US state whose orders show, as its code (`TX`); '' for all of them. */
+    region: string;
     /** The product whose deletion is being confirmed. */
     remove: null | number;
     /** Which page of the app shows. */

@@ -1,6 +1,7 @@
 {
   "components/palette/components/commands/field": "Comando ou produto",
   "components/palette/components/commands/go/products": "Produtos",
+  "components/palette/components/commands/go/orders": "Pedidos",
   "components/palette/components/commands/go/report": "Relatório",
   "components/palette/components/commands/go/states": "Galeria de estados",
   "components/palette/components/commands/none": "Nada corresponde. Digite dois caracteres ou mais para buscar os produtos.",

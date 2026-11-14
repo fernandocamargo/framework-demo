@@ -3,6 +3,7 @@
   "components/app/skip": "Pular para os produtos",
   "components/app/world/memory": "Mundo em memória",
   "components/app/world/dummyjson": "DummyJSON",
+  "components/app/sections/orders": "Pedidos",
   "components/app/sections/products": "Produtos",
   "components/app/sections/report": "Relatório",
   "components/app/signIn/reason": "Entre para mudar o catálogo.",

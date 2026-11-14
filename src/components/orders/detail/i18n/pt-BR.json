@@ -1,0 +1,12 @@
+{
+  "components/orders/detail/close": "Fechar",
+  "components/orders/detail/hidden": "A rua e o CEP são para administradores.",
+  "components/orders/detail/items": "Itens",
+  "components/orders/detail/loading": "Lendo o pedido",
+  "components/orders/detail/quantity": "{quantity, number} ×",
+  "components/orders/detail/title": "Pedido {number}",
+  "components/orders/detail/total": "Total",
+  "components/orders/detail/failed/title": "Não foi possível ler o pedido",
+  "components/orders/detail/failed/close": "Fechar",
+  "components/orders/detail/failed/retry": "Tentar de novo"
+}

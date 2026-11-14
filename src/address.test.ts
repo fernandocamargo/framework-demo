@@ -40,4 +40,22 @@ test('an unknown path falls back to products', () => {
 
 test('a section links to its page with every dialog closed', () => {
   expect(sectionHref('products')).toBe('#/products');
+  expect(sectionHref('orders')).toBe('#/orders');
+});
+
+test('the orders page reads its state and its order from the address', () => {
+  expect(parse('#/orders?region=TX&cart=24')).toEqual({ ...HOME, cart: 24, region: 'TX', section: 'orders' });
+  expect(format({ ...HOME, cart: 24, region: 'TX', section: 'orders' })).toBe('#/orders?region=TX&cart=24');
+});
+
+test('a region is two capital letters, or the empty string for all of them', () => {
+  expect(parse('#/orders?region=tx').region).toBe('');
+  expect(parse('#/orders?region=TEXAS').region).toBe('');
+  expect(parse('#/orders?region=T').region).toBe('T');
+  expect(parse('#/orders?region=').region).toBe('');
+});
+
+test('an order that is not a number is no order', () => {
+  expect(parse('#/orders?cart=abc').cart).toBeNull();
+  expect(parse('#/orders?cart=-3').cart).toBeNull();
 });

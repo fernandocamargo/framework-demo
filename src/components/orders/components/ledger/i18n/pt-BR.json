@@ -1,0 +1,16 @@
+{
+  "components/orders/components/ledger/empty/none": "Não há pedidos.",
+  "components/orders/components/ledger/empty/region": "Nenhum pedido vai para {name}.",
+  "components/orders/components/ledger/failed/message": "Não foi possível ler os pedidos: {message}",
+  "components/orders/components/ledger/failed/retry": "Tentar de novo",
+  "components/orders/components/ledger/items": "{count, plural, one {# item} other {# itens}}",
+  "components/orders/components/ledger/label": "Livro de pedidos",
+  "components/orders/components/ledger/list": "Pedidos",
+  "components/orders/components/ledger/loading": "Lendo os pedidos…",
+  "components/orders/components/ledger/number": "Pedido {number}",
+  "components/orders/components/ledger/paging/label": "Páginas",
+  "components/orders/components/ledger/paging/next": "Próxima",
+  "components/orders/components/ledger/paging/page": "Página {page, number} de {pages, number}",
+  "components/orders/components/ledger/paging/previous": "Anterior",
+  "components/orders/components/ledger/summary": "{count, plural, one {# pedido} other {# pedidos}}{scope, select, all {} other { para {name}}}"
+}
