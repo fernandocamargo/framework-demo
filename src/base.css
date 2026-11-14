@@ -35,8 +35,9 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 10px 30px rgb(0 0 0 / 0.1);
   --ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
   --ease: cubic-bezier(0.2, 0, 0, 1);
-  /* The header's height, and the width of the network lab docked beside the page. */
-  --header: 3.75rem;
+  /* The header's height (a row of tools over a row of the app's pages, on a wide screen), and the
+     width of the network lab docked beside the page, under the header. */
+  --header: 6.25rem;
   --lab: 25rem;
   font:
     15px / 1.45 ui-sans-serif,

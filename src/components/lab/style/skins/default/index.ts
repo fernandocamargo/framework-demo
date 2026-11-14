@@ -141,7 +141,8 @@ export default css`
       border-block-start: 1px solid var(--border);
     }
   }
-  @media (max-width: 44rem) {
+  /* Below a wide screen the button is its icon alone: the header's tools share one row. */
+  @media (max-width: 75rem) {
     > .react-aria-Button > span {
       display: none;
     }

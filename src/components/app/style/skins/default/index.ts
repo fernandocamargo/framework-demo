@@ -4,7 +4,7 @@ import { css } from 'framework';
 export default css`
   & {
     display: grid;
-    grid-template-rows: var(--header) 1fr;
+    grid-template-rows: auto 1fr;
     min-block-size: 100dvh;
   }
   /* While the network lab is open on a wide screen, the page leaves it its column. */
@@ -33,9 +33,11 @@ export default css`
     inset-block-start: 0;
     z-index: 10;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0 clamp(0.75rem, 3vw, 2rem);
+    gap: 0 0.5rem;
+    min-block-size: var(--header);
+    padding: 0.45rem clamp(0.75rem, 3vw, 2rem) 0;
     border-block-end: 1px solid var(--border);
     /* No filter or transform here: the network lab's panel, inside this header, is fixed to the viewport. */
     background: var(--surface);
@@ -85,7 +87,19 @@ export default css`
     font-weight: 600;
     white-space: nowrap;
   }
+  /* The app's pages take a row of their own, under the tools: one row held them while there was
+     one page, and four pages beside the tools ran wider than a laptop's screen. On a narrow
+     screen the row scrolls rather than wrapping. */
+  > header nav {
+    order: 1;
+    display: flex;
+    flex: 1 0 100%;
+    gap: 0.25rem;
+    padding-block: 0.3rem 0.45rem;
+    overflow-x: auto;
+  }
   > header nav .react-aria-Link {
+    flex: none;
     border-color: transparent;
     background: transparent;
     &[data-hovered] {
@@ -101,6 +115,13 @@ export default css`
     inline-size: min(72rem, 100%);
     margin-inline: auto;
     padding: clamp(1rem, 3vw, 2rem) clamp(0.75rem, 3vw, 2rem) 6rem;
+  }
+  /* On a phone the header's tools take several rows: it scrolls away with the page rather than
+     keeping a third of the screen. */
+  @media (max-width: 44rem) {
+    > header {
+      position: relative;
+    }
   }
   @media (max-width: 30rem) {
     > header [itemprop='isBasedOn'] {
