@@ -12,6 +12,7 @@ import Editor from '@/components/product/editor';
 import Remove from '@/components/product/remove';
 import Session from '@/components/session';
 import Skin from '@/components/skin';
+import Tour from '@/components/tour';
 
 // The page, as schema.org names one: its name, the data it is based on (the world it reads), and the
 // catalogue in its main part.
@@ -37,6 +38,7 @@ export default ({
           <span itemProp="name">{world}</span>
         </p>
       </hgroup>
+      <Tour />
       <nav>
         {sections.map((item) => (
           <Link aria-current={item.current ? 'page' : undefined} href={item.href} key={item.id}>
