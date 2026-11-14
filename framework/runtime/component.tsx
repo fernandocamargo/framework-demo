@@ -31,7 +31,7 @@ import { useStateLayer, type StateModule } from './machine'
 import { PinContext } from './pin'
 import { shortcutsOf, useKeyboard, useShortcuts, type Entry, type ShortcutSites } from './shortcuts'
 import { report, toError, type Scope } from './pipeline'
-import { fieldContext, renderingRoute, RouteContext, useFramework } from './root'
+import { fieldContext, followRoute, renderingRoute, RouteContext, useFramework, type RouteView } from './root'
 import { activeSkin, loadSkin, type SkinModule } from './style'
 import { tracked } from './thenable'
 import { chainOf, commitHandlers, withScope } from './track'
@@ -262,7 +262,13 @@ export function component(spec: Spec) {
     const latestFlags = useCallback(() => ((flagsRead ? data.client.getQueryData(flagsRead.queryKey) : undefined) ?? NO_FLAGS) as Flags, [flagsRead, data])
     const snapshot = readsAcl ? latest() : undefined
     const flagged = readsFlags ? latestFlags() : undefined
-    const route = viewReadsRoute ? use(RouteContext) : undefined
+    // Whether this instance is rendering now: what its files and its chart read during the render
+    // is this render's (the route being rendered, the decision); what runs after it, the committed.
+    const rendering = useRef(false)
+    // The route its files read, followed field by field (root.tsx).
+    const routeView = useRef<RouteView | null>(null)
+    if (viewReadsRoute) routeView.current = followRoute(routeView.current, fields, rendering, sources.route)
+    const route = viewReadsRoute ? routeView.current!.route : undefined
     const keyboard = readsKeyboard ? useKeyboard() : undefined
     // The decision, twice. `judged` is this render's, for what runs inside the render: the chart's
     // declaration, and its first reads when it is created. `decided` is the one React committed,
@@ -271,7 +277,6 @@ export function component(spec: Spec) {
     // guard reads the decision the page shows.
     const judged = useRef<boolean>(inherited)
     const decided = useRef<boolean>(inherited)
-    const rendering = useRef(false)
     const loadThisSkin = spec.skins[skin]
     if (loadThisSkin) use(loadSkin(spec.path, skin, loadThisSkin))
 
@@ -500,7 +505,13 @@ export function component(spec: Spec) {
     return show(props, layers, state, early)
   }
   function StatelessView(props: Props) {
-    return show(props, useLayers(), undefined)
+    const layers = useLayers()
+    layers.rendering.current = true
+    try {
+      return show(props, layers, undefined)
+    } finally {
+      layers.rendering.current = false
+    }
   }
   StatefulView.displayName = spec.path
   StatelessView.displayName = spec.path

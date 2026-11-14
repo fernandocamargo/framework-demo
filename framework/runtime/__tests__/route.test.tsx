@@ -106,3 +106,53 @@ test('a chart reads the route field by field: after its first commit, a change o
   await rerender(page({ edit: 4, q: 'desk' }))
   expect(rendered.get('components/editor')).toBeUndefined()
 })
+
+test("a view follows the route fields its files read: another field does not render it, and a handler reads the committed route", async () => {
+  const pressed: unknown[] = []
+  const Button = component({
+    path: 'components/sell',
+    view: module({
+      props: { default: ({ route }: { route: Props }) => ({ editing: route['edit'] !== null, edit: () => pressed.push(route['edit']) }) },
+      render: (props: Props) => createElement('button', { onClick: props['edit'] as () => void }, props['editing'] ? 'on' : 'off'),
+    }),
+    skins: {},
+    reads: { view: ['route'] },
+  })
+  const client = createQueryClient()
+  const tree = createElement(Button)
+  const page = (route: Props) => createElement(Root, { route: route as never, entity, client }, tree)
+  const { container, rerender } = await show(page({ edit: null, page: 1 }))
+  expect(container.textContent).toBe('off')
+  rendered.clear()
+
+  await rerender(page({ edit: null, page: 2 }))
+  expect(rendered.get('components/sell')).toBeUndefined()
+
+  await rerender(page({ edit: 4, page: 2 }))
+  expect(container.textContent).toBe('on')
+  expect(rendered.get('components/sell')).toBeGreaterThan(0)
+
+  // Outside the render, the view reads the route React committed.
+  await act(async () => container.querySelector('button')!.click())
+  expect(pressed).toEqual([4])
+})
+
+test('a view that spreads the route follows all of it', async () => {
+  const Link = component({
+    path: 'components/address',
+    view: module({
+      props: { default: ({ route }: { route: Props }) => ({ text: JSON.stringify({ ...route }) }) },
+      render: (props: Props) => createElement('a', null, props['text'] as string),
+    }),
+    skins: {},
+    reads: { view: ['route'] },
+  })
+  const client = createQueryClient()
+  const tree = createElement(Link)
+  const page = (route: Props) => createElement(Root, { route: route as never, entity, client }, tree)
+  const { container, rerender } = await show(page({ edit: null, page: 1 }))
+  rendered.clear()
+  await rerender(page({ edit: null, page: 2 }))
+  expect(container.textContent).toBe('{"edit":null,"page":2}')
+  expect(rendered.get('components/address')).toBeGreaterThan(0)
+})

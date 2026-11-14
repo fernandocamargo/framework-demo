@@ -18,6 +18,9 @@ export function untracked<T>(work: () => T): T {
   }
 }
 
+/** Whether reads are recorded now: not inside `untracked`. */
+export const isTracking = () => paused === 0
+
 const isObject = (value: unknown): value is object => typeof value === 'object' && value !== null
 
 /**

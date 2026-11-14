@@ -14,6 +14,7 @@ import { activateLocale, loadShown, LocaleContext, SOURCE_LOCALE } from './i18n'
 import { createInjection, type Injection } from './injection'
 import { report, setLocation } from './pipeline'
 import { listenToKeys } from './shortcuts'
+import { isTracking } from './reads'
 import { activateSkin } from './style'
 
 type Sources = { entity: Entity; route: Route; navigation: Navigation }
@@ -85,6 +86,47 @@ export function renderingRoute(fields: ReadonlySet<string>): Route {
       return descriptor && { ...descriptor, configurable: true }
     },
   })
+}
+
+/** The route a component's files read, and the fields they read through it, with their values. */
+export type RouteView = { route: Route; read: Map<string, unknown> }
+
+/**
+ * The route for a component's files (`props.ts`, the render, `acl.ts`), followed field by field.
+ * Each render reads again, from its context, every field the files read through the last view:
+ * that keeps the component following them while its render is skipped, and when one of them
+ * changed it gets a new view, so its files run again and read what they need. A field nobody read
+ * renders nothing. Read during a render, the view reads the route being rendered; read after it
+ * (a handler, a key), the committed route. Its keys, and spreading it, read the whole route.
+ */
+export function followRoute(last: RouteView | null, fields: ReadonlySet<string>, rendering: { readonly current: boolean }, committed: Route): RouteView {
+  const whole = () => use(RouteContext) as unknown as Record<string, unknown>
+  const field = (key: string) => (key === '*' ? whole() : fields.has(key) ? use(fieldContext(key)) : whole()[key])
+  if (last) {
+    let same = true
+    // Every field is read, not only up to the first that changed, so the component keeps following all of them.
+    for (const [key, value] of last.read) if (!Object.is(field(key), value)) same = false
+    if (same) return last
+  }
+  const read = new Map<string, unknown>()
+  const now = (key: string) => {
+    if (!rendering.current) return (committed as unknown as Record<string, unknown>)[key]
+    const value = field(key)
+    if (isTracking()) read.set(key, value)
+    return value
+  }
+  const route = new Proxy({} as Route, {
+    get: (_, key) => (typeof key === 'string' ? now(key) : undefined),
+    has: (_, key) => Reflect.has(committed, key),
+    ownKeys: () => {
+      if (!rendering.current) return Reflect.ownKeys(committed)
+      const all = whole()
+      if (isTracking()) read.set('*', all)
+      return Reflect.ownKeys(all)
+    },
+    getOwnPropertyDescriptor: (_, key) => (typeof key === 'string' && Reflect.has(committed, key) ? { value: now(key), enumerable: true, configurable: true, writable: false } : undefined),
+  })
+  return { route, read }
 }
 
 /** A view of `ref.current` as if it were the object itself: reading, `in`, keys and spreading. */
