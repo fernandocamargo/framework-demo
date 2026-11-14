@@ -1,10 +1,11 @@
 // Drives the flow in perf/steps.mjs through the build perf/vite.config.ts makes, and counts, per
 // step, the render cycles it costs:
-// - calls: every call of a framework component's render, committed or not;
+// - calls: every call of a framework component's render, and `thrown`, those React did not commit;
 // - framework: the framework components React committed, new or again, and of those rendered
 //   again, how many changed nothing in the page (`no change`);
 // - plumbing: the framework's own wrappers around them (Component, View);
 // - other: every other component (react-aria's, the shell's).
+// With DETAIL=1, each group that changed nothing says which framework component it is inside of.
 // It also reports a miss for each check that failed right after `idle()`.
 //
 //   npm run perf                      builds, then runs the flow once in Chromium
@@ -29,6 +30,8 @@ const here = (file) => path.join(import.meta.dirname, file)
 const DIST = here('dist')
 const RENDERS = new Set(['StatefulView', 'StatelessView'])
 const PLUMBING = new Set(['Component', 'View'])
+// The framework's wrappers carry the folder's path as their name; react-aria has a `Component` of its own.
+const isPlumbing = (component) => PLUMBING.has(component.fn) && component.name !== component.fn
 const recorder = readFileSync(here('recorder.js'), 'utf8')
 
 if (!existsSync(path.join(DIST, 'index.html'))) throw new Error('No perf build: run `npm run perf`, or `npx vite build --config perf/vite.config.ts`')
@@ -70,8 +73,8 @@ async function run() {
     results.push({ name: step.name, ok, idleAt })
   }
   await page.waitForTimeout(300)
-  const commits = await page.evaluate(() => window.__renders)
-  const calls = await page.evaluate(() => window.__calls)
+  // Both at once: a commit between two reads would leave its calls without it.
+  const { commits, calls } = await page.evaluate(() => ({ commits: window.__renders, calls: window.__calls }))
   await browser.close()
   return { results, commits, calls, errors }
 }
@@ -88,10 +91,11 @@ const summarize = ({ results, commits, calls }) =>
       ...step,
       commits: commits.filter((commit) => commit.phase === step.name).length,
       calls: calls.filter((call) => call.phase === step.name && !call.suspend).length,
+      thrown: calls.filter((call) => call.phase === step.name && !call.suspend && !call.kept).length,
       suspends: calls.filter((call) => call.phase === step.name && call.suspend).length,
       framework: count((component) => RENDERS.has(component.fn)),
-      plumbing: count((component) => PLUMBING.has(component.fn)),
-      other: count((component) => !RENDERS.has(component.fn) && !PLUMBING.has(component.fn)),
+      plumbing: count(isPlumbing),
+      other: count((component) => !RENDERS.has(component.fn) && !isPlumbing(component)),
       time: components.reduce((sum, component) => sum + component.self, 0),
       wasted: components.filter((component) => !component.mounted && !component.dom).reduce((sum, component) => sum + component.self, 0),
     }
@@ -114,12 +118,18 @@ const say = (line) => {
   console.log(line)
 }
 say(`## ${label}: ${engine}, CPU x${cpu}, ${runs} run(s); counts from the first run`)
-say('step                            idle ms  miss  calls | fw new again no-change | plumbing again no-change | other new again no-change |  ms  wasted')
-const totals = { calls: 0, fwNew: 0, fwAgain: 0, fwUnchanged: 0, otherAgain: 0, otherUnchanged: 0, misses: 0, time: 0, wasted: 0 }
+say('step                            idle ms  miss  calls thrown | fw new again no-change | plumbing again no-change | other new again no-change |  ms  wasted')
+const blank = () => ({ steps: 0, calls: 0, thrown: 0, fwNew: 0, fwAgain: 0, fwUnchanged: 0, otherAgain: 0, otherUnchanged: 0, misses: 0, time: 0, wasted: 0 })
+// The visit's steps and the further ones are totalled apart.
+const visit = blank()
+const further = blank()
 const cell = (value, width) => String(value).padStart(width)
 summaries[0].forEach((step, index) => {
   const misses = summaries.filter((summary) => !summary[index].ok).length
+  const totals = STEPS[index].further ? further : visit
+  totals.steps += 1
   totals.calls += step.calls
+  totals.thrown += step.thrown
   totals.fwNew += step.framework.mounted
   totals.fwAgain += step.framework.again
   totals.fwUnchanged += step.framework.unchanged.length
@@ -129,7 +139,7 @@ summaries[0].forEach((step, index) => {
   totals.time += step.time
   totals.wasted += step.wasted
   say(
-    `${step.name.padEnd(31)} ${cell(median(summaries.map((summary) => summary[index].idleAt)), 7)} ${cell(`${misses}/${runs}`, 5)} ${cell(step.calls, 6)} |` +
+    `${step.name.padEnd(31)} ${cell(median(summaries.map((summary) => summary[index].idleAt)), 7)} ${cell(`${misses}/${runs}`, 5)} ${cell(step.calls, 6)} ${cell(step.thrown, 6)} |` +
       ` ${cell(step.framework.mounted, 6)} ${cell(step.framework.again, 5)} ${cell(step.framework.unchanged.length, 9)} |` +
       ` ${cell(step.plumbing.again, 14)} ${cell(step.plumbing.unchanged.length, 9)} |` +
       ` ${cell(step.other.mounted, 9)} ${cell(step.other.again, 5)} ${cell(step.other.unchanged.length, 9)} |` +
@@ -144,15 +154,18 @@ summaries[0].forEach((step, index) => {
           : component.why?.cause === 'own'
             ? `own${component.why.hooks?.length ? ` hooks ${component.why.hooks.join(',')}` : ''}${component.why.contexts?.length ? ` contexts ${component.why.contexts.join(',')}` : ''}`
             : component.why?.cause
-      const key = `${RENDERS.has(component.fn) ? '' : '  (other) '}${component.name} ← ${cause}`
+      const key = `${RENDERS.has(component.fn) ? '' : `  (in ${(component.within || 'the shell').replace('components/', '')}) `}${component.name} ← ${cause}`
       byName.set(key, (byName.get(key) ?? 0) + 1)
     }
     for (const [key, value] of [...byName].sort((a, b) => b[1] - a[1]).slice(0, Number(env.TOP ?? 8))) say(`      ${String(value).padStart(4)}× ${key}`)
   }
 })
-say(
-  `total: ${totals.misses} misses; ${totals.calls} render calls; framework mounted ${totals.fwNew}, rendered again ${totals.fwAgain}, ${totals.fwUnchanged} with no change; ` +
-    `other rendered again ${totals.otherAgain}, ${totals.otherUnchanged} with no change; render time ${totals.time.toFixed(1)} ms, ${totals.wasted.toFixed(1)} ms of it changing nothing`,
-)
+const total = (name, totals) =>
+  say(
+    `${name}: ${totals.steps} steps, ${totals.misses} misses; ${totals.calls} render calls, ${totals.thrown} of them thrown away; framework mounted ${totals.fwNew}, rendered again ${totals.fwAgain}, ${totals.fwUnchanged} with no change; ` +
+      `other rendered again ${totals.otherAgain}, ${totals.otherUnchanged} with no change; render time ${totals.time.toFixed(1)} ms, ${totals.wasted.toFixed(1)} ms of it changing nothing`,
+  )
+total('total', visit)
+if (further.steps) total('further', further)
 if (all.some((run) => run.errors.length)) say(`page errors: ${[...new Set(all.flatMap((run) => run.errors))].join(' | ')}`)
 writeFileSync(here(`out/${label}/summary.txt`), `${lines.join('\n')}\n`)

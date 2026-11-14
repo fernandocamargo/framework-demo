@@ -1,15 +1,17 @@
 // The app built for counting render cycles: react-dom's profiling build (each fiber records its
 // render time), unminified, so components keep their names, with the framework counting every
-// call of a component's render, committed or not (`window.__renderCall`), and each time a
-// component is about to suspend: on its view, its skin, or its default read
-// (`window.__suspend`). `npm run perf` builds it and drives perf/steps.mjs through it.
+// call of a component's render (`window.__renderCall`), which of those calls React committed
+// (`window.__kept`: the rest it threw away), and each time a component is about to suspend: on its
+// view, its skin, or its default read (`window.__suspend`). `npm run perf` builds it and drives perf/steps.mjs through it.
 import path from 'node:path'
 import { mergeConfig, type Plugin } from 'vite'
 import base from '../vite.config.ts'
 
 /** Insertions into the runtime's component.tsx, each before an anchor that must be there. */
 const EDITS: [anchor: string, before: string][] = [
-  ['const rendered = shareElements(', 'globalThis.__renderCall?.(spec.path)\n    '],
+  ['const rendered = shareElements(', '__call = globalThis.__renderCall?.(spec.path)\n    '],
+  // The layout effect of the render React commits holds that render's call: one it throws away never runs it.
+  ['useLayoutEffect(() => commitHandlers(scope))', 'let __call: unknown\n    useLayoutEffect(() => void (__call !== undefined && globalThis.__kept?.(__call)))\n    '],
   ['const module = use(loadView())', "if (loadView().status !== 'fulfilled') globalThis.__suspend?.(spec.path, 'view')\n    "],
   ['if (loadThisSkin) use(loadSkin(', "if (loadThisSkin && loadSkin(spec.path, skin, loadThisSkin).status !== 'fulfilled') globalThis.__suspend?.(spec.path, 'skin')\n    "],
   ['const answer: unknown = query ? useSuspenseQuery(', "if (query && __client.getQueryData(query.queryKey) === undefined) globalThis.__suspend?.(spec.path, 'data')\n    "],

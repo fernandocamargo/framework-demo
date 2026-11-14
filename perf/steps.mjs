@@ -5,6 +5,8 @@ const dialog = (page, name) => page.getByRole('dialog', { name }).or(page.getByR
 const rows = (page) => page.getByRole('list', { name: 'Products' }).getByRole('listitem')
 const shown = async (locator) => (await locator.count()) > 0 && (await locator.first().isVisible())
 const status = (page) => page.getByRole('status').first().innerText()
+const lab = (page) => page.getByRole('complementary', { name: 'Network lab' })
+const latency = (page) => lab(page).getByRole('slider', { name: 'Latency' })
 
 /** In the page: serves the flags these ways, as another tab of the world would. */
 const serve = (ways) => {
@@ -188,5 +190,84 @@ export const STEPS = [
     name: 'sign out',
     act: (page) => page.getByRole('button', { name: 'Sign out' }).click(),
     check: (page) => shown(page.getByRole('button', { name: 'Sign in' })),
+  },
+  // Beyond the visit: what the 29 steps above do not reach. They are counted apart (`further`), so
+  // the visit's totals stay comparable from one change to the next.
+  {
+    name: 'two seconds with the lab open',
+    further: true,
+    act: (page) => page.waitForTimeout(2200),
+    check: (page) => shown(lab(page)),
+  },
+  {
+    name: 'slow the network down: 500 ms',
+    further: true,
+    // Each change of the setting mounts the slider again, so each key needs its focus again.
+    act: async (page) => {
+      for (let step = 0; step < 2; step++) {
+        await latency(page).focus()
+        await page.keyboard.press('ArrowRight')
+        await page.evaluate(() => window.__framework.idle())
+      }
+    },
+    check: async (page) => (await lab(page).innerText()).includes('500 ms'),
+  },
+  {
+    name: 'slow: search for "desk"',
+    further: true,
+    act: async (page) => {
+      await page.getByRole('searchbox', { name: 'Search products' }).fill('desk')
+      await page.keyboard.press('Enter')
+    },
+    check: async (page) => (await status(page)).includes('desk') && (await rows(page).count()) > 0,
+  },
+  {
+    name: 'slow: open a product',
+    further: true,
+    act: (page) => rows(page).first().getByRole('link').first().click(),
+    check: async (page) => (await page.getByRole('dialog').getByRole('region', { name: 'Reviews' }).getByRole('listitem').count()) > 0,
+  },
+  {
+    name: 'slow: close the product',
+    further: true,
+    act: (page) => page.keyboard.press('Escape'),
+    check: async (page) => !page.url().includes('view='),
+  },
+  {
+    name: 'slow: clear the search',
+    further: true,
+    act: (page) => page.getByRole('button', { name: 'Clear the search' }).click(),
+    check: async (page) => (await rows(page).count()) === 12,
+  },
+  {
+    name: 'the network as before',
+    further: true,
+    // Each change of the setting mounts the slider again, so each key needs its focus again.
+    act: async (page) => {
+      for (let step = 0; step < 2; step++) {
+        await latency(page).focus()
+        await page.keyboard.press('ArrowLeft')
+        await page.evaluate(() => window.__framework.idle())
+      }
+    },
+    check: async (page) => (await lab(page).innerText()).includes('0 ms'),
+  },
+  {
+    name: 'close the lab',
+    further: true,
+    act: (page) => page.getByRole('button', { name: /Network lab/ }).click(),
+    check: async (page) => !(await shown(lab(page))),
+  },
+  {
+    name: 'open the states gallery',
+    further: true,
+    act: (page) => page.getByRole('link', { name: 'States' }).click(),
+    check: async (page) => (await page.getByRole('region').count()) === 6,
+  },
+  {
+    name: 'back to the catalogue',
+    further: true,
+    act: (page) => page.getByRole('link', { name: 'Back to the catalogue' }).click(),
+    check: async (page) => (await rows(page).count()) === 12,
   },
 ]

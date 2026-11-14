@@ -3,11 +3,14 @@
 // - `mounted`, or why it re-rendered: its own state or a context (`own`), its parent with the
 //   same props (`parent`), or the props that changed, each marked `sameValue` when only the
 //   reference is new (a function with the same code, an object or element with equal contents);
-// - `dom`: whether the commit changed the page anywhere inside it (an attribute, a text, a node
-//   added or removed, including all it rendered). A re-render with `dom: false` changed nothing
-//   anyone can see.
-// It also counts every call of a framework component's render, committed or not
-// (`window.__renderCall`, from perf/vite.config.ts), per step (`window.__phase`).
+// - `dom`: whether the commit changed the page anywhere inside it (an attribute or a text that
+//   holds another value than before, a node added or removed, including all it rendered). A
+//   re-render with `dom: false` changed nothing anyone can see.
+//   Each also says which framework component it is `within`, so what react-aria renders can be
+//   told apart by the component of ours that holds it.
+// It also counts every call of a framework component's render (`window.__renderCall`, from
+// perf/vite.config.ts), per step (`window.__phase`), and marks the calls React committed
+// (`window.__kept`): a call never marked is a render React threw away.
 (() => {
   const PERFORMED_WORK = 1;
   // React's flag on a fiber whose children were removed in this commit, bubbled up as subtreeFlags.
@@ -63,7 +66,7 @@
   // What changed in the page since the last commit, as the fibers it touched and their ancestors.
   const observer = new MutationObserver(() => {});
   // The document itself: as an init script, this runs before the page has an <html> element.
-  observer.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+  observer.observe(document, { subtree: true, childList: true, attributes: true, characterData: true, attributeOldValue: true, characterDataOldValue: true });
   const fiberOf = (node) => {
     for (let current = node; current; current = current.parentNode) {
       const key = Object.keys(current).find((name) => name.startsWith('__reactFiber$'));
@@ -79,15 +82,45 @@
         if (fiber.alternate) touched.add(fiber.alternate);
       }
     };
+    // An attribute or a text written with the value it had is no change: React sets an input's
+    // `name` and `type` again whenever the input renders. Each is compared with what it was
+    // before the first write since the last commit.
+    const before = new Map();
     for (const record of records) {
-      mark(record.target);
-      for (const node of record.addedNodes || []) mark(node);
+      if (record.type === 'childList') {
+        mark(record.target);
+        for (const node of record.addedNodes) mark(node);
+        continue;
+      }
+      let written = before.get(record.target);
+      if (!written) before.set(record.target, (written = new Map()));
+      const key = record.type === 'attributes' ? `@${record.attributeName}` : '#text';
+      if (!written.has(key)) written.set(key, record.oldValue);
+    }
+    for (const [node, written] of before) {
+      for (const [key, value] of written) {
+        const now = key === '#text' ? node.data : node.getAttribute(key.slice(1));
+        if (now !== value) mark(node);
+      }
     }
     return touched;
   };
 
   const calls = (window.__calls = []);
-  window.__renderCall = (path) => calls.push({ phase: window.__phase, path, at: performance.now() });
+  window.__renderCall = (path) => {
+    const call = { phase: window.__phase, path, at: performance.now(), kept: false };
+    calls.push(call);
+    return call;
+  };
+  window.__kept = (call) => {
+    call.kept = true;
+  };
+  // The framework component a fiber is inside of: the nearest view above it.
+  const VIEWS = new Set(['StatefulView', 'StatelessView']);
+  const withinOf = (fiber) => {
+    for (let node = fiber.return; node; node = node.return) if (typeof node.type === 'function' && VIEWS.has(node.type.name)) return node.type.displayName;
+    return '';
+  };
   window.__suspend = (path, on) => calls.push({ phase: window.__phase, path, at: performance.now(), suspend: on });
   const commits = (window.__renders = []);
   window.__phase = 'load';
@@ -118,6 +151,7 @@
             commit.components.push({
               name: nameOf(node),
               fn: typeof node.type === 'function' ? node.type.name : '',
+              within: withinOf(node),
               mounted: node.alternate === null,
               self: Math.max(0, (node.actualDuration || 0) - children),
               // A removal shows in the mutations only at the parent node, outside a component that
