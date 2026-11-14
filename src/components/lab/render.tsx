@@ -1,8 +1,9 @@
 import { createPortal } from 'react-dom'
 import { Button, Label, Radio, RadioGroup, Slider, SliderOutput, SliderThumb, SliderTrack, Switch, Tab, TabList, TabPanel, Tabs } from 'react-aria-components'
 import Flags from './components/flags'
+import SellOut from './components/sell-out'
 
-export default ({ className, i18n, open, send, change, expireToken, breakRefresh, forgetChanges, sellOut, faults, toggleLabel, latency, latencyText, failurePercent, failureText, force, offline, tokenMinutes, minutes, canSellOut, network, tracked }) => (
+export default ({ className, i18n, open, send, change, expireToken, breakRefresh, forgetChanges, faults, toggleLabel, latency, latencyText, failurePercent, failureText, force, offline, tokenMinutes, minutes, network, tracked }) => (
   <div className={className}>
     <Button aria-label={toggleLabel} aria-expanded={open} aria-controls="network-lab" data-active={faults > 0 || undefined} onPress={() => send({ type: 'toggle' })}>
       <span className="icon" data-icon="signal" />
@@ -24,16 +25,16 @@ export default ({ className, i18n, open, send, change, expireToken, breakRefresh
         <p className="intro">{i18n.intro}</p>
 
         <div className="controls">
-          <Slider key={`latency-${latency}`} defaultValue={latency} minValue={0} maxValue={3000} step={250} onChangeEnd={(value) => change({ latency: value as number })}>
+          <Slider defaultValue={latency} minValue={0} maxValue={3000} step={250} onChangeEnd={(value) => change({ latency: value as number })}>
             <Label>{i18n.latency.label}</Label>
-            <SliderOutput>{({ state }) => latencyText(state.getThumbValue(0))}</SliderOutput>
+            <SliderOutput>{({ state }) => latencyText({ ms: state.getThumbValue(0) })}</SliderOutput>
             <SliderTrack>
               <SliderThumb />
             </SliderTrack>
           </Slider>
-          <Slider key={`failures-${failurePercent}`} defaultValue={failurePercent} minValue={0} maxValue={100} step={10} onChangeEnd={(value) => change({ failureRate: (value as number) / 100 })}>
+          <Slider defaultValue={failurePercent} minValue={0} maxValue={100} step={10} onChangeEnd={(value) => change({ failureRate: (value as number) / 100 })}>
             <Label>{i18n.failures.label}</Label>
-            <SliderOutput>{({ state }) => failureText(state.getThumbValue(0))}</SliderOutput>
+            <SliderOutput>{({ state }) => failureText({ percent: state.getThumbValue(0) })}</SliderOutput>
             <SliderTrack>
               <SliderThumb />
             </SliderTrack>
@@ -65,9 +66,7 @@ export default ({ className, i18n, open, send, change, expireToken, breakRefresh
         <div className="buttons">
           <Button onPress={() => expireToken()}>{i18n.actions.expire}</Button>
           <Button onPress={() => breakRefresh()}>{i18n.actions.revoke}</Button>
-          <Button isDisabled={!canSellOut} onPress={() => sellOut()}>
-            {i18n.actions.sellOut}
-          </Button>
+          <SellOut />
           <Button onPress={() => forgetChanges()}>{i18n.actions.forget}</Button>
         </div>
 

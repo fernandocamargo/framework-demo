@@ -12,7 +12,6 @@ export default {
   actions: {
     expire: 'Expire the access token',
     revoke: 'Revoke the refresh token',
-    sellOut: 'Sell out the product being edited',
     forget: 'Forget local changes',
   },
   tabs: { label: 'Activity', network: 'API client', tracked: 'Inspector', flags: 'Flags' },

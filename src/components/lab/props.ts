@@ -60,8 +60,8 @@ function describe(entry: Tracked, i18n: I18n<typeof messages>, intl: Intl, cause
   return { kind: event.action, text: event.action === 'stale' ? '' : event.path, where }
 }
 
-export default ({ state, i18n, intl, async: { default: answer, change, expireToken, breakRefresh, forgetChanges, sellOut } }) => {
-  const { settings, editing } = answer
+export default ({ state, i18n, intl, async: { default: answer, change, expireToken, breakRefresh, forgetChanges } }) => {
+  const { settings } = answer
   const faults = [settings.latency > 0, settings.failureRate > 0, settings.force !== 0, settings.offline].filter(Boolean).length
   const when = (at: number) => intl.formatTime(at, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   return {
@@ -72,18 +72,18 @@ export default ({ state, i18n, intl, async: { default: answer, change, expireTok
     expireToken,
     breakRefresh,
     forgetChanges,
-    sellOut,
     faults,
     toggleLabel: i18n.toggle({ faults }),
     latency: settings.latency,
-    latencyText: (ms: number) => i18n.latency.value({ ms }),
+    // The messages themselves, not a function made here: the same at every run, so the sliders'
+    // outputs that call them are kept (track.ts) and react-aria does not render them again.
+    latencyText: i18n.latency.value,
     failurePercent: Math.round(settings.failureRate * 100),
-    failureText: (percent: number) => i18n.failures.value({ percent }),
+    failureText: i18n.failures.value,
     force: String(settings.force),
     offline: settings.offline,
     tokenMinutes: String(settings.tokenMinutes),
     minutes: [1, 5, 30].map((minutes) => ({ value: String(minutes), label: i18n.token.minutes({ minutes }) })),
-    canSellOut: editing !== null,
     network: state.context.network.map((entry) => ({ ...entry, tone: TONES[entry.kind], kind: i18n.kinds[entry.kind], when: when(entry.at) })),
     tracked: (() => {
       const tracked: Tracked[] = state.context.tracked

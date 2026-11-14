@@ -14,7 +14,6 @@
   "components/lab/offline": "Sem conexão",
   "components/lab/actions/expire": "Expirar o token de acesso",
   "components/lab/actions/revoke": "Revogar o token de renovação",
-  "components/lab/actions/sellOut": "Esgotar o produto em edição",
   "components/lab/actions/forget": "Esquecer as alterações locais",
   "components/lab/tabs/label": "Atividade",
   "components/lab/tabs/network": "Cliente da API",

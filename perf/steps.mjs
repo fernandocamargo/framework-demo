@@ -204,10 +204,10 @@ export const STEPS = [
   {
     name: 'slow the network down: 500 ms',
     further: true,
-    // Each change of the setting mounts the slider again, so each key needs its focus again.
+    // One focus, two keys: the slider keeps the focus as its setting changes.
     act: async (page) => {
+      await latency(page).focus()
       for (let step = 0; step < 2; step++) {
-        await latency(page).focus()
         await page.keyboard.press('ArrowRight')
         await page.evaluate(() => window.__framework.idle())
       }
@@ -244,10 +244,10 @@ export const STEPS = [
   {
     name: 'the network as before',
     further: true,
-    // Each change of the setting mounts the slider again, so each key needs its focus again.
+    // One focus, two keys: the slider keeps the focus as its setting changes.
     act: async (page) => {
+      await latency(page).focus()
       for (let step = 0; step < 2; step++) {
-        await latency(page).focus()
         await page.keyboard.press('ArrowLeft')
         await page.evaluate(() => window.__framework.idle())
       }
