@@ -51,75 +51,13 @@
     outline: 1px dashed var(--border-strong);
     outline-offset: 3px;
   }
-  /* The types the app uses. A type not listed here is named by its full address (the fallback). */
+  /* Every item's type, by its name. The label writes the type's whole address in a monospace face
+     and starts 19 characters early, so "https://schema.org/" falls outside it: a type the app
+     adds tomorrow is named with no rule here. */
   & [itemscope]::before {
     content: attr(itemtype);
-  }
-  & [itemtype$='/Action']::before {
-    content: 'Action';
-  }
-  & [itemtype$='/AggregateRating']::before {
-    content: 'AggregateRating';
-  }
-  & [itemtype$='/Brand']::before {
-    content: 'Brand';
-  }
-  & [itemtype$='/CreateAction']::before {
-    content: 'CreateAction';
-  }
-  & [itemtype$='/Dataset']::before {
-    content: 'Dataset';
-  }
-  & [itemtype$='/DeleteAction']::before {
-    content: 'DeleteAction';
-  }
-  & [itemtype$='/HowTo']::before {
-    content: 'HowTo';
-  }
-  & [itemtype$='/HowToStep']::before {
-    content: 'HowToStep';
-  }
-  & [itemtype$='/Language']::before {
-    content: 'Language';
-  }
-  & [itemtype$='/Offer']::before {
-    content: 'Offer';
-  }
-  & [itemtype$='/OfferCatalog']::before {
-    content: 'OfferCatalog';
-  }
-  & [itemtype$='/Person']::before {
-    content: 'Person';
-  }
-  & [itemtype$='/Product']::before {
-    content: 'Product';
-  }
-  & [itemtype$='/PropertyValue']::before {
-    content: 'PropertyValue';
-  }
-  & [itemtype$='/Rating']::before {
-    content: 'Rating';
-  }
-  & [itemtype$='/ReadAction']::before {
-    content: 'ReadAction';
-  }
-  & [itemtype$='/ReplaceAction']::before {
-    content: 'ReplaceAction';
-  }
-  & [itemtype$='/Review']::before {
-    content: 'Review';
-  }
-  & [itemtype$='/SearchAction']::before {
-    content: 'SearchAction';
-  }
-  & [itemtype$='/SoftwareApplication']::before {
-    content: 'SoftwareApplication';
-  }
-  & [itemtype$='/UpdateAction']::before {
-    content: 'UpdateAction';
-  }
-  & [itemtype$='/WebPage']::before {
-    content: 'WebPage';
+    overflow: hidden;
+    text-indent: -19ch;
   }
 
   /* Pictures cannot take pseudo-elements: they keep the outline only. */
@@ -195,5 +133,12 @@
   & [itemscope]::before {
     border-color: var(--accent);
     color: var(--accent);
+  }
+  /* The cut falls where the text starts: its gap is a transparent border, not a padding the
+     clipped "/" would show through, and a shadow draws the label's edge outside it. */
+  & [itemscope]::before {
+    padding-inline-start: 0;
+    border-inline-start: 0.35em solid transparent;
+    box-shadow: -1px 0 0 currentColor;
   }
 }
