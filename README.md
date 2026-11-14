@@ -2,9 +2,9 @@
 
 A small back office (a product catalogue over [DummyJSON](https://dummyjson.com)) built on a small React framework. The app is the example. The framework is the point: it is an attempt to make the mechanical part of building software checkable, so that people and agents who hand work to each other have something firmer than prose to agree on.
 
-It runs at https://fernandocamargo.github.io/framework-demo/. An explainer of the idea, written for a team and already outdated in places, is at [explainer/](https://fernandocamargo.github.io/framework-demo/explainer/) (its source is [`public/explainer/index.html`](public/explainer/index.html)).
+It runs at https://fernandocamargo.github.io/framework-demo/. An explainer of the idea, written for a team, is at [explainer/](https://fernandocamargo.github.io/framework-demo/explainer/) (its source is [`public/explainer/index.html`](public/explainer/index.html)).
 
-It is meant to be read in an evening. The framework is about 3,000 lines in [`framework/`](framework/README.md); the app is about 4,000 in [`src/`](src), a third of it CSS and fixtures.
+It is meant to be read in an evening or two. The framework is about 5,700 lines in [`framework/`](framework/README.md); the app is about 6,000 in [`src/`](src), a third of it CSS, fixtures and translations.
 
 ## The idea
 
@@ -49,6 +49,7 @@ editor/
   async.ts      What to read before the first render: the categories.
   i18n.ts       Its words, in English, namespaced as the dialog is: heading, fields, problems, conflict…
   i18n/pt-BR.json  The same words in Brazilian Portuguese, checked against i18n.ts key by key.
+  shortcuts.ts  Its key: mod+s sends `save`, and does nothing while the chart takes no `save`.
   state.test.ts The editor's rules, tested without React.
   style/skins/default/index.ts   Plain CSS.
 ```
@@ -132,15 +133,25 @@ export const save =
 [`meta.ts`](src/services/products/meta.ts) is the whole cache policy:
 
 ```ts
-export default ({ services: { products } }) => ({
-  search: { reads: true },
-  get: { reads: true },
-  save: { invalidates: [products.search, products.get] },
+export default ({ clients: { local }, services: { products } }) => ({
+  search: { reads: true, follows: (stale) => local.changed(stale) },
+  get: { reads: true, follows: (stale) => local.changed(stale) },
+  save: {
+    invalidates: [products.search, products.get],
+    optimistic: [
+      update(products.search, (page, { id, changes }) => changed(page, id, changes)),
+      update(products.get, (product, { id, changes }) => (product.id === id ? edited(product, changes) : product)),
+    ],
+  },
   // …
 })
 ```
 
 The catalogue's `async.ts` calls `services.products.search`. The framework records that, so when a save succeeds anywhere, the page of the catalogue on screen reads again. No component declares a dependency, and no component calls an invalidation.
+
+- `optimistic` shows a save at once, in the list and in the product's dialog. Writes on their way are kept in order over the server's last answer, so a failed one is taken out and the others stay.
+- When a save succeeds, the other tabs hear which reads it made stale, through a `BroadcastChannel`, and read them again.
+- `follows` makes a read stale when its source says so: here, another tab's change to the local overlay, once it can be read.
 
 ## Clients, and swapping the world
 
@@ -207,7 +218,7 @@ Nobody wrote the type `{ page: number; pages: number }`: it is read from `'Page 
 
 ## Tests at the seams
 
-`npm test` runs about 90 tests in about a second. A few of them, by what they pin down:
+`npm test` runs about 130 tests in a few seconds: over 110 in Vitest, and 20 for the plugin in Node. A few of them, by what they pin down:
 
 - [`editor/state.test.ts`](src/components/product/editor/state.test.ts): "closing with unsaved changes asks first", "a save refused as a conflict keeps the changes". The flow runs as the framework runs it, with services the test passes in.
 - [`app/props.test.ts`](src/components/app/props.test.ts): "changing the catalogue needs a session", as a table over one pure function.
@@ -215,7 +226,7 @@ Nobody wrote the type `{ page: number; pages: number }`: it is read from `'Page 
 - [`http.test.ts`](src/clients/dummyjson/http.test.ts): the client on a bad network: "requests that meet a 401 at the same time share one refresh".
 - [`framework/runtime/__tests__/`](framework/runtime/__tests__): the framework's own guarantees.
 
-The end-to-end tests ([`e2e/flows.spec.ts`](e2e/flows.spec.ts)) drive the production build. After each action they wait on one promise, `window.__framework.idle()`, then look once. It resolves when no read or write is pending, no view or skin is loading, no operation is running and no placeholder is on screen. There are no sleeps and no retried assertions, with one stated exception for a list that refreshes on a timer.
+The end-to-end tests ([`e2e/flows.spec.ts`](e2e/flows.spec.ts)) drive the production build. After each action they wait on one promise, `window.__framework.idle()`, then look once. It resolves when no read or write is pending, no view or skin is loading, no operation is running and no placeholder is on screen. A flow across two tabs also waits on `window.__framework.fromTab()`, which resolves once a tab has handled another's message. There are no sleeps and no retried assertions, with one stated exception for a list that refreshes on a timer.
 
 ## The network lab
 
@@ -244,9 +255,27 @@ DummyJSON allows about 100 requests in a window it does not state, so sustained 
 
 "States", in the header, opens `#/states`: every component with a `state.ts`, in each state of its chart, one frame per state, from the folders alone. Each frame is the component held in that state: its chart is not started, so nothing moves. A state that needs more than the chart starts with (a product read, a failure's message, the form's values) gets it from the examples its `state.ts` exports. The frames follow the page's language.
 
+## What renders, and when
+
+A component renders again only for what its files read. The plugin reads what each layer file destructures, and the framework follows those sources and no other:
+
+- **The locale.** Only components with an `i18n.ts`, or that read `intl` or `locale`. The page switches in one commit, once every component on screen has its messages.
+- **The person, the backend's snapshot and the flags.** Only the parts each component reads. A folder's `acl.ts` that reads only `acl` and `flags` is decided once per change, and an instance renders again only when its decision changes.
+- **The route.** Each field has a context of its own. The catalogue follows its filters and its page; a dialog opening over it does not render it.
+- **The form.** Only the values a component's files read. The editor's fields hold what is typed, as native fields do, so a key renders the field alone.
+
+Two rules hold for every render:
+
+- **Unchanged parts are reused.** What a render gets keeps every part that is still equal, and a render that would get the same is not called. What it returns shares every element equal to the last one, so React skips it.
+- **Handlers are stable.** Each handler keeps one function for the instance's life, which calls the last committed closure.
+
+[`perf/`](perf/README.md) measures this. `npm run perf` drives 29 steps through a profiling build and counts every render, and the ones that changed nothing on the page. Its README holds the numbers after each change. For the last one:
+- framework components re-rendered 248 times, 9 of them changing nothing (267 and 28 before);
+- typing six keys in the editor renders no framework component, and 50 of react-aria's (602 at the baseline).
+
 ## Running it
 
-Node 20.19 or later.
+Node 20.19 or later. The unit tests need a newer one: CI runs everything on Node 24.
 
 ```sh
 npm ci
@@ -264,6 +293,7 @@ GrowthBook serves the DummyJSON world's flags when `.env.local` holds its client
 | `npm test` | The unit tests: pure functions, flows, services on the memory client, the API client, and the framework's runtime. |
 | `npm run check` | `typecheck`, `test` and `build`. |
 | `npm run e2e` | Builds, serves, and drives the main flows in Chromium (and WebKit in CI). Run `npx playwright install chromium` once. |
+| `npm run perf` | Builds with React's profiling build and counts the renders of each step of a flow ([`perf/`](perf/README.md)). |
 
 For editor support, use the workspace's TypeScript ("TypeScript: Select TypeScript Version" in VS Code), so that the language-service plugin in `tsconfig.json` loads. See [the framework's README](framework/README.md#editors).
 
@@ -302,6 +332,8 @@ The mechanism differs. The idea carries: give each kind of decision one place, t
 - The `Route` and the hash router in [`src/main.tsx`](src/main.tsx) stand in for a routing layer. `form.ts` stands in for a form manager.
 - Services receive no `AbortSignal` from the data layer yet. The client honours one; a stale answer is ignored by its cache key instead.
 - The local overlay keeps the API's paging, so a page that lost a product is one short.
+- The live site's build has no GrowthBook key, so its flags come from memory.
+- Offline use, and where the session and other stored data live, are not designed yet.
 - The framework is a working sketch, not a library.
 
 ## Layout
@@ -311,7 +343,7 @@ framework/          The framework: plugin/, runtime/, typescript/, shared/. See 
 src/
   main.tsx          The shell: which world and locale, the router's stand-in, Root, failures as toasts.
   locales.ts        The locales the app speaks, and `?lang=` in the address.
-  env.d.ts          What this app injects: Env, Route, Navigation.
+  env.d.ts          What this app injects: Env, Route, Flags, Navigation.
   address.ts        The address, as the route and back.
   base.css          Design tokens and the look of the controls.
   clients/          Transports.

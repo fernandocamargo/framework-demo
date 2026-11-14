@@ -213,6 +213,8 @@
         <li><span class="file"><b>state</b>.ts</span><span class="says">The flow, as a statechart that reads like prose.</span></li>
         <li><span class="file"><b>form</b>.ts</span><span class="says">Server data in, request out.</span></li>
         <li><span class="file"><b>async</b>.ts</span><span class="says">What to load before it shows.</span></li>
+        <li><span class="file"><b>i18n</b>.ts</span><span class="says">Its words. Each translation is checked against them.</span></li>
+        <li><span class="file"><b>shortcuts</b>.ts</span><span class="says">Its keys, while it is on screen.</span></li>
         <li><span class="file"><b>style</b>/skins/</span><span class="says">How it looks. Swappable.</span></li>
       </ol>
       <span class="root" style="margin-top:16px">services/products/</span>
@@ -228,13 +230,13 @@
     <div class="head">
       <span class="eyebrow">The code</span>
       <h2 id="code">The folder, file by file</h2>
-      <p class="lede">The editor and the catalogue of the <a href="https://fernandocamargo.github.io/framework-demo/">demo</a>, with their service and client: 537 lines, as they are <a href="https://github.com/fernandocamargo/framework-demo/tree/a0532c3f66da239bc231172a2690eab282787fbc/src">on GitHub</a>. The editor’s flow is a statechart that reads like its requirements, and its test drives that flow with no React and no network.</p>
+      <p class="lede">The editor, the catalogue and a delete link of the <a href="https://fernandocamargo.github.io/framework-demo/">demo</a>, with their service and clients: 712 lines, as they are <a href="https://github.com/fernandocamargo/framework-demo/tree/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src">on GitHub</a>. The editor’s flow is a statechart that reads like its requirements, and its test drives that flow with no React and no network.</p>
     </div>
     <div class="browser">
       <ul class="files" role="tablist" aria-label="Files" aria-orientation="vertical">
-        <li class="folder" role="presentation">components/<wbr>product/<wbr>editor/</li><li role="presentation"><button type="button" role="tab" id="file-tab-0" aria-controls="file-0" aria-selected="true" tabindex="0" data-file="0"><span class="name">state.ts</span><span class="role">flow</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-1" aria-controls="file-1" aria-selected="false" tabindex="-1" data-file="1"><span class="name">form.ts</span><span class="role">fields</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-2" aria-controls="file-2" aria-selected="false" tabindex="-1" data-file="2"><span class="name">props.ts</span><span class="role">shapes</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-3" aria-controls="file-3" aria-selected="false" tabindex="-1" data-file="3"><span class="name">state.test.ts</span><span class="role">proves</span></button></li><li class="folder" role="presentation">components/<wbr>catalogue/</li><li role="presentation"><button type="button" role="tab" id="file-tab-4" aria-controls="file-4" aria-selected="false" tabindex="-1" data-file="4"><span class="name">async.ts</span><span class="role">loads</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-5" aria-controls="file-5" aria-selected="false" tabindex="-1" data-file="5"><span class="name">props.ts</span><span class="role">shapes</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-6" aria-controls="file-6" aria-selected="false" tabindex="-1" data-file="6"><span class="name">render.tsx</span><span class="role">draws</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-7" aria-controls="file-7" aria-selected="false" tabindex="-1" data-file="7"><span class="name">placeholder.tsx</span><span class="role">waits</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-8" aria-controls="file-8" aria-selected="false" tabindex="-1" data-file="8"><span class="name">error.tsx</span><span class="role">fails</span></button></li><li class="folder" role="presentation">services/<wbr>products/</li><li role="presentation"><button type="button" role="tab" id="file-tab-9" aria-controls="file-9" aria-selected="false" tabindex="-1" data-file="9"><span class="name">meta.ts</span><span class="role">cache</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-10" aria-controls="file-10" aria-selected="false" tabindex="-1" data-file="10"><span class="name">index.ts</span><span class="role">endpoints</span></button></li><li class="folder" role="presentation">clients/<wbr>dummyjson/</li><li role="presentation"><button type="button" role="tab" id="file-tab-11" aria-controls="file-11" aria-selected="false" tabindex="-1" data-file="11"><span class="name">index.ts</span><span class="role">transport</span></button></li>
+        <li class="folder" role="presentation">components/<wbr>product/<wbr>editor/</li><li role="presentation"><button type="button" role="tab" id="file-tab-0" aria-controls="file-0" aria-selected="true" tabindex="0" data-file="0"><span class="name">state.ts</span><span class="role">flow</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-1" aria-controls="file-1" aria-selected="false" tabindex="-1" data-file="1"><span class="name">form.ts</span><span class="role">fields</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-2" aria-controls="file-2" aria-selected="false" tabindex="-1" data-file="2"><span class="name">props.ts</span><span class="role">shapes</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-3" aria-controls="file-3" aria-selected="false" tabindex="-1" data-file="3"><span class="name">i18n.ts</span><span class="role">words</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-4" aria-controls="file-4" aria-selected="false" tabindex="-1" data-file="4"><span class="name">shortcuts.ts</span><span class="role">keys</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-5" aria-controls="file-5" aria-selected="false" tabindex="-1" data-file="5"><span class="name">state.test.ts</span><span class="role">proves</span></button></li><li class="folder" role="presentation">components/<wbr>catalogue/</li><li role="presentation"><button type="button" role="tab" id="file-tab-6" aria-controls="file-6" aria-selected="false" tabindex="-1" data-file="6"><span class="name">async.ts</span><span class="role">loads</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-7" aria-controls="file-7" aria-selected="false" tabindex="-1" data-file="7"><span class="name">props.ts</span><span class="role">shapes</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-8" aria-controls="file-8" aria-selected="false" tabindex="-1" data-file="8"><span class="name">render.tsx</span><span class="role">draws</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-9" aria-controls="file-9" aria-selected="false" tabindex="-1" data-file="9"><span class="name">placeholder.tsx</span><span class="role">waits</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-10" aria-controls="file-10" aria-selected="false" tabindex="-1" data-file="10"><span class="name">error.tsx</span><span class="role">fails</span></button></li><li class="folder" role="presentation">components/<wbr>product/<wbr>remove-link/</li><li role="presentation"><button type="button" role="tab" id="file-tab-11" aria-controls="file-11" aria-selected="false" tabindex="-1" data-file="11"><span class="name">acl.ts</span><span class="role">allows</span></button></li><li class="folder" role="presentation">services/<wbr>products/</li><li role="presentation"><button type="button" role="tab" id="file-tab-12" aria-controls="file-12" aria-selected="false" tabindex="-1" data-file="12"><span class="name">meta.ts</span><span class="role">cache</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-13" aria-controls="file-13" aria-selected="false" tabindex="-1" data-file="13"><span class="name">index.ts</span><span class="role">endpoints</span></button></li><li class="folder" role="presentation">clients/<wbr>flags/</li><li role="presentation"><button type="button" role="tab" id="file-tab-14" aria-controls="file-14" aria-selected="false" tabindex="-1" data-file="14"><span class="name">definitions.ts</span><span class="role">flags</span></button></li><li class="folder" role="presentation">clients/<wbr>dummyjson/</li><li role="presentation"><button type="button" role="tab" id="file-tab-15" aria-controls="file-15" aria-selected="false" tabindex="-1" data-file="15"><span class="name">index.ts</span><span class="role">transport</span></button></li>
       </ul>
-      <div class="panels"><div class="source" role="tabpanel" id="file-0" aria-labelledby="file-tab-0"><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/components/product/editor/state.ts">components/<wbr>product/<wbr>editor/<wbr>state.ts</a><span>123 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s flow, for a product the address names (`edit`) or a new one (`create`).</span>
+      <div class="panels"><div class="source" role="tabpanel" id="file-0" aria-labelledby="file-tab-0"><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/state.ts">components/<wbr>product/<wbr>editor/<wbr>state.ts</a><span>143 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s flow, for a product the address names (`edit`) or a new one (`create`).</span>
 <span class="t-comment">//</span>
 <span class="t-comment">// The rules it holds:</span>
 <span class="t-comment">// - a save with problems in the form goes nowhere, and shows them;</span>
@@ -260,7 +262,7 @@
 
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> creating = ({ context }) =&gt; context.creating
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> unsaved = ({ form }) =&gt; form.unsaved
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> invalid = ({ form }) =&gt; Object.keys(problems(form.values)).length &gt; 0
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> invalid = ({ form }) =&gt; problems(form.values).length &gt; 0
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> isConflict = ({ event }) =&gt; event.error instanceof Error &amp;&amp; event.error.name === <span class="t-string">&#x27;ConflictError&#x27;</span>
 
 <span class="t-comment">// ---- Changes ---------------------------------------------------------------------------------</span>
@@ -282,7 +284,10 @@
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> changesToForce = ({ form, route }) =&gt; ({ id: route.edit ?? 0, changes: form.payload() })
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> productToCreate = ({ form }) =&gt; form.payload()
 
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ services }) =&gt; ({
+<span class="t-comment">// The chart is declared from what the person may do: a read-only editor has no `save` at all. When</span>
+<span class="t-comment">// that changes (a sign-in, a session that ends), the framework declares it again and the flow keeps</span>
+<span class="t-comment">// its place.</span>
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ services, acl }) =&gt; ({
   starting: {
     always: [{ guard: creating, target: <span class="t-string">&#x27;editing&#x27;</span> }, { target: <span class="t-string">&#x27;loading&#x27;</span> }],
   },
@@ -303,7 +308,7 @@
   editing: {
     description: <span class="t-string">&#x27;The person changes the fields.&#x27;</span>,
     on: {
-      save: [{ guard: invalid, actions: showProblems }, { guard: creating, target: <span class="t-string">&#x27;creating&#x27;</span> }, { target: <span class="t-string">&#x27;saving&#x27;</span> }],
+      ...(acl.allowed &amp;&amp; { save: [{ guard: invalid, actions: showProblems }, { guard: creating, target: <span class="t-string">&#x27;creating&#x27;</span> }, { target: <span class="t-string">&#x27;saving&#x27;</span> }] }),
       close: [{ guard: unsaved, target: <span class="t-string">&#x27;confirmingDiscard&#x27;</span> }, { actions: close }],
     },
   },
@@ -356,7 +361,24 @@
     description: <span class="t-string">&#x27;Saved. The lists that showed the product have read again; the editor closes.&#x27;</span>,
     entry: close,
   },
-})</code></pre></div><div class="source" role="tabpanel" id="file-1" aria-labelledby="file-tab-1" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/components/product/editor/form.ts">components/<wbr>product/<wbr>editor/<wbr>form.ts</a><span>33 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s fields: how a product becomes their values, how the values become the changes</span>
+})
+
+<span class="t-comment">// ---- What the states gallery shows each state with --------------------------------------------</span>
+
+<span class="t-keyword">const</span> lamp = { title: <span class="t-string">&#x27;Arc Floor Lamp&#x27;</span>, description: <span class="t-string">&#x27;A tall lamp that arcs over a desk.&#x27;</span>, category: <span class="t-string">&#x27;lighting&#x27;</span>, brand: <span class="t-string">&#x27;Fieldwork&#x27;</span>, price: 273.99, stock: 58 }
+
+<span class="t-comment">/** What a state needs on screen beyond what the chart starts with: the product read, the form&#x27;s values. */</span>
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> examples = {
+  unavailable: { context: { error: <span class="t-string">&quot;Product with id &#x27;99&#x27; not found&quot;</span> } },
+  editing: { context: { title: lamp.title }, values: lamp },
+  confirmingDiscard: { context: { title: lamp.title }, values: { ...lamp, price: 249.99 } },
+  saving: { context: { title: lamp.title }, values: lamp },
+  creating: { context: { creating: <span class="t-keyword">true</span> }, values: { ...lamp, title: <span class="t-string">&#x27;Reading Lamp&#x27;</span> } },
+  conflict: { context: { title: lamp.title }, values: { ...lamp, price: 249.99 } },
+  overwriting: { context: { title: lamp.title }, values: { ...lamp, price: 249.99 } },
+  failed: { context: { title: lamp.title, error: <span class="t-string">&#x27;The server answered 500.&#x27;</span> }, values: lamp },
+  saved: { context: { title: lamp.title }, values: lamp },
+}</code></pre></div><div class="source" role="tabpanel" id="file-1" aria-labelledby="file-tab-1" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/form.ts">components/<wbr>product/<wbr>editor/<wbr>form.ts</a><span>33 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s fields: how a product becomes their values, how the values become the changes</span>
 <span class="t-comment">// to save, and what is wrong with them. Pure functions; the framework keeps the values.</span>
 <span class="t-keyword">import</span> <span class="t-keyword">type</span> { Changes, Detailed } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/services/products/types&#x27;</span>
 
@@ -380,40 +402,74 @@
   stock: Math.trunc(values.stock),
 })
 
-<span class="t-comment">/** What stops these values from being saved, by field. Empty when nothing does. */</span>
+<span class="t-comment">/** The fields whose values stop a save. Empty when nothing does. Each is worded by i18n.ts&#x27;s `problems`. */</span>
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> problems = (values: Values) =&gt; {
-  <span class="t-keyword">const</span> found: Partial&lt;<span class="t-tag">Record</span>&lt;keyof Values, string&gt;&gt; = {}
-  <span class="t-keyword">if</span> (!values.title.trim()) found.title = <span class="t-string">&#x27;A product needs a title.&#x27;</span>
-  <span class="t-keyword">if</span> (!values.category) found.category = <span class="t-string">&#x27;Choose a category.&#x27;</span>
-  <span class="t-keyword">if</span> (!(values.price &gt; 0)) found.price = <span class="t-string">&#x27;The price must be more than zero.&#x27;</span>
-  <span class="t-keyword">if</span> (!(values.stock &gt;= 0)) found.stock = <span class="t-string">&#x27;The stock cannot be negative.&#x27;</span>
+  <span class="t-keyword">const</span> found: (<span class="t-string">&#x27;title&#x27;</span> | <span class="t-string">&#x27;category&#x27;</span> | <span class="t-string">&#x27;price&#x27;</span> | <span class="t-string">&#x27;stock&#x27;</span>)[] = []
+  <span class="t-keyword">if</span> (!values.title.trim()) found.push(<span class="t-string">&#x27;title&#x27;</span>)
+  <span class="t-keyword">if</span> (!values.category) found.push(<span class="t-string">&#x27;category&#x27;</span>)
+  <span class="t-keyword">if</span> (!(values.price &gt; 0)) found.push(<span class="t-string">&#x27;price&#x27;</span>)
+  <span class="t-keyword">if</span> (!(values.stock &gt;= 0)) found.push(<span class="t-string">&#x27;stock&#x27;</span>)
   <span class="t-keyword">return</span> found
-}</code></pre></div><div class="source" role="tabpanel" id="file-2" aria-labelledby="file-tab-2" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/components/product/editor/props.ts">components/<wbr>product/<wbr>editor/<wbr>props.ts</a><span>26 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the editor&#x27;s render shows in each state of the flow.</span>
+}</code></pre></div><div class="source" role="tabpanel" id="file-2" aria-labelledby="file-tab-2" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/props.ts">components/<wbr>product/<wbr>editor/<wbr>props.ts</a><span>32 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the editor&#x27;s render shows in each state of the flow, in the locale on screen. The fields</span>
+<span class="t-comment">// start from the seeded values and hold what is typed, so a key renders its field alone; the</span>
+<span class="t-comment">// values are read only to say what is wrong with them, once a save was tried.</span>
+<span class="t-keyword">import</span> { CURRENCY } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/format&#x27;</span>
 <span class="t-keyword">import</span> { problems } <span class="t-keyword">from</span> <span class="t-string">&#x27;./form&#x27;</span>
 
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ state, form, <span class="t-keyword">async</span>: { <span class="t-keyword">default</span>: categories } }) =&gt; {
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ state, form, i18n, acl, <span class="t-keyword">async</span>: { <span class="t-keyword">default</span>: categories } }) =&gt; {
   <span class="t-keyword">const</span> { context } = state
   <span class="t-keyword">const</span> busy = state.saving || state.creating || state.overwriting
   <span class="t-keyword">return</span> {
+    i18n,
     send: state.send,
-    values: form.values,
+    initial: form.initial,
     set: form.set,
     categories,
-    heading: context.creating ? <span class="t-string">&#x27;New product&#x27;</span> : context.title ? <span class="t-string">`Edit ${context.title}`</span> : <span class="t-string">&#x27;Edit product&#x27;</span>,
-    saveText: context.creating ? <span class="t-string">&#x27;Create product&#x27;</span> : <span class="t-string">&#x27;Save changes&#x27;</span>,
-    problems: context.checked ? problems(form.values) : {},
+    currency: { style: <span class="t-string">&#x27;currency&#x27;</span>, currency: CURRENCY } <span class="t-keyword">as</span> <span class="t-keyword">const</span>,
+    heading: context.creating ? i18n.heading.create : context.title ? i18n.heading.edit({ title: context.title }) : i18n.heading.untitled,
+    saveText: context.creating ? i18n.save.create : i18n.save.edit,
+    problems: context.checked ? Object.fromEntries(problems(form.values).map((field) =&gt; [field, i18n.problems[field]])) : {},
     loading: state.loading || state.starting,
     unavailable: state.unavailable,
     <span class="t-comment">// The form stays on screen, and locked, while a save runs or a question is open over it.</span>
     formShown: !(state.loading || state.starting || state.unavailable),
-    locked: busy || state.conflict || state.confirmingDiscard,
+    locked: busy || state.conflict || state.confirmingDiscard || !acl.allowed,
+    readOnly: !acl.allowed,
     busy,
     conflict: state.conflict,
     failed: state.failed,
     confirmingDiscard: state.confirmingDiscard,
-    error: context.error,
+    error: context.error ?? <span class="t-string">&#x27;&#x27;</span>,
   }
-}</code></pre></div><div class="source" role="tabpanel" id="file-3" aria-labelledby="file-tab-3" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/components/product/editor/state.test.ts">components/<wbr>product/<wbr>editor/<wbr>state.test.ts</a><span>115 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s rules, tested where they are written: the checks as plain functions, and the</span>
+}</code></pre></div><div class="source" role="tabpanel" id="file-3" aria-labelledby="file-tab-3" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/i18n.ts">components/<wbr>product/<wbr>editor/<wbr>i18n.ts</a><span>25 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s words, in English. Translations: i18n/&lt;locale&gt;.json.</span>
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> {
+  heading: { create: <span class="t-string">&#x27;New product&#x27;</span>, edit: <span class="t-string">&#x27;Edit {title}&#x27;</span>, untitled: <span class="t-string">&#x27;Edit product&#x27;</span> },
+  close: <span class="t-string">&#x27;Close&#x27;</span>,
+  readOnly: <span class="t-string">&#x27;You can see this product. Changing it needs a permission you do not have.&#x27;</span>,
+  loading: <span class="t-string">&#x27;Reading the product&#x27;</span>,
+  unavailable: { message: <span class="t-string">&#x27;The product could not be read: {message}&#x27;</span>, retry: <span class="t-string">&#x27;Try again&#x27;</span> },
+  fields: { title: <span class="t-string">&#x27;Title&#x27;</span>, description: <span class="t-string">&#x27;Description&#x27;</span>, category: <span class="t-string">&#x27;Category&#x27;</span>, brand: <span class="t-string">&#x27;Brand&#x27;</span>, price: <span class="t-string">&#x27;Price&#x27;</span>, stock: <span class="t-string">&#x27;Stock&#x27;</span>, choose: <span class="t-string">&#x27;Choose one&#x27;</span> },
+  problems: {
+    title: <span class="t-string">&#x27;A product needs a title.&#x27;</span>,
+    category: <span class="t-string">&#x27;Choose a category.&#x27;</span>,
+    price: <span class="t-string">&#x27;The price must be more than zero.&#x27;</span>,
+    stock: <span class="t-string">&#x27;The stock cannot be negative.&#x27;</span>,
+  },
+  conflict: {
+    message: <span class="t-string">&#x27;Somebody else changed this product while you were editing it. Your changes are still here.&#x27;</span>,
+    theirs: <span class="t-string">&#x27;Discard mine and reload&#x27;</span>,
+    mine: <span class="t-string">&#x27;Save mine anyway&#x27;</span>,
+  },
+  failed: { message: <span class="t-string">&#x27;It was not saved: {message}&#x27;</span>, back: <span class="t-string">&#x27;Back to the form&#x27;</span>, retry: <span class="t-string">&#x27;Try again&#x27;</span> },
+  cancel: <span class="t-string">&#x27;Cancel&#x27;</span>,
+  save: { create: <span class="t-string">&#x27;Create product&#x27;</span>, edit: <span class="t-string">&#x27;Save changes&#x27;</span> },
+  discard: { title: <span class="t-string">&#x27;Discard your changes?&#x27;</span>, text: <span class="t-string">&#x27;What you changed in this product has not been saved.&#x27;</span>, keep: <span class="t-string">&#x27;Keep editing&#x27;</span>, discard: <span class="t-string">&#x27;Discard&#x27;</span> },
+  keys: { save: <span class="t-string">&#x27;Save the product&#x27;</span> },
+}</code></pre></div><div class="source" role="tabpanel" id="file-4" aria-labelledby="file-tab-4" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/shortcuts.ts">components/<wbr>product/<wbr>editor/<wbr>shortcuts.ts</a><span>5 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s key. The chart decides when it works: a read-only editor&#x27;s chart has no `save`,</span>
+<span class="t-comment">// and a running save takes none, so the key does nothing then, and the list of keys says so.</span>
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ i18n }) =&gt; ({
+  <span class="t-string">&#x27;mod+s&#x27;</span>: { label: i18n.keys.save, send: <span class="t-string">&#x27;save&#x27;</span> },
+})</code></pre></div><div class="source" role="tabpanel" id="file-5" aria-labelledby="file-tab-5" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/state.test.ts">components/<wbr>product/<wbr>editor/<wbr>state.test.ts</a><span>115 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s rules, tested where they are written: the checks as plain functions, and the</span>
 <span class="t-comment">// flow itself with the services a test gives it. No React, no network.</span>
 <span class="t-keyword">import</span> { formOf, startFlow } <span class="t-keyword">from</span> <span class="t-string">&#x27;framework/testing&#x27;</span>
 <span class="t-keyword">import</span> <span class="t-keyword">type</span> { Detailed } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/services/products/types&#x27;</span>
@@ -441,7 +497,7 @@ test(<span class="t-string">&#x27;the checks are plain functions of what they ar
   expect(editor.unsaved({ form: { unsaved: <span class="t-keyword">true</span> } } <span class="t-keyword">as</span> never)).toBe(<span class="t-keyword">true</span>)
   expect(editor.isConflict({ event: { error: conflict } } <span class="t-keyword">as</span> never)).toBe(<span class="t-keyword">true</span>)
   expect(editor.isConflict({ event: { error: <span class="t-keyword">new</span> Error(<span class="t-string">&#x27;offline&#x27;</span>) } } <span class="t-keyword">as</span> never)).toBe(<span class="t-keyword">false</span>)
-  expect(form.problems({ ...form.seed(product), title: <span class="t-string">&#x27; &#x27;</span>, price: 0 })).toEqual({ title: <span class="t-string">&#x27;A product needs a title.&#x27;</span>, price: <span class="t-string">&#x27;The price must be more than zero.&#x27;</span> })
+  expect(form.problems({ ...form.seed(product), title: <span class="t-string">&#x27; &#x27;</span>, price: 0 })).toEqual([<span class="t-string">&#x27;title&#x27;</span>, <span class="t-string">&#x27;price&#x27;</span>])
 })
 
 test(<span class="t-string">&#x27;the product seeds the form once, and a save sends the changes for the version read&#x27;</span>, <span class="t-keyword">async</span> () =&gt; {
@@ -527,7 +583,7 @@ test(<span class="t-string">&#x27;a new product starts from an empty form and is
   <span class="t-keyword">await</span> flow.settled()
   expect(create).toHaveBeenCalledWith({ title: <span class="t-string">&#x27;Cork Coaster&#x27;</span>, description: <span class="t-string">&#x27;&#x27;</span>, category: <span class="t-string">&#x27;desks&#x27;</span>, brand: <span class="t-string">&#x27;&#x27;</span>, price: 7.5, stock: 0 })
   expect(save).not.toHaveBeenCalled()
-})</code></pre></div><div class="source" role="tabpanel" id="file-4" aria-labelledby="file-tab-4" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/components/catalogue/async.ts">components/<wbr>catalogue/<wbr>async.ts</a><span>9 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The catalogue waits for its page of products before it shows. The framework records what</span>
+})</code></pre></div><div class="source" role="tabpanel" id="file-6" aria-labelledby="file-tab-6" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/catalogue/async.ts">components/<wbr>catalogue/<wbr>async.ts</a><span>9 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The catalogue waits for its page of products before it shows. The framework records what</span>
 <span class="t-comment">// this read: the two services and these five route fields. So another filter, sort or page in</span>
 <span class="t-comment">// the address is another read; a dialog opening is not; and a write that makes</span>
 <span class="t-comment">// `products.search` stale (services/products/meta.ts) reads the page on screen again.</span>
@@ -535,86 +591,95 @@ test(<span class="t-string">&#x27;a new product starts from an empty form and is
   <span class="t-keyword">const</span> filters = { q: route.q, category: route.category, sort: route.sort, order: route.order, page: route.page }
   <span class="t-keyword">const</span> [page, categories] = <span class="t-keyword">await</span> Promise.all([services.products.search(filters), services.products.categories()])
   <span class="t-keyword">return</span> { filters, page, categories }
-}</code></pre></div><div class="source" role="tabpanel" id="file-5" aria-labelledby="file-tab-5" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/components/catalogue/props.ts">components/<wbr>catalogue/<wbr>props.ts</a><span>26 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the catalogue&#x27;s render shows, worked out from what its read answered.</span>
+}</code></pre></div><div class="source" role="tabpanel" id="file-7" aria-labelledby="file-tab-7" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/catalogue/props.ts">components/<wbr>catalogue/<wbr>props.ts</a><span>27 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the catalogue&#x27;s render shows, worked out from what its read answered, in the page&#x27;s words.</span>
 <span class="t-keyword">import</span> { filtered, href, HOME } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/address&#x27;</span>
-<span class="t-keyword">import</span> { plural } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/format&#x27;</span>
 
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ <span class="t-keyword">async</span>: { <span class="t-keyword">default</span>: answer } }) =&gt; {
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ i18n, acl, <span class="t-keyword">async</span>: { <span class="t-keyword">default</span>: answer } }) =&gt; {
   <span class="t-keyword">const</span> { filters, page, categories } = answer
-  <span class="t-keyword">const</span> category = categories.find(({ slug }) =&gt; slug === filters.category)?.name
+  <span class="t-keyword">const</span> category = categories.find(({ slug }) =&gt; slug === filters.category)?.name ?? <span class="t-string">&#x27;&#x27;</span>
   <span class="t-keyword">const</span> narrowed = Boolean(filters.q || filters.category)
   <span class="t-keyword">return</span> {
+    i18n,
     filters,
     categories,
     items: page.items,
-    summary: [plural(page.total, <span class="t-string">&#x27;product&#x27;</span>), filters.q &amp;&amp; <span class="t-string">`matching “${filters.q}”`</span>, category &amp;&amp; <span class="t-string">`in ${category}`</span>].filter(Boolean).join(<span class="t-string">&#x27; &#x27;</span>),
+    canChange: acl.allowed,
+    summary: i18n.summary({ count: page.total, filter: filters.q &amp;&amp; category ? <span class="t-string">&#x27;both&#x27;</span> : filters.q ? <span class="t-string">&#x27;q&#x27;</span> : category ? <span class="t-string">&#x27;category&#x27;</span> : <span class="t-string">&#x27;none&#x27;</span>, q: filters.q, category }),
     empty: page.items.length === 0,
-    emptyText: narrowed ? <span class="t-string">&#x27;No product matches these filters.&#x27;</span> : <span class="t-string">&#x27;The catalogue is empty.&#x27;</span>,
+    emptyText: narrowed ? i18n.empty.narrowed : i18n.empty.none,
     clearHref: narrowed ? href(HOME) : <span class="t-keyword">null</span>,
     createHref: href(filters, { create: <span class="t-keyword">true</span> }),
     bulkHref: href(filters, { bulk: <span class="t-keyword">true</span> }),
     paging: {
       shown: page.pages &gt; 1,
-      text: <span class="t-string">`Page ${page.page} of ${page.pages}`</span>,
+      text: i18n.paging.page({ page: page.page, pages: page.pages }),
       previousHref: page.page &gt; 1 ? filtered(filters, { page: page.page - 1 }) : <span class="t-keyword">null</span>,
       nextHref: page.page &lt; page.pages ? filtered(filters, { page: page.page + 1 }) : <span class="t-keyword">null</span>,
     },
   }
-}</code></pre></div><div class="source" role="tabpanel" id="file-6" aria-labelledby="file-tab-6" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/components/catalogue/render.tsx">components/<wbr>catalogue/<wbr>render.tsx</a><span>50 lines</span></header><pre tabindex="0"><code><span class="t-keyword">import</span> { Link } <span class="t-keyword">from</span> <span class="t-string">&#x27;react-aria-components&#x27;</span>
+}</code></pre></div><div class="source" role="tabpanel" id="file-8" aria-labelledby="file-tab-8" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/catalogue/render.tsx">components/<wbr>catalogue/<wbr>render.tsx</a><span>58 lines</span></header><pre tabindex="0"><code><span class="t-keyword">import</span> { Link } <span class="t-keyword">from</span> <span class="t-string">&#x27;react-aria-components&#x27;</span>
 <span class="t-keyword">import</span> Filters <span class="t-keyword">from</span> <span class="t-string">&#x27;./components/filters&#x27;</span>
 <span class="t-keyword">import</span> ProductRow <span class="t-keyword">from</span> <span class="t-string">&#x27;./components/product-row&#x27;</span>
 
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ className, filters, categories, items, summary, empty, emptyText, clearHref, createHref, bulkHref, paging }) =&gt; (
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ className, i18n, filters, categories, items, canChange, summary, empty, emptyText, clearHref, createHref, bulkHref, paging }) =&gt; (
   &lt;section className={className} aria-labelledby=<span class="t-string">&quot;catalogue-title&quot;</span>&gt;
     &lt;div className=<span class="t-string">&quot;top&quot;</span>&gt;
       &lt;div&gt;
-        &lt;h2 id=<span class="t-string">&quot;catalogue-title&quot;</span>&gt;Products&lt;/h2&gt;
+        &lt;h2 id=<span class="t-string">&quot;catalogue-title&quot;</span>&gt;{i18n.title}&lt;/h2&gt;
         &lt;p className=<span class="t-string">&quot;summary&quot;</span> role=<span class="t-string">&quot;status&quot;</span>&gt;
           {summary}
         &lt;/p&gt;
       &lt;/div&gt;
-      &lt;div className=<span class="t-string">&quot;actions&quot;</span>&gt;
-        &lt;<span class="t-tag">Link</span> href={bulkHref} data-variant=<span class="t-string">&quot;secondary&quot;</span>&gt;
-          &lt;span className=<span class="t-string">&quot;icon&quot;</span> data-icon=<span class="t-string">&quot;tag&quot;</span> /&gt;
-          Bulk price change
-        &lt;/<span class="t-tag">Link</span>&gt;
-        &lt;<span class="t-tag">Link</span> href={createHref} data-variant=<span class="t-string">&quot;primary&quot;</span>&gt;
-          &lt;span className=<span class="t-string">&quot;icon&quot;</span> data-icon=<span class="t-string">&quot;plus&quot;</span> /&gt;
-          New product
-        &lt;/<span class="t-tag">Link</span>&gt;
-      &lt;/div&gt;
+      {canChange &amp;&amp; (
+        &lt;div className=<span class="t-string">&quot;actions&quot;</span>&gt;
+          &lt;<span class="t-tag">Link</span> href={bulkHref} data-variant=<span class="t-string">&quot;secondary&quot;</span>&gt;
+            &lt;span className=<span class="t-string">&quot;icon&quot;</span> data-icon=<span class="t-string">&quot;tag&quot;</span> /&gt;
+            {i18n.actions.bulk}
+          &lt;/<span class="t-tag">Link</span>&gt;
+          &lt;<span class="t-tag">Link</span> href={createHref} data-variant=<span class="t-string">&quot;primary&quot;</span>&gt;
+            &lt;span className=<span class="t-string">&quot;icon&quot;</span> data-icon=<span class="t-string">&quot;plus&quot;</span> /&gt;
+            {i18n.actions.create}
+          &lt;/<span class="t-tag">Link</span>&gt;
+        &lt;/div&gt;
+      )}
     &lt;/div&gt;
+    {!canChange &amp;&amp; (
+      &lt;p className=<span class="t-string">&quot;notice&quot;</span> data-tone=<span class="t-string">&quot;info&quot;</span> role=<span class="t-string">&quot;note&quot;</span>&gt;
+        &lt;span className=<span class="t-string">&quot;icon&quot;</span> data-icon=<span class="t-string">&quot;user&quot;</span> /&gt;
+        {i18n.readOnly}
+      &lt;/p&gt;
+    )}
     &lt;<span class="t-tag">Filters</span> filters={filters} categories={categories} /&gt;
     {empty ? (
       &lt;div className=<span class="t-string">&quot;empty&quot;</span>&gt;
         &lt;p&gt;{emptyText}&lt;/p&gt;
-        {clearHref &amp;&amp; &lt;<span class="t-tag">Link</span> href={clearHref}&gt;Clear the filters&lt;/<span class="t-tag">Link</span>&gt;}
+        {clearHref &amp;&amp; &lt;<span class="t-tag">Link</span> href={clearHref}&gt;{i18n.empty.clear}&lt;/<span class="t-tag">Link</span>&gt;}
       &lt;/div&gt;
     ) : (
-      &lt;ul className=<span class="t-string">&quot;rows&quot;</span> aria-label=<span class="t-string">&quot;Products&quot;</span>&gt;
+      &lt;ul className=<span class="t-string">&quot;rows&quot;</span> aria-label={i18n.list}&gt;
         {items.map((product) =&gt; (
           &lt;<span class="t-tag">ProductRow</span> key={product.id} product={product} filters={filters} /&gt;
         ))}
       &lt;/ul&gt;
     )}
     {paging.shown &amp;&amp; (
-      &lt;nav className=<span class="t-string">&quot;paging&quot;</span> aria-label=<span class="t-string">&quot;Pages&quot;</span>&gt;
+      &lt;nav className=<span class="t-string">&quot;paging&quot;</span> aria-label={i18n.paging.label}&gt;
         &lt;<span class="t-tag">Link</span> href={paging.previousHref ?? <span class="t-keyword">undefined</span>} isDisabled={!paging.previousHref} data-variant=<span class="t-string">&quot;secondary&quot;</span>&gt;
-          Previous
+          {i18n.paging.previous}
         &lt;/<span class="t-tag">Link</span>&gt;
         &lt;span&gt;{paging.text}&lt;/span&gt;
         &lt;<span class="t-tag">Link</span> href={paging.nextHref ?? <span class="t-keyword">undefined</span>} isDisabled={!paging.nextHref} data-variant=<span class="t-string">&quot;secondary&quot;</span>&gt;
-          Next
+          {i18n.paging.next}
         &lt;/<span class="t-tag">Link</span>&gt;
       &lt;/nav&gt;
     )}
   &lt;/section&gt;
-)</code></pre></div><div class="source" role="tabpanel" id="file-7" aria-labelledby="file-tab-7" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/components/catalogue/placeholder.tsx">components/<wbr>catalogue/<wbr>placeholder.tsx</a><span>15 lines</span></header><pre tabindex="0"><code><span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ className }) =&gt; (
+)</code></pre></div><div class="source" role="tabpanel" id="file-9" aria-labelledby="file-tab-9" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/catalogue/placeholder.tsx">components/<wbr>catalogue/<wbr>placeholder.tsx</a><span>15 lines</span></header><pre tabindex="0"><code><span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ className, i18n }) =&gt; (
   &lt;section className={className} aria-busy=<span class="t-string">&quot;true&quot;</span>&gt;
     &lt;div className=<span class="t-string">&quot;top&quot;</span>&gt;
       &lt;div&gt;
-        &lt;h2&gt;Products&lt;/h2&gt;
-        &lt;p className=<span class="t-string">&quot;summary&quot;</span>&gt;Reading the catalogue…&lt;/p&gt;
+        &lt;h2&gt;{i18n.title}&lt;/h2&gt;
+        &lt;p className=<span class="t-string">&quot;summary&quot;</span>&gt;{i18n.loading}&lt;/p&gt;
       &lt;/div&gt;
     &lt;/div&gt;
     &lt;ul className=<span class="t-string">&quot;rows&quot;</span> aria-hidden=<span class="t-string">&quot;true&quot;</span>&gt;
@@ -623,39 +688,77 @@ test(<span class="t-string">&#x27;a new product starts from an empty form and is
       ))}
     &lt;/ul&gt;
   &lt;/section&gt;
-)</code></pre></div><div class="source" role="tabpanel" id="file-8" aria-labelledby="file-tab-8" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/components/catalogue/error.tsx">components/<wbr>catalogue/<wbr>error.tsx</a><span>18 lines</span></header><pre tabindex="0"><code><span class="t-keyword">import</span> { Button } <span class="t-keyword">from</span> <span class="t-string">&#x27;react-aria-components&#x27;</span>
+)</code></pre></div><div class="source" role="tabpanel" id="file-10" aria-labelledby="file-tab-10" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/catalogue/error.tsx">components/<wbr>catalogue/<wbr>error.tsx</a><span>18 lines</span></header><pre tabindex="0"><code><span class="t-keyword">import</span> { Button } <span class="t-keyword">from</span> <span class="t-string">&#x27;react-aria-components&#x27;</span>
 
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ className, error, resetErrorBoundary }) =&gt; (
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ className, i18n, error, resetErrorBoundary }) =&gt; (
   &lt;section className={className}&gt;
     &lt;div className=<span class="t-string">&quot;top&quot;</span>&gt;
-      &lt;h2&gt;Products&lt;/h2&gt;
+      &lt;h2&gt;{i18n.title}&lt;/h2&gt;
     &lt;/div&gt;
     &lt;div className=<span class="t-string">&quot;notice&quot;</span> data-tone=<span class="t-string">&quot;danger&quot;</span> role=<span class="t-string">&quot;alert&quot;</span>&gt;
       &lt;span className=<span class="t-string">&quot;icon&quot;</span> data-icon=<span class="t-string">&quot;alert&quot;</span> /&gt;
       &lt;div&gt;
-        &lt;p&gt;The catalogue could not be read: {error.message}&lt;/p&gt;
+        &lt;p&gt;{i18n.failed.message({ message: error.message })}&lt;/p&gt;
         &lt;div className=<span class="t-string">&quot;actions&quot;</span>&gt;
-          &lt;<span class="t-tag">Button</span> onPress={resetErrorBoundary}&gt;Try again&lt;/<span class="t-tag">Button</span>&gt;
+          &lt;<span class="t-tag">Button</span> onPress={resetErrorBoundary}&gt;{i18n.failed.retry}&lt;/<span class="t-tag">Button</span>&gt;
         &lt;/div&gt;
       &lt;/div&gt;
     &lt;/div&gt;
   &lt;/section&gt;
-)</code></pre></div><div class="source" role="tabpanel" id="file-9" aria-labelledby="file-tab-9" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/services/products/meta.ts">services/<wbr>products/<wbr>meta.ts</a><span>16 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the data layer needs to know about the catalogue&#x27;s operations: which ones read, how</span>
-<span class="t-comment">// long an answer that rarely changes stays good, and what each write makes stale. By</span>
-<span class="t-comment">// reference: rename an operation and this file follows, or fails to compile.</span>
+)</code></pre></div><div class="source" role="tabpanel" id="file-11" aria-labelledby="file-tab-11" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/remove-link/acl.ts">components/<wbr>product/<wbr>remove-link/<wbr>acl.ts</a><span>4 lines</span></header><pre tabindex="0"><code><span class="t-comment">// One link, deep inside a row or a dialog, narrower than what the page allows: it needs the</span>
+<span class="t-comment">// grant to delete products, and deletions not paused (the `deletions` flag, a kill switch). A guest</span>
+<span class="t-comment">// may still try, and is asked to sign in.</span>
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ acl, flags }) =&gt; flags.deletions &amp;&amp; acl.allowed &amp;&amp; (acl.role === <span class="t-string">&#x27;guest&#x27;</span> || acl.grants.products.includes(<span class="t-string">&#x27;delete&#x27;</span>))</code></pre></div><div class="source" role="tabpanel" id="file-12" aria-labelledby="file-tab-12" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/services/products/meta.ts">services/<wbr>products/<wbr>meta.ts</a><span>51 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the data layer needs to know about the catalogue&#x27;s operations: which ones read, how</span>
+<span class="t-comment">// long an answer that rarely changes stays good, what each write makes stale, and how some</span>
+<span class="t-comment">// writes change what is shown before the server answers. By reference: rename an operation and</span>
+<span class="t-comment">// this file follows, or fails to compile.</span>
 <span class="t-comment">// A component that read one of these reads again when a write makes it stale. No component</span>
 <span class="t-comment">// says so, and no component calls an invalidation.</span>
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ services: { products } }) =&gt; ({
-  search: { reads: <span class="t-keyword">true</span> },
-  get: { reads: <span class="t-keyword">true</span> },
+<span class="t-keyword">import</span> { update } <span class="t-keyword">from</span> <span class="t-string">&#x27;framework&#x27;</span>
+<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Listed, Page } <span class="t-keyword">from</span> <span class="t-string">&#x27;./types&#x27;</span>
+
+<span class="t-comment">/** A product as the overlay will keep it: changed here, one version on. What the server will answer, so nothing renders twice. */</span>
+<span class="t-keyword">const</span> edited = &lt;<span class="t-tag">T</span> extends Listed&gt;(product: T, changes: Partial&lt;<span class="t-tag">Listed</span>&gt;): T =&gt; ({ ...product, ...changes, version: product.version + 1, local: product.local ?? <span class="t-string">&#x27;edited&#x27;</span> })
+
+<span class="t-comment">/** A list with one product changed, or the same list. */</span>
+<span class="t-keyword">const</span> changed = (page: Page, id: number, changes: Partial&lt;<span class="t-tag">Listed</span>&gt;): Page =&gt;
+  page.items.some((item) =&gt; item.id === id) ? { ...page, items: page.items.map((item) =&gt; (item.id === id ? edited(item, changes) : item)) } : page
+
+<span class="t-comment">// The reads lay the local overlay over DummyJSON&#x27;s answers; in another tab, they follow the</span>
+<span class="t-comment">// overlay the tabs share, once its change can be read there.</span>
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ clients: { local }, services: { products } }) =&gt; ({
+  search: { reads: <span class="t-keyword">true</span>, follows: (stale) =&gt; local.changed(stale) },
+  get: { reads: <span class="t-keyword">true</span>, follows: (stale) =&gt; local.changed(stale) },
   reviews: { reads: <span class="t-keyword">true</span>, freshFor: 60_000 },
   categories: { reads: <span class="t-keyword">true</span>, freshFor: 5 * 60_000 },
-  save: { invalidates: [products.search, products.get] },
+  <span class="t-comment">// A save shows at once in the list and in the product&#x27;s dialog; a conflict or a failure takes it out.</span>
+  save: {
+    invalidates: [products.search, products.get],
+    optimistic: [
+      update(products.search, (page, { id, changes }) =&gt; changed(page, id, changes)),
+      update(products.get, (product, { id, changes }) =&gt; (product.id === id ? edited(product, changes) : product)),
+    ],
+  },
+  setStock: {
+    invalidates: [products.search, products.get],
+    optimistic: [
+      update(products.search, (page, { id, stock }) =&gt; changed(page, id, { stock })),
+      update(products.get, (product, { id, stock }) =&gt; (product.id === id ? edited(product, { stock }) : product)),
+    ],
+  },
   create: { invalidates: [products.search] },
-  remove: { invalidates: [products.search, products.get] },
+  <span class="t-comment">// A deletion leaves the list at once.</span>
+  remove: {
+    invalidates: [products.search, products.get],
+    optimistic: [
+      update(products.search, (page, id) =&gt;
+        page.items.some((item) =&gt; item.id === id) ? { ...page, items: page.items.filter((item) =&gt; item.id !== id), total: page.total - 1 } : page,
+      ),
+    ],
+  },
   sellOut: { invalidates: [products.search, products.get] },
   reset: { invalidates: [products.search, products.get] },
-})</code></pre></div><div class="source" role="tabpanel" id="file-10" aria-labelledby="file-tab-10" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/services/products/index.ts">services/<wbr>products/<wbr>index.ts</a><span>102 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The catalogue&#x27;s operations. Reads ask DummyJSON and lay the local overlay over the answer.</span>
+})</code></pre></div><div class="source" role="tabpanel" id="file-13" aria-labelledby="file-tab-13" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/services/products/index.ts">services/<wbr>products/<wbr>index.ts</a><span>114 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The catalogue&#x27;s operations. Reads ask DummyJSON and lay the local overlay over the answer.</span>
 <span class="t-comment">// Writes go to DummyJSON first, signed in, so the network and the session are exercised for</span>
 <span class="t-comment">// real; DummyJSON echoes them and keeps nothing, so the overlay keeps them (clients/local).</span>
 <span class="t-comment">// The services&#x27; meta.ts says which of these read and what each write makes stale.</span>
@@ -737,6 +840,18 @@ test(<span class="t-string">&#x27;a new product starts from an empty form and is
     <span class="t-keyword">return</span> local.create({ ...changes, rating: 0, thumbnail: <span class="t-string">&#x27;&#x27;</span>, images: [], reviews: [] })
   }
 
+/**
+ * Sets a product&#x27;s stock, whatever its version: a count taken in the stockroom, not an edit of
+ * what somebody <span class="t-keyword">else</span> saved. Each press of a row&#x27;s buttons sends one, with the count the row shows.
+ */
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> setStock =
+  ({ clients: { api, local } }) =&gt;
+  <span class="t-keyword">async</span> ({ id, stock }: { id: number; stock: number }): Promise&lt;{ id: number; version: number }&gt; =&gt; {
+    <span class="t-keyword">if</span> (isLocal(id)) <span class="t-keyword">await</span> api.get(<span class="t-string">&#x27;/auth/me&#x27;</span>, { auth: <span class="t-keyword">true</span> })
+    <span class="t-keyword">else</span> <span class="t-keyword">await</span> api.put(<span class="t-string">`/auth/products/${id}`</span>, { stock }, { auth: <span class="t-keyword">true</span> })
+    <span class="t-keyword">return</span> { id, version: <span class="t-keyword">await</span> local.edit(id, { stock }) }
+  }
+
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> remove =
   ({ clients: { api, local } }) =&gt;
   <span class="t-keyword">async</span> (id: number): Promise&lt;void&gt; =&gt; {
@@ -756,10 +871,68 @@ test(<span class="t-string">&#x27;a new product starts from an empty form and is
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> reset =
   ({ clients: { local } }) =&gt;
   () =&gt;
-    local.reset()</code></pre></div><div class="source" role="tabpanel" id="file-11" aria-labelledby="file-tab-11" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a0532c3f66da239bc231172a2690eab282787fbc/src/clients/dummyjson/index.ts">clients/<wbr>dummyjson/<wbr>index.ts</a><span>4 lines</span></header><pre tabindex="0"><code><span class="t-comment">// DummyJSON, over the network. The session lasts as long as the tab.</span>
+    local.reset()</code></pre></div><div class="source" role="tabpanel" id="file-14" aria-labelledby="file-tab-14" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/clients/flags/definitions.ts">clients/<wbr>flags/<wbr>definitions.ts</a><span>55 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The app&#x27;s feature flags, as the GrowthBook project will hold them. Until its client key arrives,</span>
+<span class="t-comment">// OpenFeature&#x27;s in-memory provider serves these same flags (index.ts), so nothing else changes</span>
+<span class="t-comment">// when it does: the provider is the one line that changes.</span>
+<span class="t-comment">//</span>
+<span class="t-comment">// Each flag has its values, the value the app falls back on when the provider cannot answer, and</span>
+<span class="t-comment">// the ways it can be served: who gets which value. One way is served at a time; the network lab</span>
+<span class="t-comment">// chooses another, as GrowthBook&#x27;s dashboard would.</span>
+<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Acl, Flags } <span class="t-keyword">from</span> <span class="t-string">&#x27;framework&#x27;</span>
+
+<span class="t-comment">/** Who is asking, as the provider targets them: by id, and by the role the backend gives them. */</span>
+<span class="t-keyword">export</span> <span class="t-keyword">type</span> Targeting = { targetingKey: string; role: Acl[<span class="t-string">&#x27;role&#x27;</span>] }
+
+<span class="t-keyword">type</span> Definition&lt;<span class="t-tag">Value</span>&gt; = {
+  <span class="t-comment">/** The flag&#x27;s key at the provider. */</span>
+  key: string
+  variants: Record&lt;string, Value&gt;
+  fallback: Value
+  <span class="t-comment">/** Each way the flag can be served: the variant each person gets. */</span>
+  ways: Record&lt;string, (who: Targeting) =&gt; string&gt;
+  <span class="t-comment">/** The way served until the lab chooses another. */</span>
+  served: string
+}
+
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> definitions = {
+  <span class="t-comment">// Counting stock from the catalogue&#x27;s rows, with − and +: rolled out to admins first.</span>
+  stockCount: {
+    key: <span class="t-string">&#x27;stock-count&#x27;</span>,
+    variants: { on: <span class="t-keyword">true</span>, off: <span class="t-keyword">false</span> },
+    fallback: <span class="t-keyword">false</span>,
+    ways: { admins: ({ role }) =&gt; (role === <span class="t-string">&#x27;admin&#x27;</span> ? <span class="t-string">&#x27;on&#x27;</span> : <span class="t-string">&#x27;off&#x27;</span>), everyone: () =&gt; <span class="t-string">&#x27;on&#x27;</span>, nobody: () =&gt; <span class="t-string">&#x27;off&#x27;</span> },
+    served: <span class="t-string">&#x27;admins&#x27;</span>,
+  },
+  <span class="t-comment">// Whether products may be deleted. Off pauses every deletion: a kill switch.</span>
+  deletions: {
+    key: <span class="t-string">&#x27;deletions&#x27;</span>,
+    variants: { on: <span class="t-keyword">true</span>, off: <span class="t-keyword">false</span> },
+    fallback: <span class="t-keyword">true</span>,
+    ways: { on: () =&gt; <span class="t-string">&#x27;on&#x27;</span>, off: () =&gt; <span class="t-string">&#x27;off&#x27;</span> },
+    served: <span class="t-string">&#x27;on&#x27;</span>,
+  },
+  <span class="t-comment">// Above which percentage a bulk price change asks a second time: sooner for moderators.</span>
+  largeChangeAt: {
+    key: <span class="t-string">&#x27;large-change-at&#x27;</span>,
+    variants: { soon: 10, usual: 50 },
+    fallback: 50,
+    ways: { moderators: ({ role }) =&gt; (role === <span class="t-string">&#x27;moderator&#x27;</span> ? <span class="t-string">&#x27;soon&#x27;</span> : <span class="t-string">&#x27;usual&#x27;</span>), usual: () =&gt; <span class="t-string">&#x27;usual&#x27;</span>, soon: () =&gt; <span class="t-string">&#x27;soon&#x27;</span> },
+    served: <span class="t-string">&#x27;moderators&#x27;</span>,
+  },
+} satisfies { [Name in keyof Flags]: Definition&lt;<span class="t-tag">Flags</span>[Name]&gt; }
+
+<span class="t-keyword">export</span> <span class="t-keyword">type</span> Name = keyof <span class="t-keyword">typeof</span> definitions
+<span class="t-comment">/** The way each flag is served. */</span>
+<span class="t-keyword">export</span> <span class="t-keyword">type</span> Served = { [Name in keyof <span class="t-keyword">typeof</span> definitions]: keyof (<span class="t-keyword">typeof</span> definitions)[Name][<span class="t-string">&#x27;ways&#x27;</span>] &amp; string }
+
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> names = Object.keys(definitions) <span class="t-keyword">as</span> Name[]</code></pre></div><div class="source" role="tabpanel" id="file-15" aria-labelledby="file-tab-15" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/clients/dummyjson/index.ts">clients/<wbr>dummyjson/<wbr>index.ts</a><span>8 lines</span></header><pre tabindex="0"><code><span class="t-comment">// DummyJSON, over the network. The session is the browser&#x27;s, as a backend&#x27;s cookie would be:</span>
+<span class="t-comment">// every tab of the app shares it, and one tab&#x27;s sign-out ends it in the others.</span>
+<span class="t-keyword">import</span> { withPermissions } <span class="t-keyword">from</span> <span class="t-string">&#x27;../permissions&#x27;</span>
+<span class="t-keyword">import</span> { shared } <span class="t-keyword">from</span> <span class="t-string">&#x27;../storage&#x27;</span>
 <span class="t-keyword">import</span> { createHttp } <span class="t-keyword">from</span> <span class="t-string">&#x27;./http&#x27;</span>
 
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ env }) =&gt; createHttp({ baseUrl: env.apiUrl, wire: (url, init) =&gt; fetch(url, init), storage: window.sessionStorage })</code></pre></div></div>
+<span class="t-comment">// DummyJSON has no permissions endpoint: a layer over the wire answers it as a backend would.</span>
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ env }) =&gt; createHttp({ baseUrl: env.apiUrl, wire: withPermissions((url, init) =&gt; fetch(url, init)), storage: shared() })</code></pre></div></div>
     </div>
   </section>
 <!-- code:end -->
@@ -808,13 +981,13 @@ test(<span class="t-string">&#x27;a new product starts from an empty form and is
       <p class="lede">A product list and its editor. This is what happens when someone renames a product and saves.</p>
     </div>
     <ol class="flow" id="steps">
-      <li><b>Route</b><span>The address says edit product 42.</span><code>#/products/42/edit</code></li>
+      <li><b>Route</b><span>The address says edit product 42.</span><code>#/products?edit=42</code></li>
       <li><b>Flow</b><span>The statechart enters “loading the product”.</span><code>state.ts</code></li>
       <li><b>Service</b><span>It calls a referenced service. The client is injected.</span><code>GET /products/42</code></li>
       <li><b>Form</b><span>The answer seeds the form, once.</span><code>form.ts</code></li>
       <li><b>Tracking</b><span>Each keystroke and click is tracked with where it happened.</span><code>editor#input.onChange@28:70</code></li>
-      <li><b>Save</b><span>The flow saves and goes back to the list.</span><code>PUT /products/42</code></li>
-      <li><b>Refresh</b><span>The list read what the save made stale, so it reads again.</span><code>GET /products?…</code></li>
+      <li><b>Save</b><span>The flow saves and goes back to the list, which shows the change at once.</span><code>PUT /auth/products/42</code></li>
+      <li><b>Refresh</b><span>The list read what the save made stale, so it reads again, in every tab.</span><code>GET /products?…</code></li>
     </ol>
     <div class="controls">
       <button type="button" id="play">Play the save</button>
@@ -902,6 +1075,63 @@ A product with this title already exists</pre>
     </div>
   </section>
 
+  <section aria-labelledby="layers">
+    <div class="head">
+      <span class="eyebrow">Running today, in the demo</span>
+      <h2 id="layers">More layers, the same shape</h2>
+      <p class="lede">Words, permissions, keys and flags are files beside the others, each saying one thing. A component renders again only for what its files read.</p>
+    </div>
+    <div class="rails">
+      <div class="rail">
+        <h3>Words: <code>i18n.ts</code></h3>
+        <p>Any shape in, the same shape out. A message with placeholders reaches the component as a function, typed from its ICU, and every translation is checked against it, key by key.</p>
+        <pre>page: 'Page {page, number} of {pages, number}'
+
+i18n.paging.page({ page, pages })</pre>
+      </div>
+      <div class="rail">
+        <h3>Permissions: <code>acl.ts</code></h3>
+        <p>The backend sends a snapshot of what may be done. The nearest <code>acl.ts</code> above a component decides, and everything below it gets <code>acl.allowed</code>.</p>
+        <pre>export default ({ acl, flags }) =&gt;
+  flags.deletions &amp;&amp; acl.allowed &amp;&amp;
+  acl.grants.products.includes('delete')</pre>
+      </div>
+      <div class="rail">
+        <h3>Keys: <code>shortcuts.ts</code></h3>
+        <p>The keys a component answers while it is on screen. A key sends the chart’s event, so it does nothing when the chart takes none. <code>?</code> lists them.</p>
+        <pre>export default ({ i18n }) =&gt; ({
+  'mod+s': { label: i18n.keys.save, send: 'save' },
+})</pre>
+      </div>
+      <div class="rail">
+        <h3>Flags</h3>
+        <p>Read in any file as <code>flags</code>, through OpenFeature. GrowthBook streams each change to every tab, and only what reads that flag renders.</p>
+        <pre>export const isLargeChange = ({ form, flags }) =&gt;
+  form.payload().percent &gt; flags.largeChangeAt</pre>
+      </div>
+      <div class="rail">
+        <h3>At once</h3>
+        <p>A write shows before the server answers and is taken back if it fails. A save in one tab makes the same reads stale in the others.</p>
+        <pre>save: {
+  invalidates: [products.search, products.get],
+  optimistic: [update(products.get, …)],
+}</pre>
+      </div>
+      <div class="rail">
+        <h3>An inspector of the pipelines</h3>
+        <p>Every press, with the file and line where its handler was written, the write it sent, the change shown at once, and the reads it made stale. No screen contains tracking code.</p>
+      </div>
+      <div class="rail">
+        <h3>A gallery of the states</h3>
+        <p>Every chart in each of its states, one frame each, from the folders alone: the component held in that state, its chart never started.</p>
+      </div>
+      <div class="rail">
+        <h3>Renders that follow reads</h3>
+        <p>The locale, the person, the snapshot, the flags, the fields of the route, the form’s values: a component follows the ones its files read, and no other. Six keys typed in the editor render no framework component.</p>
+      </div>
+    </div>
+  </section>
+
   <section aria-labelledby="review">
     <div class="head">
       <span class="eyebrow">Reviewing an agent’s work</span>
@@ -975,6 +1205,11 @@ A product with this title already exists</pre>
           <li>Changing the selected account loads that account’s data</li>
           <li>A failed load shows its error and recovers</li>
           <li>Typos in events, states, fields and services are caught</li>
+          <li>The page speaks English and Brazilian Portuguese, and switches in place</li>
+          <li>Each role sees what it may do</li>
+          <li>A count shows at once, and goes back when the server refuses it</li>
+          <li>Two tabs share a sign-in, a count and a sign-out</li>
+          <li>A flag served another way renders only what reads it</li>
         </ul>
       </div>
       <div class="card">
@@ -982,6 +1217,8 @@ A product with this title already exists</pre>
         <ol class="asks">
           <li>The routing layer.</li>
           <li>The form manager.</li>
+          <li>Offline use.</li>
+          <li>Where the session and other stored data live.</li>
         </ol>
       </div>
     </div>
