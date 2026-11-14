@@ -5,6 +5,7 @@ import { component } from '../component';
 import { createQueryClient } from '../data';
 import { type Interaction, pipeline } from '../pipeline';
 import { Root } from '../root';
+import type { Keyboard } from '../shortcuts';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
@@ -89,6 +90,52 @@ const Keys = component({
     }),
 });
 
+/** A component that keeps the keys it is given, to call them. */
+let listed: Keyboard | undefined;
+const ran = vi.fn();
+const skipped = vi.fn();
+const Runner = component({
+  path: 'components/runner',
+  reads: { acl: [], chart: [], state: [], view: ['keyboard'] },
+  skins: {},
+  view: () =>
+    Promise.resolve({
+      async: undefined,
+      children: [],
+      form: undefined,
+      props: undefined,
+      render: ({ keyboard }: Props) => {
+        listed = keyboard as Keyboard;
+        return createElement('p', null, 'runner');
+      },
+      shortcuts: {
+        default: () => ({
+          r: { label: 'Run', run: ran },
+          x: { label: 'Skipped', run: skipped, when: false },
+        }),
+      },
+      state: undefined,
+    }),
+});
+
+/** A component whose key says which instance ran it. */
+const who = vi.fn();
+const Named = component({
+  path: 'components/named',
+  reads: { acl: [], chart: [], state: [], view: [] },
+  skins: {},
+  view: () =>
+    Promise.resolve({
+      async: undefined,
+      children: [],
+      form: undefined,
+      props: undefined,
+      render: ({ name }: Props) => createElement('p', null, String(name)),
+      shortcuts: { default: ({ name }: Props) => ({ n: { label: 'Who', run: () => who(name) } }) },
+      state: undefined,
+    }),
+});
+
 async function show(element: ReactNode) {
   let shown: ReturnType<typeof render> | undefined;
   await act(async () => {
@@ -164,4 +211,68 @@ test('a component hidden behind a dialog answers no key', async () => {
   expect(flow()).toBe('idle');
   // Not the app's while hidden: the page keeps the key.
   expect(event.defaultPrevented).toBe(false);
+});
+
+test('a listed key runs what its shortcut does, and only when it is available', async () => {
+  await show(createElement(Runner));
+  const shortcut = (label: string) =>
+    listed!.groups.flatMap((group) => group.shortcuts).find((item) => item.label === label)!;
+
+  shortcut('Run').run();
+  expect(ran).toHaveBeenCalledTimes(1);
+
+  shortcut('Skipped').run();
+  expect(skipped).not.toHaveBeenCalled();
+});
+
+test('a listed key does what pressing it does: the chart’s event only while the chart takes it, tracked where it was written', async () => {
+  const shown = await show(createElement('div', null, createElement(Flow), createElement(Runner)));
+  const flow = () => shown.querySelector('p')!.textContent;
+  const flowKey = (label: string) =>
+    listed!.groups.find((group) => group.path === 'components/flow')!.shortcuts.find((item) => item.label === label)!;
+
+  // `save` in `idle`: the chart has no `save` there, so the key runs nothing.
+  await act(async () => flowKey('Save').run());
+  expect(flow()).toBe('idle');
+
+  const interactions: Interaction[] = [];
+  const listen = (event: Event) => interactions.push((event as CustomEvent<Interaction>).detail);
+  pipeline.addEventListener('interaction', listen);
+  await act(async () => flowKey('Start').run());
+  await settle();
+  pipeline.removeEventListener('interaction', listen);
+  expect(flow()).toBe('editing');
+  expect(interactions.map((interaction) => interaction.name)).toEqual(['components/flow#shortcuts.s']);
+});
+
+test('of two instances of a folder, a listed key runs the last shown, as pressing does, and nothing once they leave', async () => {
+  const root = (children: ReactNode) => createElement(Root, { client: createQueryClient(), entity }, children);
+  let rendered: ReturnType<typeof render> | undefined;
+  await act(async () => {
+    rendered = render(
+      root(
+        createElement(
+          'div',
+          null,
+          createElement(Named, { name: 'first' }),
+          createElement(Named, { name: 'second' }),
+          createElement(Runner),
+        ),
+      ),
+    );
+  });
+  await settle();
+  const run = listed!.groups.find((group) => group.path === 'components/named')!.shortcuts[0]!.run;
+  who.mockClear();
+
+  await act(async () => run());
+  expect(who).toHaveBeenCalledWith('second');
+  await press('n');
+  expect(who).toHaveBeenLastCalledWith('second');
+
+  who.mockClear();
+  await act(async () => rendered!.rerender(root(createElement(Runner))));
+  await settle();
+  await act(async () => run());
+  expect(who).not.toHaveBeenCalled();
 });

@@ -58,6 +58,8 @@ export type Keyboard = {
       /** The keys as the platform writes them: `['⌘', 'S']` on Apple devices, `['Ctrl', 'S']` elsewhere. */
       readonly keys: readonly string[];
       readonly label: string;
+      /** Does what the key does, if it does something now. */
+      readonly run: () => void;
     }[];
   }[];
 };
@@ -235,9 +237,24 @@ let keyboard: Keyboard = Object.freeze({ groups: Object.freeze([]) });
 let signature = '';
 const listeners = new Set<() => void>();
 
+/**
+ * Does what pressing the key does, for a list of keys (a palette, a menu): the folder's entry that
+ * is available now, looked up in the registrations as they stand, so a component that left or
+ * changed its keys runs nothing stale. Of two instances of a folder, the last shown runs, as
+ * pressing does. It does not ask whether the component can be reached: a palette runs keys while
+ * its own dialog hides the page. A `focus` key still needs its element reachable to focus it.
+ */
+function runKey(path: string, keys: string) {
+  for (const registration of [...registrations.values()].sort((a, b) => b.order - a.order)) {
+    if (registration.path !== path) continue;
+    const entry = registration.entries.find((known) => known.keys === keys && known.available);
+    if (entry) return entry.act();
+  }
+}
+
 /** The keys on screen, by component, in the order the components were shown; one group per folder. */
 function update() {
-  const byPath = new Map<string, Map<string, { available: boolean; keys: string[]; label: string }>>();
+  const byPath = new Map<string, Map<string, { available: boolean; keys: string[]; label: string; run: () => void }>>();
   for (const { entries, path } of [...registrations.values()].sort((a, b) => a.order - b.order)) {
     let group = byPath.get(path);
     if (!group) byPath.set(path, (group = new Map()));
@@ -245,7 +262,13 @@ function update() {
       const known = group.get(entry.keys);
       // Two instances of a folder: one entry, available when either's is.
       if (known) known.available ||= entry.available;
-      else group.set(entry.keys, { available: entry.available, keys: shown(entry.combo), label: entry.label });
+      else
+        group.set(entry.keys, {
+          available: entry.available,
+          keys: shown(entry.combo),
+          label: entry.label,
+          run: () => runKey(path, entry.keys),
+        });
     }
   }
   const groups = [...byPath]
