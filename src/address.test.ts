@@ -1,4 +1,4 @@
-import { filtered, format, HOME, href, parse } from './address';
+import { filtered, format, HOME, href, parse, sectionHref } from './address';
 
 test('the home page has the shortest address, and every field at its default', () => {
   expect(format(HOME)).toBe('#/products');
@@ -32,4 +32,12 @@ test('a link from a list keeps its filters and opens one dialog', () => {
 test('another filter starts again at page 1', () => {
   const filters = { category: 'audio', order: 'asc' as const, page: 2, q: '', sort: 'title' as const };
   expect(filtered(filters, { category: 'desks' })).toBe('#/products?category=desks');
+});
+
+test('an unknown path falls back to products', () => {
+  expect(parse('#/nowhere?q=lamp')).toEqual({ ...HOME, q: 'lamp' });
+});
+
+test('a section links to its page with every dialog closed', () => {
+  expect(sectionHref('products')).toBe('#/products');
 });

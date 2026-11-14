@@ -3,6 +3,7 @@ export default {
   brand: 'Stockroom',
   failed: { message: 'The page could not start: {message}', retry: 'Try again' },
   loading: 'Loading the catalogue',
+  sections: { products: 'Products' },
   signIn: { reason: 'Sign in to change the catalogue.' },
   skip: 'Skip to the products',
   states: 'States',

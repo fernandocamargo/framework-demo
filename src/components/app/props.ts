@@ -1,3 +1,5 @@
+import { sectionHref, SECTIONS } from '@/address';
+
 // The page's rules. Changing the catalogue needs a session: when the address opens one of
 // those dialogs and nobody is signed in, the sign-in dialog is asked for, on top of it.
 export type Props = {
@@ -13,6 +15,13 @@ export default ({ async: { default: page }, i18n, navigating }) => {
     brand: i18n.brand,
     dialogs,
     navigating,
+    section: page.section,
+    sections: SECTIONS.map((id) => ({
+      current: id === page.section,
+      href: sectionHref(id),
+      id,
+      label: i18n.sections[id],
+    })),
     signInReason: !session && changing ? i18n.signIn.reason : null,
     skip: i18n.skip,
     states: i18n.states,

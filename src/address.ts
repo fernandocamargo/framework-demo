@@ -10,8 +10,13 @@ export type Filters = Pick<Route, 'category' | 'order' | 'page' | 'q' | 'sort'>;
 
 export const SORT_KEYS: readonly SortKey[] = ['title', 'price', 'rating', 'stock'];
 
+/** The pages of the app: the first part of the address's path (`#/products`). */
+export const SECTIONS = ['products'] as const;
+export type Section = (typeof SECTIONS)[number];
+
 // Its order matters: it is the order of the address's fields.
 export const HOME: Route = {
+  section: 'products',
   q: '',
   category: '',
   sort: 'title',
@@ -43,6 +48,7 @@ const id = (value: null | string) => {
 export function parse(hash: string): Route {
   const query = new URLSearchParams(hash.split('?')[1] ?? '');
   const sort = query.get('sort') as SortKey;
+  const path = hash.replace(/\?.*$/, '').replace(/^#\//, '');
   return {
     bulk: query.has('bulk'),
     category: query.get('category') ?? '',
@@ -52,6 +58,7 @@ export function parse(hash: string): Route {
     page: id(query.get('page')) ?? 1,
     q: query.get('q') ?? '',
     remove: id(query.get('remove')),
+    section: SECTIONS.find((section) => section === path) ?? HOME.section,
     signin: query.has('signin'),
     sort: SORT_KEYS.includes(sort) ? sort : HOME.sort,
     view: id(query.get('view')),
@@ -62,12 +69,15 @@ export function format(route: Route): string {
   const query = new URLSearchParams();
   for (const key of Object.keys(HOME) as (keyof Route)[]) {
     const value = route[key];
-    if (value === HOME[key] || value === null || value === false) continue;
+    if (key === 'section' || value === HOME[key] || value === null || value === false) continue;
     query.set(key, value === true ? '1' : String(value));
   }
   const text = query.toString();
-  return text ? `#/products?${text}` : '#/products';
+  return text ? `#/${route.section}?${text}` : `#/${route.section}`;
 }
+
+/** The address of a page with its filters and dialogs closed. */
+export const sectionHref = (section: Section) => format({ ...HOME, section });
 
 /** The address of these filters with `changes` on top, and every dialog closed unless `changes` opens one. */
 export const href = (filters: Filters, changes: Partial<Route> = {}) => format({ ...HOME, ...filters, ...changes });

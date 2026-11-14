@@ -2,6 +2,7 @@
 
 import 'framework';
 
+import type { Section } from './address';
 import type { SortKey } from './services/products/types';
 
 declare module 'framework' {
@@ -35,6 +36,8 @@ declare module 'framework' {
     q: string;
     /** The product whose deletion is being confirmed. */
     remove: null | number;
+    /** Which page of the app shows. */
+    section: Section;
     /** Whether the sign-in dialog was asked for. */
     signin: boolean;
     sort: SortKey;

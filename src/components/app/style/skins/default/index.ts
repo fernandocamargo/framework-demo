@@ -91,6 +91,11 @@ export default css`
     &[data-hovered] {
       background: var(--surface-2);
     }
+    /* The page the address shows. */
+    &[aria-current='page'] {
+      background: var(--surface-2);
+      font-weight: 600;
+    }
   }
   > main {
     inline-size: min(72rem, 100%);

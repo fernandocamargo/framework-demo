@@ -14,7 +14,15 @@ const session = {
 const i18n = messagesOf(messages);
 const page = (answer: { dialogs?: Partial<Dialogs>; session: null | typeof session; signin?: boolean }) =>
   shape({
-    async: { default: { signin: false, world: 'memory', ...answer, dialogs: { ...closed, ...answer.dialogs } } },
+    async: {
+      default: {
+        section: 'products',
+        signin: false,
+        world: 'memory',
+        ...answer,
+        dialogs: { ...closed, ...answer.dialogs },
+      },
+    },
     className: 'components/app',
     i18n,
     navigating: false,
@@ -48,7 +56,9 @@ test('the address can ask for the sign-in dialog on its own', () => {
 test("the reason is in the locale's words", () => {
   const translated = messagesOf(messages, 'pt-BR', { 'test/signIn/reason': 'Entre para mudar o catálogo.' });
   const shaped = shape({
-    async: { default: { dialogs: { ...closed, edit: 4 }, session: null, signin: false, world: 'memory' } },
+    async: {
+      default: { dialogs: { ...closed, edit: 4 }, section: 'products', session: null, signin: false, world: 'memory' },
+    },
     className: 'components/app',
     i18n: translated,
     navigating: false,

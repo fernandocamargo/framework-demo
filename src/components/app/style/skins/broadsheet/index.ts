@@ -77,6 +77,11 @@ export default css`
       background: none;
       color: var(--accent);
     }
+    /* The page the address shows, underlined twice. */
+    &[aria-current='page'] {
+      background: none;
+      text-decoration: underline double;
+    }
   }
   /* While the page changes address, a line sweeps under the masthead. */
   &[aria-busy='true'] > header::after {

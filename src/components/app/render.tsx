@@ -15,7 +15,19 @@ import Skin from '@/components/skin';
 
 // The page, as schema.org names one: its name, the data it is based on (the world it reads), and the
 // catalogue in its main part.
-export default ({ askToSignIn, brand, className, dialogs, navigating, signInReason, skip, states, world }) => (
+export default ({
+  askToSignIn,
+  brand,
+  className,
+  dialogs,
+  navigating,
+  section,
+  sections,
+  signInReason,
+  skip,
+  states,
+  world,
+}) => (
   <div aria-busy={navigating} className={className} itemScope itemType="https://schema.org/WebPage">
     <Button onPress={() => document.getElementById('main')?.focus()}>{skip}</Button>
     <header>
@@ -26,6 +38,11 @@ export default ({ askToSignIn, brand, className, dialogs, navigating, signInReas
         </p>
       </hgroup>
       <nav>
+        {sections.map((item) => (
+          <Link aria-current={item.current ? 'page' : undefined} href={item.href} key={item.id}>
+            {item.label}
+          </Link>
+        ))}
         <Link href="#/states">{states}</Link>
       </nav>
       <Lab />
@@ -35,7 +52,7 @@ export default ({ askToSignIn, brand, className, dialogs, navigating, signInReas
       <Session asked={askToSignIn} reason={signInReason} />
     </header>
     <main id="main" tabIndex={-1}>
-      <Catalogue />
+      {section === 'products' && <Catalogue />}
     </main>
     {/* The product's modal opens at once; the product's dialog waits for its read inside it. */}
     {dialogs.view !== null && (
