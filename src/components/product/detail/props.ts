@@ -19,3 +19,9 @@ export default ({ i18n, intl, acl, route, async: { default: product } }) => {
     removeHref: format({ ...route, view: null, remove: product.id }),
   }
 }
+
+/** The address each story Storybook shows of this folder needs (framework/storybook). */
+export const examples = {
+  'A product': { route: { view: 22 } },
+  'One that does not exist': { route: { view: 999 } },
+}

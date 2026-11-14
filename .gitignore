@@ -1,6 +1,9 @@
 node_modules
 dist
 .framework-types
+framework-stories
+storybook-static
+debug-storybook.log
 test-results
 playwright-report
 *.local

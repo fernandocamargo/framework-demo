@@ -19,3 +19,10 @@ export default ({ navigating, i18n, async: { default: page } }) => {
     signInReason: !session && changing ? i18n.signIn.reason : null,
   }
 }
+
+/** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
+export const examples = {
+  'The page': { props: { navigating: false } },
+  'Reading the next page': { props: { navigating: true } },
+  'A product open': { props: { navigating: false }, route: { view: 22 } },
+}

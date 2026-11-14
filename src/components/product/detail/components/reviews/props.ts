@@ -11,3 +11,8 @@ export default ({ i18n, intl, async: { default: reviews } }) => ({
     comment: review.comment,
   })),
 })
+
+/** The address each story Storybook shows of this folder needs (framework/storybook). */
+export const examples = {
+  "A product's reviews": { route: { view: 22 } },
+}

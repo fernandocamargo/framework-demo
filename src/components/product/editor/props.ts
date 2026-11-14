@@ -30,3 +30,9 @@ export default ({ state, form, i18n, acl, async: { default: categories } }) => {
     error: context.error ?? '',
   }
 }
+
+/** The address each story Storybook shows of this folder needs (framework/storybook). */
+export const examples = {
+  'Editing a product': { route: { edit: 22 } },
+  'A new product': { route: { create: true } },
+}

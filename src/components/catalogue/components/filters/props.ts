@@ -30,3 +30,14 @@ export default ({ i18n, q, category, sort, order, categories }) => ({
   sort: `${sort}:${order}`,
   sorts: SORTS.map(([field, order]) => ({ id: `${field}:${order}`, label: (i18n.sort[field] as Record<string, string>)[order] })),
 })
+
+const CATEGORIES = [
+  { slug: 'audio', name: 'Audio' },
+  { slug: 'lighting', name: 'Lighting' },
+]
+
+/** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
+export const examples = {
+  'Every product': { props: { q: '', category: '', sort: 'title', order: 'asc', categories: CATEGORIES } },
+  'Searched and sorted': { props: { q: 'lamp', category: 'lighting', sort: 'price', order: 'desc', categories: CATEGORIES } },
+}

@@ -7,3 +7,8 @@ export default ({ i18n, keyboard, onClose }) => ({
   onClose,
   groups: keyboard.groups.map(({ path, shortcuts }) => ({ file: `${path}/shortcuts.ts`, shortcuts })),
 })
+
+/** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
+export const examples = {
+  'The keys on screen': { props: { onClose: () => undefined } },
+}

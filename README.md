@@ -276,6 +276,16 @@ Two rules hold for every render:
 - the network lab, open and idle, renders nothing (two renders a second before);
 - typing six keys in the editor renders no framework component, and 50 of react-aria's (602 at the baseline).
 
+## Storybook
+
+`npm run storybook` shows every component folder at http://localhost:6006, and nobody writes a story. The framework writes one file per folder ([`framework/storybook/`](framework/storybook)), and writes them again as folders and files come and go:
+
+- **The folder's page** lists its files, each with its job, what its functions are given and which sources the component follows because of them, as the plugin reads them; then its chart's states with their descriptions, its stories, and every file's source.
+- **A story per example** its `props.ts` exports (what a parent passes, the address it needs), or one of the component as it runs.
+- **A story per state** of its chart, held in that state with `state.ts`'s example, as the states gallery shows it.
+
+Every story renders inside the app's `Root`, in the memory world ([`.storybook/preview.tsx`](.storybook/preview.tsx)). The toolbar chooses the language and who is signed in: the story signs in first with that role's demo account, so the session, what may be done and the flags agree. A story starts at the address its example names, and then follows its links. The states gallery itself is left out: its frames are pages of the app's own shell.
+
 ## Running it
 
 Node 20.19 or later. The unit tests need a newer one: CI runs everything on Node 24.
@@ -297,6 +307,7 @@ GrowthBook serves the DummyJSON world's flags when `.env.local` holds its client
 | `npm run check` | `typecheck`, `test` and `build`. |
 | `npm run e2e` | Builds, serves, and drives the main flows in Chromium (and WebKit in CI). Run `npx playwright install chromium` once. |
 | `npm run perf` | Builds with React's profiling build and counts the renders of each step of a flow ([`perf/`](perf/README.md)). |
+| `npm run storybook`, `npm run build-storybook` | Storybook, on port 6006, and its static build in `storybook-static/`. `npm run stories` writes the story files alone; `typecheck` runs it and checks them. |
 
 For editor support, use the workspace's TypeScript ("TypeScript: Select TypeScript Version" in VS Code), so that the language-service plugin in `tsconfig.json` loads. See [the framework's README](framework/README.md#editors).
 
@@ -342,16 +353,18 @@ The mechanism differs. The idea carries: give each kind of decision one place, t
 ## Layout
 
 ```
-framework/          The framework: plugin/, runtime/, typescript/, shared/. See its README.
+framework/          The framework: plugin/, runtime/, typescript/, shared/, storybook/. See its README.
 src/
   main.tsx          The shell: which world and locale, the router's stand-in, Root, failures as toasts.
   locales.ts        The locales the app speaks, and `?lang=` in the address.
   env.d.ts          What this app injects: Env, Route, Flags, Navigation.
   address.ts        The address, as the route and back.
+  reads.ts          What Root reads for the app: who is signed in, what they may do, their flags.
   base.css          Design tokens and the look of the controls.
   clients/          Transports.
   services/         Operations, and what makes what stale.
   components/       Component folders.
 e2e/                The end-to-end flows.
 perf/               Render cycles, step by step, against a baseline.
+.storybook/         Which folders Storybook shows, and the stage its stories render on.
 ```

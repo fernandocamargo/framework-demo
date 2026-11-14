@@ -4,7 +4,8 @@
   // runs it through framework/typescript/check.cjs. Plain `tsc -p .` does not load plugins, so
   // it would report those arguments as implicit `any`.
   // `rootDirs` merges the declarations the Vite plugin writes for component folders
-  // (.framework-types/, written by `npm run types`) with the sources.
+  // (.framework-types/, written by `npm run types`) with the sources. The story files the
+  // framework writes for Storybook (framework-stories/, `npm run stories`) are checked with them.
   "compilerOptions": {
     "target": "ES2022",
     "useDefineForClassFields": true,
@@ -31,5 +32,5 @@
     },
     "plugins": [{ "name": "framework-typescript-plugin", "root": "./src" }]
   },
-  "include": ["src", "framework/runtime"]
+  "include": ["src", "framework/runtime", "framework/storybook", ".storybook", "framework-stories"]
 }

@@ -35,3 +35,19 @@ export default ({ product, filters, i18n, intl, acl, flags, async: { setStock } 
       : null,
   }
 }
+
+/** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
+export const examples = {
+  'In stock': {
+    props: {
+      product: { id: 22, title: 'Arc Floor Lamp', description: 'Arc Floor Lamp for a home office.', category: 'lighting', brand: 'Fieldwork', price: 273.99, stock: 58, rating: 4.2, thumbnail: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect width='1' height='1' fill='%23a07040'/%3E%3C/svg%3E", version: 1 },
+      filters: { q: '', category: '', sort: 'title', order: 'asc', page: 1 },
+    },
+  },
+  'Low, edited here': {
+    props: {
+      product: { id: 22, title: 'Arc Floor Lamp', description: 'Arc Floor Lamp for a home office.', category: 'lighting', brand: 'Fieldwork', price: 249.99, stock: 3, rating: 4.2, thumbnail: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect width='1' height='1' fill='%23a07040'/%3E%3C/svg%3E", version: 2, local: 'edited' },
+      filters: { q: 'lamp', category: '', sort: 'price', order: 'desc', page: 1 },
+    },
+  },
+}

@@ -46,6 +46,8 @@ export default ({ services, acl }) => ({
 
 /** What a state needs on screen beyond what the chart starts with: the product's name. */
 export const examples = {
+  // The address that opens it, for Storybook's story of the chart as it runs from here.
+  loading: { route: { remove: 22 } },
   confirming: { context: { title: 'Arc Floor Lamp' } },
   removing: { context: { title: 'Arc Floor Lamp' } },
   failed: { context: { title: 'Arc Floor Lamp', error: 'The server answered 500.' } },

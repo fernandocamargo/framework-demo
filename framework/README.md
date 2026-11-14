@@ -47,9 +47,9 @@ A folder under `components/` with a `render` file and no `index` is a component.
 | File | Job |
 |---|---|
 | `render.tsx` | Places markup and interpolates. Called as a plain function, with no hooks. Receives what `props.ts` returns, or the props with `className`, `async`, `state` and `form`. |
-| `props.ts` | A plain function from what the render would get to what it gets: derived values, texts, which actions a person may take. `export type Props` states what a parent passes. |
+| `props.ts` | A plain function from what the render would get to what it gets: derived values, texts, which actions a person may take. `export type Props` states what a parent passes. `examples` says, by name, what a parent passes and the address it needs, for Storybook. |
 | `async.ts` | The default export is the read before the first render. Named exports are operations. |
-| `state.ts` | The flow, as a statechart. `examples` says what each state needs on screen in the states gallery. |
+| `state.ts` | The flow, as a statechart. `examples` says what each state needs on screen in the states gallery and in Storybook. |
 | `form.ts` | `seed` (server data to values) and `payload` (values to a request). |
 | `placeholder.tsx` | Shows while the view loads and reads. Adds a `Suspense`. |
 | `error.tsx` | Shows when the view fails. Adds an error boundary around both. |
@@ -236,6 +236,15 @@ Every component folder with a `state.ts`, in each state of its chart, from the f
   ```
 
 The demo's page is `#/states`: one frame per state, each the app alone in the memory world, in the locale on screen, at half its size. A frame per state keeps each one's dialogs to itself. A state's description is its chart's, as `state.ts` writes it.
+
+### Storybook
+
+Every component folder in Storybook, with no story written by hand (`framework/storybook/`):
+
+- `writeStories` writes one story file per folder into a git-ignored folder (`framework-stories/<path>.stories.tsx`), as the plugin writes the declarations into `.framework-types/`. Its name has no leading dot: Storybook's watcher skips such folders. `storiesPlugin` writes them again in Storybook's server when a folder or a file comes or goes, or a `props.ts` or a `state.ts` changes, and Storybook's index follows.
+- Each file holds the folder's files (its layer files, helpers, tests, skins and translations) with their sources, what the plugin read of them (what each file's functions are given, and the sources the component follows), and its chart's states. `FolderDocs` (`docs.tsx`) is the folder's docs page: a table of the files with their job, what they are given and what they follow, the states with their descriptions, the stories, and each source.
+- The stories: one per `examples` entry of `props.ts` (its `props`, and the `route` it starts at), or one of the component as it runs (a chart from its first state, with that state's example); then one per state of its chart, held there with `Pinned` and `state.ts`'s example, as the states gallery shows it. Storybook needs each story as a named export, so the states are read from `state.ts`'s code: the object its default export returns, its nested `states`, and what a spread of a literal adds. In the demo, that gives the gallery's 34 states.
+- The app's `.storybook/` says the rest: which folders (`stories.mjs`, read by Storybook and by `npm run stories`), and the stage each story renders on (`preview.tsx`).
 
 ### The form stand-in
 
