@@ -1,13 +1,14 @@
 // The app's shell: everything outside the framework's root folders. It decides which world the
 // app sees, stands in for a router, hands `Root` what the framework injects, and shows what the
 // failure pipeline carries. The app itself starts at components/app.
-import { StrictMode, useEffect, useMemo, useState, useTransition } from 'react'
+import { StrictMode, use, useEffect, useMemo, useState, useTransition } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Button, I18nProvider, Text, UNSTABLE_Toast as Toast, UNSTABLE_ToastContent as ToastContent, UNSTABLE_ToastQueue as ToastQueue, UNSTABLE_ToastRegion as ToastRegion } from 'react-aria-components'
-import { createQueryClient, onFailure, Root, type Acl, type Env, type Injection, type Navigation, type User } from 'framework'
+import { chartAt, createQueryClient, onFailure, Pinned, Root, type Acl, type Env, type Injection, type Navigation, type User } from 'framework'
 import { go, parse } from './address'
 import { currentLocale, type Locale } from './locales'
 import App from './components/app'
+import States from './components/states'
 import './base.css'
 
 // `?world=memory` (or a build with VITE_WORLD=memory) swaps the API client for one that answers
@@ -46,7 +47,38 @@ function useRoute() {
     window.addEventListener('hashchange', follow)
     return () => window.removeEventListener('hashchange', follow)
   }, [])
-  return [useMemo(() => parse(hash), [hash]), navigating] as const
+  return [useMemo(() => parse(hash), [hash]), navigating, hash] as const
+}
+
+// The states gallery: `#/states` lists every chart; `#/states/<path>/<state>` is one frame of it,
+// the component alone, held in that state.
+const STATES = '#/states'
+function pageOf(hash: string): { gallery: true } | { path: string; state: string } | null {
+  if (hash !== STATES && !hash.startsWith(`${STATES}/`)) return null
+  const [path, state] = hash.slice(STATES.length + 1).split('/')
+  return path && state ? { path: decodeURIComponent(path), state } : { gallery: true }
+}
+
+// One load per chart, kept: a component that suspends before its first commit keeps no state, so
+// a promise made in its render would be a new one each time it tries again.
+const loading = new Map<string, ReturnType<typeof chartAt>>()
+const loadChart = (path: string) => {
+  let found = loading.get(path)
+  if (!found) loading.set(path, (found = chartAt(path)))
+  return found
+}
+
+/** One frame of the gallery: the component at `path`, held in `state`, with its example. */
+function Frame({ path, state }: { path: string; state: string }) {
+  const found = use(loadChart(path))
+  if (!found) return <p>No chart at {path}.</p>
+  const example = found.examples[state]
+  const Component = found.component
+  return (
+    <Pinned path={path} state={state} example={example}>
+      <Component {...example?.props} />
+    </Pinned>
+  )
 }
 
 // The locale is part of the address too (`?lang=pt-BR`, src/locales.ts). A change shows in a
@@ -72,12 +104,13 @@ function useLocale() {
 }
 
 function Shell() {
-  const [route, navigating] = useRoute()
+  const [route, navigating, hash] = useRoute()
   const locale = useLocale()
+  const page = pageOf(hash)
   return (
     <I18nProvider locale={locale}>
       <Root env={env} entity={entity} route={route} navigation={navigation} client={client} locale={locale} user={whoIsSignedIn} acl={permissions} sync={`stockroom:${world}`}>
-        <App navigating={navigating} />
+        {page === null ? <App navigating={navigating} /> : 'gallery' in page ? <States /> : <Frame key={`${page.path}/${page.state}`} path={page.path} state={page.state} />}
       </Root>
       <ToastRegion queue={toasts} aria-label="Failures">
         {({ toast }) => (

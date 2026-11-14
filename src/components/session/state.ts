@@ -119,3 +119,17 @@ export default ({ services }) => ({
     on: { ...asking, ...signedInElsewhere },
   },
 })
+
+// ---- What the states gallery shows each state with --------------------------------------------
+
+const emily = { id: 1, username: 'emilys', firstName: 'Emily', lastName: 'Johnson', image: '' }
+
+/** What a state needs on screen beyond what the chart starts with: the page asking to sign in, the person, the time left. */
+export const examples = {
+  signedOut: { props: { asked: true } },
+  signingIn: { props: { asked: true }, values: { username: 'emilys', password: 'emilyspass' } },
+  signedIn: { context: { user: emily, expiresAt: 45_000, now: 0 } },
+  refreshing: { context: { user: emily, expiresAt: 12_000, now: 0 } },
+  signingOut: { context: { user: emily, expiresAt: 45_000, now: 0 } },
+  expired: { props: { asked: true } },
+}

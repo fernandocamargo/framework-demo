@@ -124,3 +124,20 @@ export default ({ services, acl }) => ({
     entry: close,
   },
 })
+
+// ---- What the states gallery shows each state with --------------------------------------------
+
+const lamp = { title: 'Arc Floor Lamp', description: 'A tall lamp that arcs over a desk.', category: 'lighting', brand: 'Fieldwork', price: 273.99, stock: 58 }
+
+/** What a state needs on screen beyond what the chart starts with: the product read, the form's values. */
+export const examples = {
+  unavailable: { context: { error: "Product with id '99' not found" } },
+  editing: { context: { title: lamp.title }, values: lamp },
+  confirmingDiscard: { context: { title: lamp.title }, values: { ...lamp, price: 249.99 } },
+  saving: { context: { title: lamp.title }, values: lamp },
+  creating: { context: { creating: true }, values: { ...lamp, title: 'Reading Lamp' } },
+  conflict: { context: { title: lamp.title }, values: { ...lamp, price: 249.99 } },
+  overwriting: { context: { title: lamp.title }, values: { ...lamp, price: 249.99 } },
+  failed: { context: { title: lamp.title, error: 'The server answered 500.' }, values: lamp },
+  saved: { context: { title: lamp.title }, values: lamp },
+}

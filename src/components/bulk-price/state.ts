@@ -140,3 +140,36 @@ export default ({ services, acl }) => ({
     },
   },
 })
+
+// ---- What the states gallery shows each state with --------------------------------------------
+
+const audio = [
+  { id: 1, title: 'Studio Monitor', price: 199.99, version: 1 },
+  { id: 2, title: 'Desk Microphone', price: 93.99, version: 1 },
+  { id: 4, title: 'Audio Interface', price: 167.99, version: 1 },
+] as Listed[]
+const chosen = { category: 'audio', selected: [1, 2, 4], direction: 'increase', percent: 15 }
+
+/** What a state needs on screen beyond what the chart starts with: the products read, the rule, the results so far. */
+export const examples = {
+  choosing: { context: { items: audio }, values: chosen },
+  settingRule: { context: { items: audio }, values: chosen },
+  previewing: { context: { items: audio }, values: chosen },
+  confirmingLargeChange: { context: { items: audio }, values: { ...chosen, percent: 60 } },
+  applying: {
+    context: { items: audio, queue: [audio[2]], results: [{ id: 1, title: 'Studio Monitor', from: 199.99, to: 229.99, error: null }, { id: 2, title: 'Desk Microphone', from: 93.99, to: 108.09, error: null }] },
+    values: chosen,
+  },
+  advancing: { context: { items: audio, queue: [], results: [] }, values: chosen },
+  summary: {
+    context: {
+      items: audio,
+      results: [
+        { id: 1, title: 'Studio Monitor', from: 199.99, to: 229.99, error: null },
+        { id: 2, title: 'Desk Microphone', from: 93.99, to: 108.09, error: 'The server answered 500.' },
+        { id: 4, title: 'Audio Interface', from: 167.99, to: 193.19, error: null },
+      ],
+    },
+    values: chosen,
+  },
+}

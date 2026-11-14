@@ -1,4 +1,4 @@
-import { Button } from 'react-aria-components'
+import { Button, Link } from 'react-aria-components'
 import BulkPrice from '@/components/bulk-price'
 import Catalogue from '@/components/catalogue'
 import Keyboard from '@/components/keyboard'
@@ -9,7 +9,7 @@ import Editor from '@/components/product/editor'
 import Remove from '@/components/product/remove'
 import Session from '@/components/session'
 
-export default ({ className, navigating, dialogs, brand, skip, world, askToSignIn, signInReason }) => (
+export default ({ className, navigating, dialogs, brand, skip, world, states, askToSignIn, signInReason }) => (
   <div className={className} aria-busy={navigating}>
     <Button className="skip" onPress={() => document.getElementById('main')?.focus()}>
       {skip}
@@ -20,6 +20,9 @@ export default ({ className, navigating, dialogs, brand, skip, world, askToSignI
         <h1>{brand}</h1>
         <span className="badge">{world}</span>
       </div>
+      <Link className="react-aria-Link states" href="#/states" data-variant="quiet">
+        {states}
+      </Link>
       <Lab />
       <Language />
       <Keyboard />

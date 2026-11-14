@@ -83,3 +83,7 @@ Each row has a count with a button on either side, offered to someone signed in 
 
 The data layer's events go to the pipelines, and the lab's tracker listens from the start. The same 26 steps count the same: 0 misses, 385 render calls, framework components rendered again 226 times (28 changing nothing). Events are dispatched after a microtask, outside any render, and nothing renders them until the lab is open.
 
+## After the states gallery
+
+The header has a "States" link; nothing else in the visit changes. 0 misses, 385 render calls, framework components rendered again 226 times (28 changing nothing). A component's form and chart read whether they are pinned once per render, from a context nothing changes outside the gallery.
+

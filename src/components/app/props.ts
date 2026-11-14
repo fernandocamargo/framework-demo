@@ -14,6 +14,7 @@ export default ({ navigating, i18n, async: { default: page } }) => {
     brand: i18n.brand,
     skip: i18n.skip,
     world: page.world === 'memory' ? i18n.world.memory : i18n.world.dummyjson,
+    states: i18n.states,
     askToSignIn: !session && (page.signin || changing),
     signInReason: !session && changing ? i18n.signIn.reason : null,
   }

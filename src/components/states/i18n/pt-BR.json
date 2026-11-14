@@ -1,0 +1,8 @@
+{
+  "components/states/title": "Estados",
+  "components/states/intro": "Todo componente com um diagrama de estados, em cada estado do diagrama, no mundo em memória. Cada quadro mantém o componente em um estado: o diagrama não é iniciado, então nada se move. O que um estado precisa além do que o diagrama tem no início vem dos exemplos que seu state.ts exporta.",
+  "components/states/back": "Voltar ao catálogo",
+  "components/states/count": "{count, plural, one {# estado} other {# estados}}",
+  "components/states/frame": "{path} no estado {state}",
+  "components/states/example": "com um exemplo"
+}

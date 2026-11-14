@@ -6,5 +6,6 @@
   "components/app/signIn/reason": "Entre para mudar o catálogo.",
   "components/app/loading": "Carregando o catálogo",
   "components/app/failed/message": "A página não pôde começar: {message}",
-  "components/app/failed/retry": "Tentar de novo"
+  "components/app/failed/retry": "Tentar de novo",
+  "components/app/states": "Estados"
 }

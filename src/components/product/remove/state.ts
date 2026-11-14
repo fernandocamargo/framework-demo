@@ -41,3 +41,12 @@ export default ({ services, acl }) => ({
     on: { ...(acl.allowed && { confirm: 'removing' }), cancel: { actions: close } },
   },
 })
+
+// ---- What the states gallery shows each state with --------------------------------------------
+
+/** What a state needs on screen beyond what the chart starts with: the product's name. */
+export const examples = {
+  confirming: { context: { title: 'Arc Floor Lamp' } },
+  removing: { context: { title: 'Arc Floor Lamp' } },
+  failed: { context: { title: 'Arc Floor Lamp', error: 'The server answered 500.' } },
+}

@@ -460,3 +460,29 @@ test('the inspector shows what a press did: the write, its optimistic change, th
   expect(text).toContain('products.search and products.get, by products.setStock')
   expect(text).toContain('Form.onSubmit')
 })
+
+test('the states gallery shows every chart in each of its states; a frame holds its component in one state, with its example', async ({ page }) => {
+  await act(page, () => page.goto('./?world=memory#/states'))
+  expect(await page.getByRole('heading', { level: 1 }).innerText()).toBe('States')
+  expect(await page.getByRole('region').count()).toBe(6)
+  const editor = page.getByRole('region', { name: 'components/product/editor' })
+  expect(await editor.locator('iframe').count()).toBe(11)
+  expect(await editor.innerText()).toContain('Somebody else saved this product meanwhile.')
+
+  // One frame on its own: the editor held in a conflict, the question over the form it keeps.
+  await act(page, () => page.goto('./?world=memory#/states/components%2Fproduct%2Feditor/conflict'))
+  const held = dialog(page, 'Edit Arc Floor Lamp')
+  expect(await held.getByRole('alert').innerText()).toContain('Somebody else changed this product')
+  expect(await held.getByRole('textbox', { name: 'Title' }).inputValue()).toBe('Arc Floor Lamp')
+  // Nothing moves: the chart is not started.
+  await act(page, () => held.getByRole('button', { name: 'Save mine anyway' }).click())
+  expect(await held.getByRole('alert').count()).toBe(1)
+
+  // A question shown with the dialog it asks about sits above it, though the page added it first.
+  await act(page, () => page.goto('./?world=memory#/states/components%2Fproduct%2Feditor/confirmingDiscard'))
+  // (A frame is a picture: the gallery lets no pointer reach it.)
+  const layers = await page.evaluate(() =>
+    Object.fromEntries(Array.from(document.querySelectorAll('.react-aria-ModalOverlay')).map((overlay) => [overlay.querySelector('[role=alertdialog]') ? 'question' : 'dialog', Number(getComputedStyle(overlay).zIndex)])),
+  )
+  expect(layers['question']).toBeGreaterThan(layers['dialog']!)
+})

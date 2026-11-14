@@ -234,6 +234,10 @@ The end-to-end tests ([`e2e/flows.spec.ts`](e2e/flows.spec.ts)) drive the produc
 
 DummyJSON allows about 100 requests in a window it does not state, so sustained stress can earn a real 429. The client retries those too.
 
+## The states gallery
+
+"States", in the header, opens `#/states`: every component with a `state.ts`, in each state of its chart, one frame per state, from the folders alone. Each frame is the component held in that state: its chart is not started, so nothing moves. A state that needs more than the chart starts with (a product read, a failure's message, the form's values) gets it from the examples its `state.ts` exports. The frames follow the page's language.
+
 ## Running it
 
 Node 20.19 or later.
