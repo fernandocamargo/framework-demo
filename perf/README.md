@@ -4,14 +4,18 @@ What a visit costs in renders, measured so that a change to the framework or the
 
 Per step it counts:
 
-- **calls**: every call of a framework component's render, committed or not;
+- **calls**: every call of a framework component's render, and **thrown**, the calls whose output React never showed (a render it threw away, which no later render reused);
 - **fw**: the framework components React committed, new or again, and of those rendered again, how many changed nothing in the page;
 - **plumbing**: the framework's wrappers around them;
 - **other**: every other component (react-aria's, the shell's), the same way;
 - **ms** and **wasted**: their render time in the profiling build, and the part that changed nothing;
 - **miss**: a check that failed right after `idle()`, which would make an end-to-end test flaky.
 
-`LABEL`, `RUNS`, `CPU` (Chromium's throttling), `ENGINE` (`chromium` or `webkit`), `DETAIL=1` (which components changed nothing, and why) and `CHROMIUM` / `WEBKIT` (browser executables) change the run. `node perf/cycles.mjs` runs again on the last build. Results go to `perf/out/<LABEL>/`.
+A change to the page is an attribute or a text that holds another value than before the commit, or a node added or removed. Writing a value again is not one: React sets an input's `name` and `type` at each of its renders.
+
+After the visit's 29 steps come ten more, counted apart (`further`): the lab left open for two seconds, a network slowed by 500 ms, the states gallery and the way back. The visit's totals stay comparable from one change to the next.
+
+`LABEL`, `RUNS`, `CPU` (Chromium's throttling), `ENGINE` (`chromium` or `webkit`), `DETAIL=1` (which components changed nothing, why, and which framework component they are inside of) and `CHROMIUM` / `WEBKIT` (browser executables) change the run. `node perf/cycles.mjs` runs again on the last build. Results go to `perf/out/<LABEL>/`.
 
 ## Baseline
 
@@ -116,3 +120,45 @@ Each field of the route has a context of its own, and a component reads only the
 - **The shell's toast region is one element.** `main.tsx` renders again at every change of address; the toast region is now an element made once, so React skips it: four fewer re-renders per change of address.
 
 What is left at a change of filter is real: the rows' links carry the filters, so each row renders, and react-aria renders inside them (151 changing nothing when sorting by price).
+
+## After the third round
+
+An adversarial pass: the counts were measured again, and the recorder itself was checked. Chromium, three runs, before and after in one sitting; the same in WebKit.
+
+The recorder first, since two of its answers were wrong:
+
+- **A value written again is not a change.** React sets an input's `name` and `type` at each render of the input, and the recorder took that for a change to the page. On the same build, the other components' re-renders that change nothing went from 1,903 to 2,228, the open lab's among them.
+- **react-aria has a `Component` of its own**, which was counted as the framework's wrapper.
+- **`thrown`** is new: the render calls whose output React never showed.
+- **`DETAIL=1` says which framework component holds each re-render.** At a change of filter, the re-renders that change nothing are not inside the rows, as "After route fields" says: every row's render changes a link. They are inside the filter bar, in react-aria's `Select` as it opens, is moved over and closes.
+
+With the recorder corrected, the visit's 29 steps:
+
+| | before (`62d5dee`) | after |
+|---|---|---|
+| misses, in 5 runs | 0 | 0 |
+| render calls, thrown away | 420, 20 | 417 to 420, 17 to 20 |
+| framework components rendered again (changing nothing) | 248 (9) | 246 (7) |
+| other components rendered again (changing nothing) | 4,991 (2,228) | 4,722 (1,957) |
+| of those changing nothing: in a commit where a component of ours rendered | 736 | 465 |
+| of those changing nothing: react-aria alone, and the shell | 1,430 and 62 | 1,430 and 62 |
+
+WebKit, the same steps: 0 misses in 5 runs, 418 render calls (17 thrown away), framework 247 (7), other 4,484 (1,762); before, 248 (9) and 4,722 (2,002).
+
+What changed:
+
+- **A chart that moves and shows nothing new renders nothing.** A render gets another `state` only when the states, the context or the status changed, or the chart came to rest; an action that returns what the context holds keeps the context. The lab, open and idle, entered its state again every second and rendered twice each time: in two seconds, 4 render calls and 130 of react-aria's re-renders, 120 of them changing nothing. Now 1 and 52, for the one tick that brings new requests.
+- **A function in the JSX that uses nothing of the render is made once.** `{(item) => <ListBoxItem … />}` was a new function at every render, so its list was never the element shown before, and react-aria rendered the select around it again. The plugin moves such a function out of the render. A search renders 56 of react-aria's components again (14 changing nothing), against 96 (54); clearing it, 104 (31) against 175 (102).
+- **The filter bar is given the fields it shows**, not the filters whole: another page of the same list no longer renders it (2 of the 9).
+- **A render that returns what it returned is the element React showed**, so nothing below it renders.
+- **A guard reads the decision React committed.** A render React threw away left its acl decision where the chart's guards read it; `discarded.test.tsx` holds the case.
+
+What is left, and why:
+
+- **7 framework re-renders that change nothing.** The session's chart going from `restoring` to `signedOut`; the closed lab when the editor opens and closes (its read reads `route.edit`, for a button it does not show); the app and the session at a sign-in and a sign-out, where two layers learn of one event. In two of them the render is not called.
+- **17 to 20 render calls thrown away**, 6 when the catalogue opens and 11 to 14 when a product does, by how many of react-aria's commits fall in the wait. React holds content back until 300 ms after a placeholder showed, and renders it again after each other commit in between; the memory world answers in 3 ms. With the lab's latency at 500 ms (the further steps), none is thrown away. The same rule shows the catalogue at about 360 ms when it was ready at 155 ms.
+- **1,430 re-renders of react-aria alone**: its own state, in commits where no component of ours rendered.
+- **A function that reads the render** (the lab's slider outputs, the bulk change's progress bar) is still new at each render.
+
+Beyond the visit, measured once: fifteen navigations left before they answer, at 750 ms of latency, each end as a fresh load of the same address, in both engines. A save in another tab renders the catalogue and one row. WebKit renders the rows twice at a sign-in from another tab (the permissions and the flags arrive apart), Chromium once. Over 210 rounds of navigation the page keeps 114 more DOM nodes per round: react-aria's `runAfterTransition` holds an element removed while one of its CSS transitions runs, and through it the editor closed by a save. Opening and closing the editor at a person's pace keeps none.
+

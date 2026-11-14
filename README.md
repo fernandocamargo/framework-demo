@@ -263,14 +263,16 @@ A component renders again only for what its files read. The plugin reads what ea
 - **The person, the backend's snapshot and the flags.** Only the parts each component reads. A folder's `acl.ts` that reads only `acl` and `flags` is decided once per change, and an instance renders again only when its decision changes.
 - **The route.** Each field has a context of its own. The catalogue follows its filters and its page; a dialog opening over it does not render it.
 - **The form.** Only the values a component's files read. The editor's fields hold what is typed, as native fields do, so a key renders the field alone.
+- **The chart.** Only when it shows something else: other states, or another context. A state entered again, or a service starting, renders nothing.
 
 Two rules hold for every render:
 
 - **Unchanged parts are reused.** What a render gets keeps every part that is still equal, and a render that would get the same is not called. What it returns shares every element equal to the last one, so React skips it.
-- **Handlers are stable.** Each handler keeps one function for the instance's life, which calls the last committed closure.
+- **Handlers are stable.** Each handler keeps one function for the instance's life, which calls the last committed closure. A function in the JSX that uses nothing of the render (a list's `{(item) => <Item … />}`) is made once, outside it.
 
-[`perf/`](perf/README.md) measures this. `npm run perf` drives 29 steps through a profiling build and counts every render, and the ones that changed nothing on the page. Its README holds the numbers after each change. For the last one:
-- framework components re-rendered 248 times, 9 of them changing nothing (267 and 28 before);
+[`perf/`](perf/README.md) measures this. `npm run perf` drives a visit of 29 steps, and ten more beyond it, through a profiling build. It counts every render, the ones that changed nothing on the page, and the ones React threw away. Its README holds the numbers after each change. For the last one:
+- framework components re-rendered 246 times, 7 of them changing nothing (248 and 9 before);
+- the network lab, open and idle, renders nothing (two renders a second before);
 - typing six keys in the editor renders no framework component, and 50 of react-aria's (602 at the baseline).
 
 ## Running it
