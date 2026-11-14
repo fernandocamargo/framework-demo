@@ -1,0 +1,199 @@
+/*
+ * The Blueprint skin's page: what no component owns, as base.css is for the default skin. The page
+ * as a drawing of itself: a blueprint ground under pale lines, every item outlined and named by its
+ * schema.org type, every property named by its itemprop, and the hidden <meta> and <link> values
+ * written out where they sit. Nothing here changes the markup: the same elements, attributes and
+ * text, only the sheets differ.
+ *
+ * It applies while the page wears it (`<html data-skin="blueprint">`, set by the framework). Its
+ * rules sit under `:where()`, so they weigh what base.css's weigh: they win over base.css by coming
+ * after it, and the components' own Blueprint sheets win over them.
+ */
+:root[data-skin='blueprint'] {
+  color-scheme: dark;
+  --bg: #0b2545;
+  --surface: #0f2d52;
+  --surface-2: #163a66;
+  --border: #5f8fc0;
+  --border-strong: #9cc3e8;
+  --text: #e8f1fb;
+  --muted: #a9c7e8;
+  --accent: #ffd166;
+  --accent-hover: #ffe08a;
+  --on-accent: #0b2545;
+  --accent-soft: #1d4a7d;
+  --danger: #ffb4b4;
+  --danger-soft: #4a1f2a;
+  --warn: #ffd166;
+  --warn-soft: #3d3317;
+  --ok: #9ef0c6;
+  --ok-soft: #173d33;
+  --shadow: 0 0 0 1px var(--border);
+  --ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+:where(:root[data-skin='blueprint']) {
+  /* The ground: a grid of pale lines, as on tracing paper. */
+  & body {
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(rgb(156 195 232 / 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(156 195 232 / 0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  & :is(code, kbd, time) {
+    font-family: var(--mono);
+  }
+
+  /* ---- Items: a dashed outline, named by their type before their content ------------------- */
+  & [itemscope] {
+    outline: 1px dashed var(--border-strong);
+    outline-offset: 3px;
+  }
+  /* The types the app uses. A type not listed here is named by its full address (the fallback). */
+  & [itemscope]::before {
+    content: attr(itemtype);
+  }
+  & [itemtype$='/Action']::before {
+    content: 'Action';
+  }
+  & [itemtype$='/AggregateRating']::before {
+    content: 'AggregateRating';
+  }
+  & [itemtype$='/Brand']::before {
+    content: 'Brand';
+  }
+  & [itemtype$='/CreateAction']::before {
+    content: 'CreateAction';
+  }
+  & [itemtype$='/Dataset']::before {
+    content: 'Dataset';
+  }
+  & [itemtype$='/DeleteAction']::before {
+    content: 'DeleteAction';
+  }
+  & [itemtype$='/HowTo']::before {
+    content: 'HowTo';
+  }
+  & [itemtype$='/HowToStep']::before {
+    content: 'HowToStep';
+  }
+  & [itemtype$='/Language']::before {
+    content: 'Language';
+  }
+  & [itemtype$='/Offer']::before {
+    content: 'Offer';
+  }
+  & [itemtype$='/OfferCatalog']::before {
+    content: 'OfferCatalog';
+  }
+  & [itemtype$='/Person']::before {
+    content: 'Person';
+  }
+  & [itemtype$='/Product']::before {
+    content: 'Product';
+  }
+  & [itemtype$='/PropertyValue']::before {
+    content: 'PropertyValue';
+  }
+  & [itemtype$='/Rating']::before {
+    content: 'Rating';
+  }
+  & [itemtype$='/ReadAction']::before {
+    content: 'ReadAction';
+  }
+  & [itemtype$='/ReplaceAction']::before {
+    content: 'ReplaceAction';
+  }
+  & [itemtype$='/Review']::before {
+    content: 'Review';
+  }
+  & [itemtype$='/SearchAction']::before {
+    content: 'SearchAction';
+  }
+  & [itemtype$='/SoftwareApplication']::before {
+    content: 'SoftwareApplication';
+  }
+  & [itemtype$='/UpdateAction']::before {
+    content: 'UpdateAction';
+  }
+  & [itemtype$='/WebPage']::before {
+    content: 'WebPage';
+  }
+
+  /* Pictures cannot take pseudo-elements: they keep the outline only. */
+  & img[itemprop] {
+    outline: 1px dashed var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ---- Properties: named by their itemprop ------------------------------------------------------ */
+  & [itemprop]::after {
+    content: attr(itemprop);
+  }
+
+  /* ---- Hidden data: a <meta> or <link> is shown where it sits, as "name: value" ----------------- */
+  & meta[itemprop],
+  & link[itemprop] {
+    display: inline-block;
+  }
+  & meta[itemprop]::before {
+    content: attr(itemprop) ': ' attr(content);
+  }
+  & link[itemprop]::before {
+    content: attr(itemprop) ': ' attr(href);
+  }
+  /* The values a page links to are named by their last word, as the pitch of the skin draws them. */
+  & link[href$='/InStock']::before {
+    content: 'availability: InStock';
+  }
+  & link[href$='/OutOfStock']::before {
+    content: 'availability: OutOfStock';
+  }
+  & link[href$='/LimitedAvailability']::before {
+    content: 'availability: LimitedAvailability';
+  }
+  & link[href$='/ActiveActionStatus']::before {
+    content: 'actionStatus: ActiveActionStatus';
+  }
+  & link[href$='/CompletedActionStatus']::before {
+    content: 'actionStatus: CompletedActionStatus';
+  }
+  & link[href$='/FailedActionStatus']::before {
+    content: 'actionStatus: FailedActionStatus';
+  }
+  & link[href$='/PotentialActionStatus']::before {
+    content: 'actionStatus: PotentialActionStatus';
+  }
+  & meta[itemprop]::after,
+  & link[itemprop]::after {
+    content: none;
+  }
+
+  /* The labels themselves: small, monospace, boxed in the colour of what they name. */
+  & [itemscope]::before,
+  & [itemprop]::after,
+  & meta[itemprop]::before,
+  & link[itemprop]::before {
+    display: inline-block;
+    margin-inline: 0.2em;
+    padding: 0 0.35em;
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    color: var(--border-strong);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+    vertical-align: baseline;
+  }
+  & [itemscope]::before {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}

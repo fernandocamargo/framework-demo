@@ -18,6 +18,7 @@ import { featureFlags, permissions, whoIsSignedIn } from '../src/reads';
 import { SKINS } from '../src/skins';
 import '../src/base.css';
 import '../src/broadsheet.css';
+import '../src/blueprint.css';
 
 const env: Env = { apiUrl: 'https://dummyjson.com', world: 'memory' };
 const entity = { id: 'memory' };

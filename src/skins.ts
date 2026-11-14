@@ -1,7 +1,7 @@
 // The skins the app wears, and the part of the address that says which one shows: `?skin=broadsheet`,
 // before the hash, beside `?lang=` and `?world=`, so every link inside the app keeps it. Every
 // component folder has a sheet for each (style/skins/<name>/index.ts); the markup is the same in all.
-export const SKINS = ['default', 'broadsheet'] as const;
+export const SKINS = ['default', 'broadsheet', 'blueprint'] as const;
 export type Skin = (typeof SKINS)[number];
 
 /** The skin the address asks for, or the default one. */

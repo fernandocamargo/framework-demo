@@ -24,6 +24,7 @@ import { featureFlags, permissions, whoIsSignedIn } from './reads';
 import { currentSkin, type Skin } from './skins';
 import './base.css';
 import './broadsheet.css';
+import './blueprint.css';
 
 // `?world=memory` (or a build with VITE_WORLD=memory) swaps the API client for one that answers
 // from fixtures. Nothing else changes: the same services, flows and components run on it.
