@@ -8,9 +8,10 @@
 // - in a component's `style/` files, replaces the import of another component with that
 //   component's escaped selector, so a skin can write `${Navigation} { … }`;
 // - in a component's render, placeholder and error files, wraps every JSX `on…` handler in
-//   `track(handler, site, key)`, so it is tracked with its placement, and moves a function written
+//   `track(handler, site, key)`, so it is tracked with its placement; moves a function written
 //   in the JSX that uses nothing of the render (a list's `{(item) => <Item … />}`) out of it, so
-//   it is the same function at every render;
+//   it is the same function at every render; and keeps one that reads the render
+//   (`keep(fn, [values], site, key)`) for as long as the values it reads are the same;
 // - resolves `@/…` to the root, for files inside the root;
 // - writes one declaration per component folder, so TypeScript resolves folder imports
 //   through `rootDirs`.
@@ -193,36 +194,90 @@ const referredBy = (code) => {
 }
 
 /**
- * The functions written in the JSX of a render (a child, `{(item) => <Item … />}`, or an attribute
- * that is not a handler) that use nothing of the render around them: only their own parameters,
- * what the module imports or declares, and globals. Such a function is the same at every render,
- * so it can live outside it. Then the element it is given to is equal to the one before
- * (elements.ts), and React skips it: a list is not rendered again because its parent was. One that
- * holds a handler stays: its handler is tracked where it is written.
+ * What a function binds where its own code can see it: its parameters, and what its body declares
+ * outside the functions it holds. Each with whether it stays the same through a render (a
+ * parameter, a `const`, a function declaration), and where it is declared.
  */
-function constantFunctions(ast, code) {
+const bindingsOf = (fn) => {
+  const bindings = new Map()
+  const bind = (pattern, binding) => {
+    const names = new Set()
+    boundBy(pattern, names)
+    for (const name of names) bindings.set(name, binding)
+  }
+  for (const parameter of fn.params) bind(parameter, { stable: true, at: -1 })
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return
+    if (Array.isArray(node)) return node.forEach(visit)
+    if (FUNCTIONS.has(node.type)) return void (node.id && bindings.set(node.id.name, { stable: true, at: -1 }))
+    if (node.type === 'VariableDeclaration') {
+      for (const declarator of node.declarations) {
+        bind(declarator.id, { stable: node.kind === 'const', at: declarator.end })
+        visit(declarator.init)
+      }
+      return
+    }
+    if (node.type === 'ClassDeclaration' && node.id) bindings.set(node.id.name, { stable: false, at: node.end })
+    else if (node.type === 'CatchClause') bind(node.param, { stable: false, at: -1 })
+    children(node, visit)
+  }
+  visit(fn.body)
+  return bindings
+}
+
+/** The `key` an element is given, as written, or nothing. */
+const keyOf = (opening, code) => {
+  const attribute = opening.attributes.find((each) => each.type === 'JSXAttribute' && each.name.type === 'JSXIdentifier' && each.name.name === 'key')
+  if (!attribute?.value) return undefined
+  const value = attribute.value.type === 'JSXExpressionContainer' ? attribute.value.expression : attribute.value
+  return code.slice(value.start, value.end)
+}
+
+/**
+ * The functions written in the JSX of a render (a child, `{(item) => <Item … />}`, or an attribute
+ * that is not a handler), each with the names of the render it reads (`deps`):
+ * - one that reads none uses only its own parameters, what the module imports or declares, and
+ *   globals. It is the same at every render, so it can live outside it;
+ * - one that reads some, each a parameter or a `const` declared before it, is the same function as
+ *   long as those are the same values (`keep`, track.ts).
+ * Either way the element it is given to is equal to the one before (elements.ts), and React skips
+ * it: a list is not rendered again because its parent was. One that holds a handler stays as
+ * written: its handler is tracked where it is written. So does one that reads a `let`, a name
+ * declared after it, `this` or `arguments`, or binds a name of the render again.
+ */
+function jsxFunctions(ast, code) {
   const found = []
-  const constant = (fn, around) => {
-    if (fn.type !== 'ArrowFunctionExpression' || fn.async) return false
+  const classify = (fn, around, key) => {
+    if (fn.type !== 'ArrowFunctionExpression' || fn.async) return null
     const source = code.slice(fn.start, fn.end)
-    if (/\son[A-Z]/.test(source) || source.includes('data-track')) return false
+    if (/\son[A-Z]/.test(source) || source.includes('data-track')) return null
     const own = namesOf(fn, true)
     const referred = referredBy(fn)
-    if (referred.has('this') || referred.has('arguments')) return false
-    // A name the render around it binds: read by the function, or bound by it again.
-    for (const name of around) if (referred.has(name) || own.has(name)) return false
-    return true
+    if (referred.has('this') || referred.has('arguments')) return null
+    const deps = []
+    for (const [name, binding] of around) {
+      if (own.has(name)) return null
+      if (!referred.has(name)) continue
+      if (!binding.stable || binding.at > fn.start) return null
+      deps.push(name)
+    }
+    return { fn, deps, key }
   }
-  const visit = (node, around) => {
+  const visit = (node, around, key) => {
     if (!node || typeof node !== 'object') return
-    if (Array.isArray(node)) return node.forEach((child) => visit(child, around))
-    if (FUNCTIONS.has(node.type)) return children(node, (child) => visit(child, new Set([...(around ?? []), ...namesOf(node, false)])))
-    // Outside every function there is no render to move it out of.
-    if (around && node.type === 'JSXExpressionContainer' && constant(node.expression, around)) return void found.push(node.expression)
+    if (Array.isArray(node)) return node.forEach((child) => visit(child, around, key))
+    // A key belongs to the function that writes it: a function inside starts without one.
+    if (FUNCTIONS.has(node.type)) return children(node, (child) => visit(child, new Map([...(around ?? []), ...bindingsOf(node)]), undefined))
+    if (node.type === 'JSXElement') return children(node, (child) => visit(child, around, keyOf(node.openingElement, code) ?? key))
+    // Outside every function there is no render to keep it for.
+    if (around && node.type === 'JSXExpressionContainer') {
+      const function_ = classify(node.expression, around, key)
+      if (function_) return void found.push(function_)
+    }
     if (node.type === 'JSXAttribute' && node.name.type === 'JSXIdentifier' && HANDLER.test(node.name.name)) return
-    children(node, (child) => visit(child, around))
+    children(node, (child) => visit(child, around, key))
   }
-  visit(ast, null)
+  visit(ast, null, undefined)
   return found
 }
 
@@ -230,16 +285,13 @@ function constantFunctions(ast, code) {
  * Wraps every JSX `on…` attribute: `onClick={save}` becomes `onClick={__track(save, __site_0)}`,
  * with the site's placement hoisted as a frozen constant. `data-track="off"`
  * on an element leaves it alone, and the plugin removes the marker. It also moves the functions
- * that use nothing of the render out of it (constantFunctions).
+ * that use nothing of the render out of it, and keeps the ones that read the render for as long as
+ * what they read is the same (jsxFunctions).
  */
 export function transformRender(code, id, componentPathValue, file, runtime) {
   if (!/\son[A-Z]/.test(code) && !code.includes('=>')) return null
   const ast = parseAst(code, { lang: 'tsx' }, id)
   const edits = new MagicString(code)
-  const moved = constantFunctions(ast, code).map((fn, index) => {
-    edits.overwrite(fn.start, fn.end, `__constant_${index}`)
-    return `const __constant_${index} = ${code.slice(fn.start, fn.end)};`
-  })
   const lineStarts = [0]
   for (let index = 0; index < code.length; index += 1) if (code[index] === '\n') lineStarts.push(index + 1)
   const locate = (offset) => {
@@ -251,6 +303,20 @@ export function transformRender(code, id, componentPathValue, file, runtime) {
       else high = middle - 1
     }
     return { line: low + 1, column: offset - lineStarts[low] + 1 }
+  }
+  const moved = []
+  let kept = 0
+  for (const { fn, deps, key } of jsxFunctions(ast, code)) {
+    if (!deps.length) {
+      const name = `__constant_${moved.length}`
+      edits.overwrite(fn.start, fn.end, name)
+      moved.push(`const ${name} = ${code.slice(fn.start, fn.end)};`)
+      continue
+    }
+    const { line, column } = locate(fn.start)
+    edits.prependLeft(fn.start, '__keep(')
+    edits.appendRight(fn.end, `, [${deps.join(', ')}], ${JSON.stringify(`${componentPathValue}@${line}:${column}`)}${key ? `, ${key}` : ''})`)
+    kept += 1
   }
   const sites = []
   walk(ast, (node) => {
@@ -287,8 +353,9 @@ export function transformRender(code, id, componentPathValue, file, runtime) {
       edits.appendRight(expression.end, `, ${constant}${key ? `, ${key}` : ''})`)
     }
   })
-  if (!sites.length && !moved.length) return null
-  edits.prepend(`${sites.length ? `import { track as __track } from ${runtime};\n${sites.join('\n')}\n` : ''}${moved.length ? `${moved.join('\n')}\n` : ''}`)
+  if (!sites.length && !moved.length && !kept) return null
+  const imported = [...(sites.length ? ['track as __track'] : []), ...(kept ? ['keep as __keep'] : [])]
+  edits.prepend(`${imported.length ? `import { ${imported.join(', ')} } from ${runtime};\n` : ''}${sites.length ? `${sites.join('\n')}\n` : ''}${moved.length ? `${moved.join('\n')}\n` : ''}`)
   return { code: edits.toString(), map: edits.generateMap({ hires: true, source: id }) }
 }
 

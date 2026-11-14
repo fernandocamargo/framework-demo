@@ -22,8 +22,8 @@ let current: Scope | null = null
 type Entry = { wrapper: Handler; next: Handler; committed: Handler }
 /** Each instance's entries, by site, then key, in the order the render reached them. */
 const entries = new WeakMap<Scope, Map<Site, Map<unknown, Entry[]>>>()
-/** How many of each list the run in progress has reached. */
-const reached = new WeakMap<Scope, Map<Entry[], number>>()
+/** How many of each list (of handlers, of kept functions) the run in progress has reached. */
+const reached = new WeakMap<Scope, Map<object, number>>()
 /** The entries a render gave a new handler, until React commits it. */
 const staged = new WeakMap<Scope, Set<Entry>>()
 
@@ -110,7 +110,7 @@ export function track<T>(handler: T, site: Site, key?: unknown): T {
   if (!byKey) bySite.set(site, (byKey = new Map()))
   let list = byKey.get(key)
   if (!list) byKey.set(key, (list = []))
-  const counts = reached.get(scope) ?? new Map<Entry[], number>()
+  const counts = reached.get(scope) ?? new Map<object, number>()
   const at = counts.get(list) ?? 0
   counts.set(list, at + 1)
   let entry = list[at]
@@ -126,3 +126,34 @@ export function track<T>(handler: T, site: Site, key?: unknown): T {
   }
   return entry.wrapper as T
 }
+
+/** A function a render wrote, and the render's values it reads. */
+type Kept = { fn: unknown; values: readonly unknown[] }
+/** Each instance's kept functions, by site, then key, in the order the render reached them. */
+const kept = new WeakMap<Scope, Map<string, Map<unknown, Kept[]>>>()
+
+/**
+ * A function written in a render's JSX that reads values of the render (a slider's output that
+ * formats with the render's formatter): the plugin passes it here with those values. Inside an
+ * instance it is the function of the last render that read the same values, so the element it is
+ * given to is the element shown before and React skips it. The values are parameters or `const`s,
+ * so the same values make a function that does the same. Outside an instance, it is as written.
+ */
+export function keep<T>(fn: T, values: readonly unknown[], site: string, key?: unknown): T {
+  const scope = current
+  if (!scope) return fn
+  let bySite = kept.get(scope)
+  if (!bySite) kept.set(scope, (bySite = new Map()))
+  let byKey = bySite.get(site)
+  if (!byKey) bySite.set(site, (byKey = new Map()))
+  let list = byKey.get(key)
+  if (!list) byKey.set(key, (list = []))
+  const counts = reached.get(scope) ?? new Map<object, number>()
+  const at = counts.get(list) ?? 0
+  counts.set(list, at + 1)
+  const last = list[at]
+  if (last && last.values.length === values.length && last.values.every((value, index) => Object.is(value, values[index]))) return last.fn as T
+  list[at] = { fn, values }
+  return fn
+}
+
