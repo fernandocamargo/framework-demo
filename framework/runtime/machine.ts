@@ -29,6 +29,7 @@
 import { createActor, enqueueActions, fromPromise, setup, type AnyActorRef, type AnyStateMachine, type SnapshotFrom } from 'xstate'
 import { useSelector } from '@xstate/react'
 import { use, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { shareByIdentity } from './data'
 import { PinContext, type Pin } from './pin'
 import { report } from './pipeline'
 import { sameParts, tracking } from './reads'
@@ -66,7 +67,18 @@ export function buildMachine(path: string, module: StateModule, injection: Sourc
     if (kind === 'action') {
       actions[name] = enqueueActions(({ enqueue, ...args }) => {
         const patch = (fn as Fn)(withSources(args as Record<string, unknown>))
-        if (isPlainObject(patch)) enqueue.assign(patch)
+        if (!isPlainObject(patch)) return
+        // The context keeps every part equal to what it held, as a read's answer does, and stays
+        // the same object when the action changes nothing: a chart that reads something every
+        // second and finds it as it was renders nothing.
+        const context = ((args as { context?: unknown }).context ?? {}) as Record<string, unknown>
+        const kept: Record<string, unknown> = {}
+        let changed = false
+        for (const [key, value] of Object.entries(patch)) {
+          kept[key] = Object.hasOwn(context, key) ? shareByIdentity(context[key], value) : value
+          if (!Object.hasOwn(context, key) || kept[key] !== context[key]) changed = true
+        }
+        if (changed) enqueue.assign(kept)
       })
     }
     return name
@@ -184,6 +196,22 @@ function carried(machine: AnyStateMachine, snapshot: SnapshotFrom<AnyStateMachin
   }
 }
 
+const sameValue = (a: unknown, b: unknown): boolean => {
+  if (Object.is(a, b)) return true
+  if (!isPlainObject(a) || !isPlainObject(b)) return false
+  const keys = Object.keys(a)
+  return keys.length === Object.keys(b).length && keys.every((key) => Object.hasOwn(b, key) && sameValue(a[key], b[key]))
+}
+
+/**
+ * Whether a render would get the same `state` from both: the same states, context and status. A
+ * chart also moves without any of that changing (a state entered again, a service started or
+ * done), and that renders nothing. Coming to rest counts as a change: a chart declared again
+ * waits for it (useChart).
+ */
+const sameShown = (a: SnapshotFrom<AnyStateMachine>, b: SnapshotFrom<AnyStateMachine>) =>
+  a === b || (a.context === b.context && a.status === b.status && a.error === b.error && sameValue(a.value, b.value) && atRest(a) === atRest(b))
+
 const forEachActor = (actor: AnyActorRef, callback: (actor: AnyActorRef) => void) => {
   callback(actor)
   for (const child of Object.values((actor.getSnapshot() as { children?: Record<string, AnyActorRef> }).children ?? {})) forEachActor(child, callback)
@@ -269,7 +297,8 @@ export function useStateLayer(path: string, module: StateModule, injection: Sour
   const running = useChart(chart.current, pin)
   const { actor } = running
   const { flags } = running.declared
-  const snapshot = useSelector(actor, (state: SnapshotFrom<AnyStateMachine>) => state)
+  // The last snapshot that shows something else than the one before it (sameShown).
+  const snapshot = useSelector(actor, (state: SnapshotFrom<AnyStateMachine>) => state, sameShown)
 
   useEffect(() => {
     const subscription = actor.subscribe({ error: (error) => report(error, { layer: 'state', path }) })
