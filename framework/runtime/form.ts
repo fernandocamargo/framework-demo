@@ -11,6 +11,7 @@
  * the component around it does not render at all. A seed renders whoever read `initial`. The
  * chart's guards and the operations read the latest values when they run, and follow none.
  */
+
 import { useMemo, useRef, useSyncExternalStore } from 'react'
 import { sameParts, tracking } from './reads'
 

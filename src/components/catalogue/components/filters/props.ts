@@ -2,6 +2,7 @@
 // address (render.tsx), and the catalogue reads again because its read used those fields.
 // It is given the fields it shows, not the filters whole: another page of the same list is not
 // another filter bar.
+
 import type { Filters } from '@/address'
 import type { Category, SortKey } from '@/services/products/types'
 

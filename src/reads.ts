@@ -1,6 +1,7 @@
 // What `Root` reads for this app, beside what the address and the shell give it: who is signed in,
 // what the backend says they may do, and the flags they get. The shell (main.tsx) and Storybook's
 // preview (.storybook/preview.tsx) hand the same three to their `Root`.
+
 import type { Acl, Flags, Injection, User } from 'framework'
 
 // Who is signed in: the session the API client holds, then the profile it names, which carries

@@ -3,6 +3,7 @@
  * created in that state, with the example's context over the chart's own, and never started, so
  * nothing runs and nothing moves.
  */
+
 import { createContext, createElement, useMemo, type ReactNode } from 'react'
 
 /** What a state needs on screen beyond what its chart starts with: a `state.ts`'s `examples[state]`. */

@@ -1,6 +1,7 @@
 // What the wizard's render shows at each step, worked out from the flow and the form, in the
 // locale on screen. Prices are formatted by `intl`; the sentences with a bold part are functions
 // the render gives the tag to.
+
 import type { ReactNode } from 'react'
 import { CURRENCY } from '@/format'
 import { newPrice, ruleProblem } from './rule'

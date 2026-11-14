@@ -1,6 +1,7 @@
 // Each flag, the value the person signed in gets, and the ways it can be served, in the locale on
 // screen. The values come from `flags`, as every component gets them; the ways, from the flags'
 // definitions. When GrowthBook serves the flags, its dashboard chooses: only the values show.
+
 import { definitions, names } from '@/clients/flags/definitions'
 
 export default ({ i18n, intl, flags, async: { default: served, serve } }) => ({

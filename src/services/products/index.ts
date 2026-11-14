@@ -2,6 +2,7 @@
 // Writes go to DummyJSON first, signed in, so the network and the session are exercised for
 // real; DummyJSON echoes them and keeps nothing, so the overlay keeps them (clients/local).
 // The services' meta.ts says which of these read and what each write makes stale.
+
 import { isLocal } from '@/clients/local'
 import { laid, layPage, PAGE_SIZE } from './overlay'
 import type { Category, Changes, Detailed, Listed, Local, Page, Product, Query, Review } from './types'

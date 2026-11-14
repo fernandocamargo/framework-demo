@@ -3,6 +3,7 @@
 // call of a component's render (`window.__renderCall`), which of those calls React committed
 // (`window.__kept`: the rest it threw away), and each time a component is about to suspend: on its
 // view, its skin, or its default read (`window.__suspend`). `npm run perf` builds it and drives perf/steps.mjs through it.
+
 import path from 'node:path'
 import { mergeConfig, type Plugin } from 'vite'
 import base from '../vite.config.ts'

@@ -1,6 +1,7 @@
 // The catalogue's keys. Creating and the bulk change follow what the person may do, as the links
 // do; paging follows the page the catalogue read. A key that does nothing now is still listed,
 // as unavailable.
+
 import { go } from '@/address'
 
 export default ({ i18n, acl, async: { default: answer } }) => ({

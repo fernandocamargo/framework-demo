@@ -1,5 +1,6 @@
 // The flags' client on the in-memory provider: targeting by role, a flag served another way, and a
 // change made in another tab.
+
 import createFlags from '.'
 
 const admin = { targetingKey: '1', role: 'admin' as const }

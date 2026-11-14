@@ -1,4 +1,5 @@
 // The sign-in form's fields, and the credentials they make.
+
 import type { Credentials } from '@/clients/dummyjson/http'
 
 export const seed = (_: undefined) => ({ username: '', password: '' })

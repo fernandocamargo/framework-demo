@@ -1,5 +1,6 @@
 // The editor's fields: how a product becomes their values, how the values become the changes
 // to save, and what is wrong with them. Pure functions; the framework keeps the values.
+
 import type { Changes, Detailed } from '@/services/products/types'
 
 export const seed = (product: Detailed | undefined) => ({

@@ -1,5 +1,6 @@
 // The editor's rules, tested where they are written: the checks as plain functions, and the
 // flow itself with the services a test gives it. No React, no network.
+
 import { formOf, startFlow } from 'framework/testing'
 import type { Detailed } from '@/services/products/types'
 import * as form from './form'

@@ -1,4 +1,5 @@
 // What this app injects, as the framework's interfaces. main.tsx gives the values to `Root`.
+
 import 'framework'
 import type { SortKey } from './services/products/types'
 

@@ -6,6 +6,7 @@
 // In memory, the way each flag is served is kept as GrowthBook's dashboard would keep it: one place
 // every tab of the world reads (localStorage). A change made in one tab reaches the others'
 // providers, as each tab hears GrowthBook's stream, and each provider says its flags changed.
+
 import { InMemoryProvider, OpenFeature, ProviderEvents } from '@openfeature/web-sdk'
 import type { Flags } from 'framework'
 import { prefixed, shared } from '../storage'

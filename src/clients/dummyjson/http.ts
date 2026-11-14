@@ -6,6 +6,7 @@
 // - the network lab's faults, which use DummyJSON's own `delay` and `/http/<status>` helpers,
 //   so a forced failure is a real response.
 // The wire is a parameter: `fetch` for the real thing, a function for the memory world.
+
 import { sleep, type KeyValue } from '../storage'
 
 export type Wire = (url: string, init: RequestInit) => Promise<Response>

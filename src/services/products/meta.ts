@@ -4,6 +4,7 @@
 // this file follows, or fails to compile.
 // A component that read one of these reads again when a write makes it stale. No component
 // says so, and no component calls an invalidation.
+
 import { update } from 'framework'
 import type { Listed, Page } from './types'
 

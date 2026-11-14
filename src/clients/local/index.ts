@@ -5,6 +5,7 @@
 // Each edited product has a version. A save says which version it changed; when the stored one
 // is newer, somebody else saved meanwhile (another tab, or the network lab's button), and the
 // save is refused as a conflict.
+
 import type { Product } from '@/services/products/types'
 import { prefixed, shared, sleep, type KeyValue } from '../storage'
 

@@ -14,6 +14,7 @@
 // object its default export returns, its nested `states`, and the states a spread may add.
 // `storiesPlugin` writes them again when a folder or a file appears or goes, or a `state.ts` or a
 // `props.ts` changes.
+
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { parseAst } from 'vite'

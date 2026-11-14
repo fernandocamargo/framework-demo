@@ -3,6 +3,7 @@
 // Applying sends one save per product, in order. Each result is kept, so the person watches
 // the progress, and a failure does not stop the rest. The summary lists what failed, and the
 // failed ones can be sent again.
+
 import type { Listed } from '@/services/products/types'
 import { newPrice, ruleProblem } from './rule'
 

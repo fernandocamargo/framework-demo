@@ -10,6 +10,7 @@
  * (elements.ts). A render React throws away never reaches a handler. Outside an instance (a
  * placeholder, an error file), one wrapper per site, handler and key.
  */
+
 import { currentRoute, nextId, pipeline, report, type Interaction, type Scope, type Site } from './pipeline'
 
 type Handler = (...args: unknown[]) => unknown

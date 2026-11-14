@@ -21,6 +21,7 @@
  *   what a component depends on.
  * - **Failures** go to the error pipeline, tagged with the service's or component's path.
  */
+
 import { QueryCache, QueryClient, hashKey, type Query } from '@tanstack/react-query'
 import { hold } from './activity'
 import { emitData, report } from './pipeline'

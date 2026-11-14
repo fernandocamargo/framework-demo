@@ -1,7 +1,9 @@
 // The memory world's data: a small catalogue in DummyJSON's shapes, and its one user. Written
 // by rule, so every run starts from the same shop.
+
 import type { Product } from '@/services/products/types'
 
+// Its order matters: a product's id comes from its category's place here (desks are 31 to 40).
 const CATALOGUE = {
   audio: ['Studio Monitor', 'Desk Microphone', 'Open-Back Headphones', 'Audio Interface', 'Boom Arm', 'Pop Filter', 'Bluetooth Speaker', 'Noise-Cancelling Earbuds', 'Podcast Mixer'],
   keyboards: ['Tenkeyless Keyboard', 'Split Keyboard', 'Low-Profile Keyboard', 'Numeric Pad', 'Walnut Wrist Rest', 'PBT Keycap Set', 'Linear Switch Pack', 'Coiled Cable', 'Macro Pad'],

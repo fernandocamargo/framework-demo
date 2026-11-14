@@ -1,6 +1,7 @@
 // A dialog's frame: the overlay and the modal, with no read of its own. It shows at once and stays
 // while the dialog inside waits for its read, so it opens once, and the dialog's placeholder, its
 // content and its error all show in it.
+
 import { createElement, type ReactNode } from 'react'
 import { Dialog, Heading } from 'react-aria-components'
 

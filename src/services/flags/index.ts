@@ -1,5 +1,6 @@
 // The feature flags, as the app's flows read them. The client holds the provider; Root's `flags`
 // read evaluates them for the person signed in, and every component that reads `flags` gets them.
+
 import type { Name, Served, Targeting } from '@/clients/flags/definitions'
 
 /** The flags this person gets: by id, and by the role the backend gives them. */

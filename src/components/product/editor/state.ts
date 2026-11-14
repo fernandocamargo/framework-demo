@@ -6,6 +6,7 @@
 // - a save refused because somebody else saved meanwhile is a conflict, not a failure: the
 //   person keeps their changes and chooses whose version stays;
 // - a failed save keeps the changes, to try again.
+
 import { problems } from './form'
 
 export const description = 'Edit a product, or write a new one, and save it.'

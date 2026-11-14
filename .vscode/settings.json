@@ -1,0 +1,16 @@
+{
+  // On save, ESLint sorts (imports in three groups, keys, props: eslint.config.mjs), then Prettier
+  // lays the file out (.prettierrc). `npm run check` fails on a file left unsorted or unformatted.
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "prettier.requireConfig": true,
+  // The framework's TypeScript plugin types what the framework injects. It loads only in the
+  // project's own TypeScript, so VS Code offers to switch to it once (framework/README.md, Editors).
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

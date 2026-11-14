@@ -1,5 +1,6 @@
 // One row of the catalogue. It is given its product as the catalogue's read answered it, and
 // the filters, so its links keep them. Prices and ratings are formatted for the locale on screen.
+
 import { href, type Filters } from '@/address'
 import { CURRENCY, STOCK_TONES, stockLevel } from '@/format'
 import type { Listed } from '@/services/products/types'

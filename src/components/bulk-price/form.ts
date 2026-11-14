@@ -1,4 +1,5 @@
 // The wizard's fields: which products, and the rule.
+
 import type { Rule } from './rule'
 
 export const seed = (_: undefined) => ({

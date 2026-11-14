@@ -17,6 +17,7 @@
  * `acl.ts` says, as a boolean, whether what the component offers may be done; the component and
  * everything below it get that as `acl.allowed`, until a folder below says otherwise.
  */
+
 import { createContext, createElement, memo, Suspense, use, useCallback, useLayoutEffect, useMemo, useRef, type ComponentType, type ReactNode } from 'react'
 import { useQueryErrorResetBoundary, useSuspenseQueries, useSuspenseQuery, type QueryObserverResult } from '@tanstack/react-query'
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary'

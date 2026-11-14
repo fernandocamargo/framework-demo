@@ -1,6 +1,7 @@
 // What the session's render shows: who is signed in, their role and how long the access token
 // has left, and the sign-in dialog when the page asks for it. The role is the one the backend's
 // permissions name (`acl`), not the session's: DummyJSON's sign-in answers none.
+
 import { DEMOS } from './form'
 
 export type Props = {

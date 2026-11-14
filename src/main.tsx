@@ -1,6 +1,7 @@
 // The app's shell: everything outside the framework's root folders. It decides which world the
 // app sees, stands in for a router, hands `Root` what the framework injects, and shows what the
 // failure pipeline carries. The app itself starts at components/app.
+
 import { StrictMode, use, useEffect, useMemo, useState, useTransition } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Button, I18nProvider, Text, UNSTABLE_Toast as Toast, UNSTABLE_ToastContent as ToastContent, UNSTABLE_ToastQueue as ToastQueue, UNSTABLE_ToastRegion as ToastRegion } from 'react-aria-components'

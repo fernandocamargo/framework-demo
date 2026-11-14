@@ -1,5 +1,6 @@
 // @vitest-environment node
 // @ts-expect-error The plugin is plain JavaScript, with no declarations.
+
 import { transformRender } from '../../plugin/index.mjs'
 
 const transformed = (code: string) => (transformRender(code, '/src/components/list/render.tsx', 'components/list', 'components/list/render.tsx', '"framework"') as { code: string } | null)?.code ?? code

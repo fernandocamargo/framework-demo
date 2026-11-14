@@ -1,5 +1,6 @@
 // The product services, against the memory world: the same client code as the real one, on a
 // wire that answers from fixtures. Each test builds its own world, so nothing leaks between them.
+
 import { createStore } from '@/clients/local'
 import memory from '@/clients/memory'
 import { DEMO } from '@/components/session/form'

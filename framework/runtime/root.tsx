@@ -5,6 +5,7 @@
  * last resort of the error pipeline. A `Suspense` at the top catches components with no
  * placeholder.
  */
+
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { createContext, createElement, Suspense, use, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type Context, type ReactNode } from 'react'
 import { hold, Pending, useCommitted, watch } from './activity'

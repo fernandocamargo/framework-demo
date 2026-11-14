@@ -2,6 +2,7 @@
 // idle, then look once. No sleeps, no polling for selectors, no retried assertions: `idle()`
 // resolves when no read or write is pending, no view or skin is loading, no operation is
 // running and no placeholder is on screen.
+
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
 declare global {

@@ -9,6 +9,7 @@
  *   await flow.settled()
  *   expect(flow.states).toEqual(['saved'])
  */
+
 import { createActor } from 'xstate'
 import type { I18n } from './i18n-types'
 import { build, intlFor } from './i18n'

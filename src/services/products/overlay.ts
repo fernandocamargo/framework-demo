@@ -1,5 +1,6 @@
 // How the local overlay is laid over what the API answers. Pure functions: the services call
 // them with what the two clients returned, and the tests call them with literals.
+
 import type { Overlay } from '@/clients/local'
 import type { Listed, Local, Page, Product, Query } from './types'
 

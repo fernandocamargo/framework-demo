@@ -1,5 +1,6 @@
 // GrowthBook as an OpenFeature provider, on a payload given in the test (no network): targeting
 // by the person's id and role, and a change said only when GrowthBook's flags change.
+
 import { GrowthBook } from '@growthbook/growthbook'
 import { ProviderEvents } from '@openfeature/web-sdk'
 import { growthbookProvider } from './growthbook'

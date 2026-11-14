@@ -1,0 +1,4 @@
+# Prettier also skips what .gitignore lists.
+package-lock.json
+# Built from the workspace's sketch (S-008); formatted there.
+public/explainer/

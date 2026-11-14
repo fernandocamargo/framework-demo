@@ -26,6 +26,7 @@
  * after it (`{ type: 'user' }`), once the component has rendered with the new value, so its guards
  * read it: a session chart that reads `user` follows a sign-in made in another tab.
  */
+
 import { createActor, enqueueActions, fromPromise, setup, type AnyActorRef, type AnyStateMachine, type SnapshotFrom } from 'xstate'
 import { useSelector } from '@xstate/react'
 import { use, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -146,8 +147,9 @@ export function buildMachine(path: string, module: StateModule, injection: Sourc
   for (const { key } of flags) seen.set(key, (seen.get(key) ?? 0) + 1)
   const flagNames = flags.map(({ key, path: at }) => ({ name: (seen.get(key) ?? 0) > 1 ? at : key, path: at }))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const machine = setup({ actors: actors as any, guards: guards as any, actions: actions as any }).createMachine(config as any)
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   return { machine: machine as AnyStateMachine, flags: flagNames }
 }
 

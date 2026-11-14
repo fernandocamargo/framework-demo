@@ -2,6 +2,7 @@
 // locale on screen: the API client's requests, and the inspector, which shows what the pipelines
 // carried: interactions with the place they were written, failures with their layer, and what the
 // data layer did.
+
 import type { I18n, Intl } from 'framework'
 import type { Tracked } from '@/clients/tracker'
 import type * as messages from './i18n'

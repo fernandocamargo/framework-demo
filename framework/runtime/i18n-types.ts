@@ -10,6 +10,7 @@
  * - one with tags (`<b>…</b>`) also takes a function per tag, and gives React nodes;
  * - a function leaf `(values, intl) => …` is called with its values alone.
  */
+
 import type { ReactNode } from 'react'
 import type { IntlShape } from 'react-intl'
 

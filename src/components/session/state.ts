@@ -5,6 +5,7 @@
 //
 // The access token is short-lived on purpose (one minute by default, set in the network lab),
 // so a refresh can be watched. While signed in, the chart looks at the clock once a second.
+
 import type { Session } from '@/clients/dummyjson/http'
 import { CLOSED } from '@/address'
 import { DEMOS } from './form'

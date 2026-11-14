@@ -14,6 +14,7 @@
 //
 // CHROMIUM and WEBKIT may name browser executables, as for the end-to-end tests. Writes
 // perf/out/<LABEL>/cycles.json (every commit of the first run) and summary.txt.
+
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import path from 'node:path'

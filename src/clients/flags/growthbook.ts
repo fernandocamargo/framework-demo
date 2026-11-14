@@ -5,6 +5,7 @@
 // context (the role) beside it. With streaming, GrowthBook pushes every change of its flags, and
 // the provider says its flags changed. It says so only for a new payload: the SDK also calls back
 // when the person changes, and the flags read for a new person would otherwise read itself again.
+
 import type { GrowthBook, InitOptions } from '@growthbook/growthbook'
 import { ErrorCode, OpenFeatureEventEmitter, ProviderEvents, type EvaluationContext, type JsonValue, type Provider, type ResolutionDetails } from '@openfeature/web-sdk'
 

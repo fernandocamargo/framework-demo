@@ -2,6 +2,7 @@
 // Locally, CHROMIUM and WEBKIT may name browser executables already on the machine; without
 // them Playwright uses the browsers it installed (`npx playwright install chromium webkit`).
 // E2E_URL points the run at a server that is already up, such as the dev server.
+
 import { defineConfig } from '@playwright/test'
 
 const url = process.env.E2E_URL ?? 'http://localhost:5181'

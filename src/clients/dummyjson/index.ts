@@ -1,5 +1,6 @@
 // DummyJSON, over the network. The session is the browser's, as a backend's cookie would be:
 // every tab of the app shares it, and one tab's sign-out ends it in the others.
+
 import { withPermissions } from '../permissions'
 import { shared } from '../storage'
 import { createHttp } from './http'

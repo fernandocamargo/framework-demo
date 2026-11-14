@@ -18,6 +18,7 @@
  * rendering. It is also `window.__framework.idle()`, for tests that drive the page from outside.
  * It does not see a timer, a request made outside the framework, or an overlay still closing.
  */
+
 import type { QueryClient } from '@tanstack/react-query'
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
 

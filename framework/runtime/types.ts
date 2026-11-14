@@ -3,6 +3,7 @@
  * (framework/typescript/) annotates each injected argument with one of these,
  * filling in the app's own clients and services.
  */
+
 import type { ReactNode } from 'react'
 import type { I18n, Intl } from './i18n-types'
 import type { Allowed, Entity, Env, Flags, Navigation, Route, User } from './index'

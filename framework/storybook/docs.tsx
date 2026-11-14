@@ -2,6 +2,7 @@
 // file (what its functions are given, and which sources the component follows because of it),
 // the states of its chart, its stories, and each file's source. The story files hold all of it
 // (stories.mjs); this page only shows it.
+
 import { Primary, Source, Stories, Title, useOf } from '@storybook/addon-docs/blocks'
 
 type Folder = {

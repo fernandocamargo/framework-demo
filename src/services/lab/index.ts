@@ -1,5 +1,6 @@
 // The network lab's operations: the faults the API client applies, and what the client and the
 // framework's pipelines have seen lately.
+
 import type { Settings } from '@/clients/dummyjson/http'
 
 export const settings =

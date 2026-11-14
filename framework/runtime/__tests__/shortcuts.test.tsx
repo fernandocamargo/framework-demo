@@ -35,6 +35,7 @@ const Flow = component({
       },
       form: undefined,
       shortcuts: {
+        // Its order matters: the list shows the keys in this order.
         default: ({ when }: Props) => ({
           s: { label: 'Start', send: 'start' },
           'mod+s': { label: 'Save', send: 'save' },

@@ -1,4 +1,5 @@
 // The network lab's panel: closed, or open and reading the latest activity once a second.
+
 import type { Entry } from '@/clients/dummyjson/http'
 import type { Tracked } from '@/clients/tracker'
 

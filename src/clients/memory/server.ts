@@ -1,6 +1,7 @@
 // DummyJSON, answered in memory: the endpoints this app calls, with the same paths, parameters,
 // statuses and messages, including its `delay` parameter and its `/http/<status>` helper. Like
 // DummyJSON, it echoes writes and keeps nothing.
+
 import type { Product } from '@/services/products/types'
 import { sleep } from '../storage'
 import type { Wire } from '../dummyjson/http'

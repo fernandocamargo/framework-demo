@@ -3,6 +3,7 @@
 // toolbars: the page's language, and who is signed in, signed in for real with that role's demo
 // account before the story renders, so the session, what may be done and the flags agree. A story
 // starts at the address its example names, and then follows its links, as the app does.
+
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react'
 import type { Decorator, Preview } from '@storybook/react-vite'
 import { I18nProvider } from 'react-aria-components'
@@ -38,7 +39,6 @@ function Stage({ start, children }: { start: Partial<Route> | undefined; childre
     window.addEventListener('hashchange', follow)
     return () => window.removeEventListener('hashchange', follow)
     // The story's own address, once, when it mounts.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const route = useMemo(() => parse(hash), [hash])
   return children(route)

@@ -1,5 +1,6 @@
 // Writes the component folders' declarations without starting Vite, so `tsc` can run alone:
 //   node framework/plugin/write-types.mjs --root src --runtime framework/runtime/index.ts
+
 import { parseArgs } from 'node:util'
 import { resolveOptions, writeTypes } from './index.mjs'
 

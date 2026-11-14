@@ -15,6 +15,7 @@
  * The messages of a folder in a locale are built once and shared by every instance, so a
  * component's `i18n` keeps its identity until the locale changes.
  */
+
 import { createContext } from 'react'
 import { createIntl, createIntlCache, type IntlShape } from 'react-intl'
 import { parse } from '@formatjs/icu-messageformat-parser'

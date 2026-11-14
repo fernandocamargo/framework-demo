@@ -1,4 +1,5 @@
 // The product's key opens its editor, for someone who may change it.
+
 import { go } from '@/address'
 
 export default ({ i18n, acl, async: { default: product } }) => ({

@@ -30,6 +30,7 @@
  * The keys on screen, translated, with whether each works now, are what a component gets as
  * `keyboard`, for a list of them.
  */
+
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react'
 import { report, type Scope, type Site } from './pipeline'
 import { track, withScope } from './track'

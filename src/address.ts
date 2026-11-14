@@ -1,6 +1,7 @@
 // The address, as the route and back. Hash routing, so a static host needs no rewrites:
 // `#/products?q=lamp&category=lighting&sort=price&order=desc&page=2&view=12`.
 // Fields at their defaults are left out, so the same page always has the same address.
+
 import type { Route } from 'framework'
 import type { SortKey } from './services/products/types'
 
@@ -8,6 +9,7 @@ export type Filters = Pick<Route, 'q' | 'category' | 'sort' | 'order' | 'page'>
 
 export const SORT_KEYS: readonly SortKey[] = ['title', 'price', 'rating', 'stock']
 
+// Its order matters: it is the order of the address's fields.
 export const HOME: Route = {
   q: '',
   category: '',
@@ -50,7 +52,8 @@ export function parse(hash: string): Route {
 
 export function format(route: Route): string {
   const query = new URLSearchParams()
-  for (const [key, value] of Object.entries(route) as [keyof Route, Route[keyof Route]][]) {
+  for (const key of Object.keys(HOME) as (keyof Route)[]) {
+    const value = route[key]
     if (value === HOME[key] || value === null || value === false) continue
     query.set(key, value === true ? '1' : String(value))
   }

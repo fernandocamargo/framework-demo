@@ -1,5 +1,6 @@
 // Who may apply a bulk price change, and how large: a plain function of the backend's snapshot
 // and what the form says.
+
 import { formOf } from 'framework/testing'
 import allowed from './acl'
 import * as form from './form'

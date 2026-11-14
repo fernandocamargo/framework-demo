@@ -1,4 +1,5 @@
 // The page's rule: changing the catalogue needs a session.
+
 import { messagesOf } from 'framework/testing'
 import * as messages from './i18n'
 import shape from './props'

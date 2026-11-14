@@ -7,6 +7,7 @@
  * declaration that branches on what may be done (`...(acl.allowed && { save })`) lists every state
  * it can have.
  */
+
 import charted from 'virtual:framework/charts'
 import { buildMachine, type StateModule } from './machine'
 import type { Example } from './pin'

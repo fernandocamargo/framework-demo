@@ -18,6 +18,7 @@
 //
 // The folder rules are shared with the TypeScript plugin (../shared/folders.cjs). Plain JavaScript, so a script can write
 // the declarations without Vite (`write-types.mjs`).
+
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import MagicString from 'magic-string'

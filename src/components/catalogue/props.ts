@@ -1,4 +1,5 @@
 // What the catalogue's render shows, worked out from what its read answered, in the page's words.
+
 import { filtered, href, HOME } from '@/address'
 
 export default ({ i18n, acl, async: { default: answer } }) => {
