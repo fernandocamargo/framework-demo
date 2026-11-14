@@ -94,18 +94,23 @@ export function chartStates(file) {
   return states
 }
 
-/** The names of a module's `export const examples = { … }`, in order. */
-export function exampleNames(file) {
-  if (!file) return []
+/** A module's `export const examples = …`, if it has one. */
+function examplesOf(file) {
+  if (!file) return undefined
   for (const node of parse(file).body) {
     if (node.type !== 'ExportNamedDeclaration' || node.declaration?.type !== 'VariableDeclaration') continue
     for (const declarator of node.declaration.declarations) {
-      if (declarator.id.type !== 'Identifier' || declarator.id.name !== 'examples') continue
-      const object = objectsOf(declarator.init)[0]
-      return object ? propertiesOf(object).map(keyName).filter(Boolean) : []
+      if (declarator.id.type === 'Identifier' && declarator.id.name === 'examples') return declarator
     }
   }
-  return []
+  return undefined
+}
+
+/** The names of a module's `export const examples = { … }`, in order. */
+export function exampleNames(file) {
+  const declarator = examplesOf(file)
+  const object = declarator && objectsOf(declarator.init)[0]
+  return object ? propertiesOf(object).map(keyName).filter(Boolean) : []
 }
 
 /** An export name for a story: a state's path or an example's name, unique and not a reserved word. */
@@ -152,8 +157,11 @@ function storyFile(options, dir, target) {
   const propsFile = findLayer(dir, 'props')
   const states = stateFile ? chartStates(stateFile) : []
   const propExamples = exampleNames(propsFile)
+  // A chart's examples are imported only when its file exports them: a missing export is a build warning.
+  const chartHasExamples = Boolean(examplesOf(stateFile))
   const reads = readsOf(options.root, dir)
-  const taken = new Set(['meta', 'Component', 'folder', 'pinned', 'shown'])
+  // The story file's own names, which no story's export may take.
+  const taken = new Set(['createElement', 'Pinned', 'Example', 'FolderDocs', 'Component', 'propExamples', 'chartExamples', 'folder', 'sources', 'stateExamples', 'shown', 'pinned'])
   const lines = [
     HEADER,
     `// From ${posix(path.relative(options.cwd, dir))}: its files, what the framework knows of them, and a story per example and per state.`,
@@ -162,12 +170,14 @@ function storyFile(options, dir, target) {
     `import { FolderDocs } from ${JSON.stringify(module_(target, options.docs))}`,
     `import Component from ${JSON.stringify(relative(target, dir))}`,
     ...(propsFile && propExamples.length ? [`import { examples as propExamples } from ${JSON.stringify(module_(target, propsFile))}`] : []),
-    ...(stateFile ? [`import * as chart from ${JSON.stringify(module_(target, stateFile))}`] : []),
+    ...(chartHasExamples ? [`import { examples as chartExamples } from ${JSON.stringify(module_(target, stateFile))}`] : []),
     ...files.map((file, index) => `import source${index} from ${JSON.stringify(`${relative(target, file.file)}?raw`)}`),
     '',
     `const folder = ${JSON.stringify({ path: id, reads, states, files: files.map(({ name, layer }) => ({ name, layer })) }, null, 2)}`,
     `const sources = [${files.map((_, index) => `source${index}`).join(', ')}]`,
-    ...(stateFile ? ['const stateExamples = ((chart as { examples?: Record<string, Example> }).examples ?? {}) as Record<string, Example>'] : []),
+    ...(states.length
+      ? [`const stateExamples: Record<string, Example> = ${chartHasExamples ? 'chartExamples as Record<string, Example>' : '{}'}`]
+      : []),
     '',
     'const shown = (example: Example | undefined) => ({',
     '  parameters: { framework: { route: example?.route } },',
