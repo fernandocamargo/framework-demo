@@ -6,10 +6,11 @@ import type { Listed } from '@/services/products/types'
 
 export type Props = { product: Listed; filters: Filters }
 
-export default ({ product, filters, i18n, intl, acl, async: { setStock } }) => {
+export default ({ product, filters, i18n, intl, acl, flags, async: { setStock } }) => {
   const level = stockLevel(product.stock)
-  // Counting stock needs the grant to update products, and someone signed in to send it.
-  const counts = acl.allowed && acl.role !== 'guest'
+  // Counting stock is being rolled out (the `stockCount` flag), and needs the grant to update
+  // products and someone signed in to send it.
+  const counts = flags.stockCount && acl.allowed && acl.role !== 'guest'
   return {
     title: product.title,
     thumbnail: product.thumbnail,

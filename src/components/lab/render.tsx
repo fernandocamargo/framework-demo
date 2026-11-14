@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom'
 import { Button, Label, Radio, RadioGroup, Slider, SliderOutput, SliderThumb, SliderTrack, Switch, Tab, TabList, TabPanel, Tabs } from 'react-aria-components'
+import Flags from './components/flags'
 
 export default ({ className, i18n, open, send, change, expireToken, breakRefresh, forgetChanges, sellOut, faults, toggleLabel, latency, latencyText, failurePercent, failureText, force, offline, tokenMinutes, minutes, canSellOut, network, tracked }) => (
   <div className={className}>
@@ -74,6 +75,7 @@ export default ({ className, i18n, open, send, change, expireToken, breakRefresh
           <TabList aria-label={i18n.tabs.label}>
             <Tab id="network">{i18n.tabs.network}</Tab>
             <Tab id="tracked">{i18n.tabs.tracked}</Tab>
+            <Tab id="flags">{i18n.tabs.flags}</Tab>
           </TabList>
           <TabPanel id="network">
             <ol className="log" aria-label={i18n.network.label}>
@@ -104,6 +106,9 @@ export default ({ className, i18n, open, send, change, expireToken, breakRefresh
                 </li>
               ))}
             </ol>
+          </TabPanel>
+          <TabPanel id="flags">
+            <Flags />
           </TabPanel>
         </Tabs>
       </aside>,

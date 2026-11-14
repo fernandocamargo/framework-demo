@@ -16,6 +16,9 @@
     "perf": "vite build --config perf/vite.config.ts --logLevel warn && node perf/cycles.mjs"
   },
   "dependencies": {
+    "@growthbook/growthbook-react": "2.0.0",
+    "@openfeature/core": "1.12.0",
+    "@openfeature/web-sdk": "1.10.0",
     "@tanstack/react-query": "5.105.0",
     "@xstate/react": "6.1.0",
     "react": "19.3.1",

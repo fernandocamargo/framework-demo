@@ -19,6 +19,7 @@
   "components/lab/tabs/label": "Atividade",
   "components/lab/tabs/network": "Cliente da API",
   "components/lab/tabs/tracked": "Inspetor",
+  "components/lab/tabs/flags": "Flags",
   "components/lab/network/label": "As últimas requisições do cliente da API",
   "components/lab/network/none": "Nenhuma requisição ainda.",
   "components/lab/tracked/label": "O que o app fez, do mais recente ao mais antigo",
@@ -48,6 +49,7 @@
   "components/lab/inspector/takesBack": "desfaz sua mudança em {reads}",
   "components/lab/inspector/staleBy": "{reads}, por {by}",
   "components/lab/inspector/staleFromTab": "{reads}, por {by} em outra aba",
+  "components/lab/inspector/stalePushed": "{reads}: a fonte mudou",
   "components/lab/inspector/toTabs": "avisou as outras abas: {reads}",
   "components/lab/inspector/fromTab": "de outra aba: {reads}"
 }

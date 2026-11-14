@@ -1,6 +1,6 @@
 import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components'
 
-export default ({ className, state, i18n, acl }) => (
+export default ({ className, state, i18n, acl, flags }) => (
   <ModalOverlay isOpen onOpenChange={(open) => !open && state.send({ type: 'cancel' })}>
     <Modal className={`react-aria-Modal ${className}`} data-size="small">
       <Dialog role="alertdialog">
@@ -9,7 +9,7 @@ export default ({ className, state, i18n, acl }) => (
         {!acl.allowed && (
           <p className="notice" data-tone="info" role="note">
             <span className="icon" data-icon="user" />
-            {i18n.refused}
+            {flags.deletions ? i18n.refused : i18n.paused}
           </p>
         )}
         {state.failed && (

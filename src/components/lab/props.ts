@@ -48,7 +48,11 @@ function describe(entry: Tracked, i18n: I18n<typeof messages>, intl: Intl, cause
       case 'rollback':
         return i18n.inspector.takesBack({ reads })
       case 'stale':
-        return event.outcome === 'received' ? i18n.inspector.staleFromTab({ reads, by: event.path }) : i18n.inspector.staleBy({ reads, by: event.path })
+        return event.outcome === 'received'
+          ? i18n.inspector.staleFromTab({ reads, by: event.path })
+          : event.outcome === 'pushed'
+            ? i18n.inspector.stalePushed({ reads })
+            : i18n.inspector.staleBy({ reads, by: event.path })
       case 'tab':
         return event.outcome === 'received' ? i18n.inspector.fromTab({ reads }) : i18n.inspector.toTabs({ reads })
     }

@@ -1,6 +1,6 @@
 import { Button, Checkbox, CheckboxGroup, Dialog, Group, Heading, Input, Label, ListBox, ListBoxItem, Modal, ModalOverlay, NumberField, Popover, ProgressBar, Radio, RadioGroup, Select, SelectValue } from 'react-aria-components'
 
-export default ({ className, i18n, state, set, values, step, steps, stepText, categories, items, selectedIds, selectionText, loadError, ruleProblem, applies, largeText, preview, applyText, canApply, limitText, progress, current, results, summaryText, retryText, failedCount }) => (
+export default ({ className, i18n, state, set, values, step, steps, stepText, categories, items, selectedIds, selectionText, loadError, ruleProblem, applies, largeTitle, largeText, preview, applyText, canApply, limitText, progress, current, results, summaryText, retryText, failedCount }) => (
   <ModalOverlay isOpen isDismissable={!state.applying} isKeyboardDismissDisabled={state.applying} onOpenChange={(open) => !open && state.send({ type: 'close' })}>
     <Modal className={`react-aria-Modal ${className}`} data-size="large">
       <Dialog>
@@ -193,7 +193,7 @@ export default ({ className, i18n, state, set, values, step, steps, stepText, ca
       <ModalOverlay isOpen={state.confirmingLargeChange} onOpenChange={(open) => !open && state.send({ type: 'back' })}>
         <Modal data-size="small">
           <Dialog role="alertdialog">
-            <Heading slot="title">{i18n.large.title}</Heading>
+            <Heading slot="title">{largeTitle}</Heading>
             <p>{largeText((chunks) => <strong>{chunks}</strong>)}</p>
             <footer>
               <Button autoFocus onPress={() => state.send({ type: 'back' })}>

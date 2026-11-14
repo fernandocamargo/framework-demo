@@ -13,9 +13,6 @@ export type Result = { id: number; title: string; from: number; to: number; erro
 /** The step of the wizard each state belongs to. */
 export const STEP = { loadingProducts: 1, choosing: 1, settingRule: 2, previewing: 3, confirmingLargeChange: 3, applying: 4, advancing: 4, summary: 5 } as const
 
-/** A rule that moves prices by more than this percentage is applied only after a second confirmation. */
-export const LARGE_CHANGE = 50
-
 /** What the events carry beside their type. */
 export type Events = { categoryChanged: { category: string } }
 
@@ -32,7 +29,8 @@ export const context = () => ({
 
 export const nothingSelected = ({ form }) => form.values.selected.length === 0
 export const invalidRule = ({ form }) => ruleProblem(form.payload()) !== null
-export const isLargeChange = ({ form }) => form.payload().percent > LARGE_CHANGE
+/** A rule that moves prices by more than the `largeChangeAt` flag's percentage is applied only after a second confirmation. */
+export const isLargeChange = ({ form, flags }) => form.payload().percent > flags.largeChangeAt
 /** The folder's acl.ts decides, as the percentage is typed, whether this change may be applied. */
 export const refused = ({ acl }) => !acl.allowed
 export const queueLeft = ({ context }) => context.queue.length > 0
@@ -117,7 +115,7 @@ export default ({ services, acl }) => ({
     },
   },
   confirmingLargeChange: {
-    description: 'The rule moves prices by more than 50%. The person confirms it a second time, or goes back to the preview.',
+    description: 'The rule moves prices by more than the largeChangeAt flag says. The person confirms it a second time, or goes back to the preview.',
     on: { confirm: [{ guard: refused }, { target: 'applying', actions: queueSelected }], back: 'previewing' },
   },
   applying: {

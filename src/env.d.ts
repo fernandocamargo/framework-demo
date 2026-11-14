@@ -55,6 +55,18 @@ declare module 'framework' {
     /** The largest price change one may apply, in percent; null for no limit. */
     limits: { priceChange: number | null }
   }
+  /**
+   * The feature flags the person signed in gets (src/clients/flags/definitions.ts): Root's `flags`
+   * read. A component follows only the flags its files read.
+   */
+  interface Flags {
+    /** Counting stock from the catalogue's rows, with − and +. */
+    stockCount: boolean
+    /** Whether products may be deleted; off pauses every deletion. */
+    deletions: boolean
+    /** The percentage above which a bulk price change asks a second time. */
+    largeChangeAt: number
+  }
   interface Navigation {
     /** Changes these fields of the address and keeps the others. */
     go(changes: Partial<Route>): void

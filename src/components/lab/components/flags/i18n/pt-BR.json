@@ -1,0 +1,18 @@
+{
+  "components/lab/components/flags/label": "Feature flags",
+  "components/lab/components/flags/intro": "Como cada flag é servida, como o painel do GrowthBook escolheria. Enquanto a chave dele não está no build, o provedor em memória do OpenFeature as serve. Uma mudança chega a todas as abas e renderiza só os componentes que leem aquela flag.",
+  "components/lab/components/flags/value": "Para você: {value}",
+  "components/lab/components/flags/on": "ligada",
+  "components/lab/components/flags/off": "desligada",
+  "components/lab/components/flags/flags/stockCount/name": "Contagem de estoque nas linhas",
+  "components/lab/components/flags/flags/stockCount/ways/admins": "Só administração",
+  "components/lab/components/flags/flags/stockCount/ways/everyone": "Todos",
+  "components/lab/components/flags/flags/stockCount/ways/nobody": "Ninguém",
+  "components/lab/components/flags/flags/deletions/name": "Exclusões",
+  "components/lab/components/flags/flags/deletions/ways/on": "Ligadas",
+  "components/lab/components/flags/flags/deletions/ways/off": "Pausadas",
+  "components/lab/components/flags/flags/largeChangeAt/name": "A mudança em massa pergunta de novo acima de",
+  "components/lab/components/flags/flags/largeChangeAt/ways/moderators": "Moderação a 10%, os outros a 50%",
+  "components/lab/components/flags/flags/largeChangeAt/ways/usual": "Todos a 50%",
+  "components/lab/components/flags/flags/largeChangeAt/ways/soon": "Todos a 10%"
+}

@@ -28,6 +28,7 @@ What this does not do: it does not decide what to build, and it does not judge w
 | Layer file | A file with a fixed name and job inside a component folder: `render.tsx`, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `i18n.ts`, `acl.ts`, `shortcuts.ts`, `placeholder.tsx`, `error.tsx`. |
 | `shortcuts.ts` | The keys a component answers while it is on screen, translated, each sending a chart's event, focusing an element or running a function, and working only while the chart takes the event or its `when` holds. `?` lists them. |
 | `acl.ts` | Whether what a component offers may be done, as a boolean. The component and everything below it get `acl.allowed`, until a folder below says otherwise. |
+| Flags | What the person signed in gets of each feature flag, as `flags`, through OpenFeature. Any file may read them; a component follows only the flags it reads. |
 | `props.ts` | The module's interface. `export type Props` says what a parent passes; the default export shapes what the render gets. |
 | Client | A transport: how the app reaches a system. A folder under `clients/`. |
 | Service | The operations on one resource, written against clients. A folder under `services/`. |
@@ -101,6 +102,7 @@ Each consumer tests the snapshot against what else it knows:
 | [`product/editor/state.ts`](src/components/product/editor/state.ts) | The chart's declaration: a read-only editor has no `save` at all. Declared again when the decision changes, it keeps its place. |
 | [`bulk-price/state.ts`](src/components/bulk-price/state.ts) | Declared with `apply` only under the grant to update prices; a guard reads the limit's decision when `apply` arrives. |
 | [`session/props.ts`](src/components/session/props.ts) | The role in the header is the snapshot's. |
+| [`product/remove-link/acl.ts`](src/components/product/remove-link/acl.ts), [`product/remove/acl.ts`](src/components/product/remove/acl.ts) | The `deletions` flag, a kill switch, read inside the rule: paused deletions are not allowed, and the dialog says why. |
 
 Each component follows only the parts of the snapshot it reads, so a sign-in renders again only the components whose answer changed.
 
@@ -151,6 +153,7 @@ Clients are injected, never imported by components or by each other's callers. T
 | [`api`](src/clients/api) | What services use. One line chooses between the two above. |
 | [`local`](src/clients/local) | A browser store for what DummyJSON does not keep. It echoes writes and persists nothing, so edits, creations and deletions are kept here as an overlay, with a version per product. |
 | [`tracker`](src/clients/tracker) | A destination for the framework's pipelines: interactions and failures, for the network lab to show. |
+| [`flags`](src/clients/flags) | OpenFeature, on its in-memory provider until GrowthBook's client key is in the build. The flags of [`definitions.ts`](src/clients/flags/definitions.ts), each with the ways it can be served: stock counting to admins first, deletions on or paused, and the bulk change asking again above 10% for moderators. The way each is served is kept in localStorage, so every tab's provider hears a change, as each would hear GrowthBook's stream. |
 
 Add `?world=memory` to the address and the app runs with no network: same services, same flows, same components. The unit tests and the end-to-end tests use that world, so CI does not depend on DummyJSON being up.
 
@@ -231,6 +234,9 @@ The end-to-end tests ([`e2e/flows.spec.ts`](e2e/flows.spec.ts)) drive the produc
 | The "Inspector" tab, after pressing a row's + | What the press did, as the pipelines carried it: the handler with the file and line where it was written, the write it sent, the change shown at once, the list worked out again from the cache, the write done, the reads it made stale and read again, and the message to the other tabs. No render contains tracking code; the Vite plugin rewrites them. |
 | "Every request answers 500", then press a row's + | The count moves at once, then goes back when the server refuses it; the inspector shows the change taken back, and the toast the failure. |
 | Two tabs, signed in in one | The other follows: who is signed in, what they may do, every count and save. Sign out in either, and both are. |
+| The "Flags" tab: stock count served to "Nobody" | The rows' − and + go, in every tab, and nothing else renders. "Admins only" brings them back for Emily; sign in as Olivia and they are not hers. |
+| The "Flags" tab: deletions "Paused" | The delete links go, and a delete dialog opened from its address says deletions are paused. The rule is in `acl.ts`, so everything below follows `acl.allowed` without reading the flag. |
+| Bulk change by 15%, as Olivia | Moderators are asked a second time above 10%, others above 50% (the `largeChangeAt` flag, read by the chart's guard). |
 
 DummyJSON allows about 100 requests in a window it does not state, so sustained stress can earn a real 429. The client retries those too.
 

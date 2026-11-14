@@ -8,7 +8,7 @@ import { STEP } from './state'
 
 const STEPS = ['products', 'rule', 'preview', 'apply', 'summary'] as const
 
-export default ({ state, form, i18n, intl, acl, async: { default: categories } }) => {
+export default ({ state, form, i18n, intl, acl, flags, async: { default: categories } }) => {
   const { context } = state
   const { values } = form
   const rule = form.payload()
@@ -36,6 +36,7 @@ export default ({ state, form, i18n, intl, acl, async: { default: categories } }
     ruleProblem: problem ? i18n.problems[problem] : null,
     /** The rule, with what makes it bold: `applies(b)`, in the preview and the question. */
     applies: (b: (chunks: ReactNode[]) => ReactNode) => i18n.preview.applies({ rule: ruleText, selected: selected.length, count: context.items.length, b }),
+    largeTitle: i18n.large.title({ limit: flags.largeChangeAt }),
     largeText: (b: (chunks: ReactNode[]) => ReactNode) => i18n.large.text({ rule: ruleText, count: selected.length, b }),
     preview: selected.map((item) => ({ id: item.id, title: item.title, from: money(item.price), to: money(newPrice(item.price, rule)) })),
     applyText: i18n.preview.apply({ count: selected.length }),

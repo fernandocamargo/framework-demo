@@ -9,12 +9,14 @@ const items = [item(1, 100), item(2, 50), item(3, 10)]
 
 /** The backend's snapshot for someone granted price changes, with the folder's decision on it. */
 const granted = (allowed = true) => ({ role: 'admin', grants: { products: ['read'], prices: ['update'] }, limits: { priceChange: null }, allowed })
+/** The flags as an admin gets them. */
+const flags = { stockCount: true, deletions: true, largeChangeAt: 50 }
 
 async function atPreview(save: (input: { id: number }) => Promise<unknown>, acl = granted()) {
   const fields = formOf(form)
   const go = vi.fn()
   const search = vi.fn(async () => ({ items, total: 3, page: 1, pages: 1 }))
-  const flow = startFlow(wizard, { services: { products: { search, save } }, form: fields, navigation: { go }, acl })
+  const flow = startFlow(wizard, { services: { products: { search, save } }, form: fields, navigation: { go }, acl, flags })
   await flow.settled()
   flow.send({ type: 'next' })
   fields.set('percent', 20)
@@ -96,15 +98,16 @@ test('the failed ones are sent again, and only those', async () => {
   expect(flow.context['results']).toHaveLength(3)
 })
 
-test('a change above 50% is applied only after a second confirmation', async () => {
+test('a change above the largeChangeAt flag is applied only after a second confirmation', async () => {
   const save = vi.fn(async () => ({}))
   const { flow, fields } = await atPreview(save)
-  expect(wizard.isLargeChange({ form: fields } as never)).toBe(false)
+  expect(wizard.isLargeChange({ form: fields, flags } as never)).toBe(false)
 
   flow.send({ type: 'back' })
   fields.set('percent', 51)
   flow.send({ type: 'next' })
-  expect(wizard.isLargeChange({ form: fields } as never)).toBe(true)
+  expect(wizard.isLargeChange({ form: fields, flags } as never)).toBe(true)
+  expect(wizard.isLargeChange({ form: fields, flags: { ...flags, largeChangeAt: 60 } } as never)).toBe(false)
 
   flow.send({ type: 'apply' })
   expect(flow.states).toEqual(['confirmingLargeChange'])

@@ -15,7 +15,7 @@ export default {
     sellOut: 'Sell out the product being edited',
     forget: 'Forget local changes',
   },
-  tabs: { label: 'Activity', network: 'API client', tracked: 'Inspector' },
+  tabs: { label: 'Activity', network: 'API client', tracked: 'Inspector', flags: 'Flags' },
   network: { label: "The API client's latest requests", none: 'No request yet.' },
   tracked: {
     label: 'What the app did, latest first',
@@ -50,6 +50,7 @@ export default {
     takesBack: 'takes back its change to {reads}',
     staleBy: '{reads}, by {by}',
     staleFromTab: '{reads}, by {by} in another tab',
+    stalePushed: '{reads}: its source changed',
     toTabs: 'told the other tabs: {reads}',
     fromTab: 'from another tab: {reads}',
   },

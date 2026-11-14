@@ -28,7 +28,7 @@
   "components/bulk-price/preview/now": "Agora",
   "components/bulk-price/preview/after": "Depois",
   "components/bulk-price/preview/apply": "Aplicar a {count, number}",
-  "components/bulk-price/large/title": "Mudar estes preços em mais da metade?",
+  "components/bulk-price/large/title": "Mudar estes preços em mais de {limit, number}%?",
   "components/bulk-price/large/text": "<b>{rule}</b> é uma mudança grande. Ela será aplicada a {count, plural, one {# produto} other {# produtos}}.",
   "components/bulk-price/large/back": "Voltar à prévia",
   "components/bulk-price/large/confirm": "Sim, aplicar",

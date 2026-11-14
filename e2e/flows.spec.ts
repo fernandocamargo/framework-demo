@@ -443,6 +443,66 @@ test('the tabs share the session and the catalogue: a sign-in, a count and a sig
   expect(await lamp(one).getByRole('button', { name: 'One more in stock' }).count()).toBe(0)
 })
 
+test('flags are for the person signed in; one served another way in the lab reaches every tab, and only what reads it', async ({ context }) => {
+  const one = await context.newPage()
+  const other = await context.newPage()
+  for (const page of [one, other]) page.on('pageerror', (error) => { throw error })
+  await open(one)
+  await open(other)
+  const lamp = (page: Page) => rows(page).filter({ hasText: 'Arc Floor Lamp' })
+  const counts = (page: Page) => lamp(page).getByRole('button', { name: 'One more in stock' }).count()
+  const deletes = (page: Page) => lamp(page).getByRole('link', { name: /^Delete / }).count()
+  // Another tab hears a flag served another way when its storage says so.
+  const listen = (page: Page) =>
+    page.evaluate(() => {
+      ;(window as unknown as { heard: Promise<void> }).heard = new Promise<void>((resolve) => window.addEventListener('storage', () => resolve(), { once: true }))
+    })
+  const heard = async (page: Page) => {
+    await page.evaluate(() => (window as unknown as { heard: Promise<void> }).heard)
+    await idle(page)
+  }
+
+  // Counting stock is rolled out to admins first.
+  await act(one, () => one.getByRole('button', { name: 'Sign in' }).click())
+  await signIn(one, 'Emily')
+  await idle(other)
+  expect(await counts(one)).toBe(1)
+
+  await act(one, () => one.getByRole('button', { name: /Network lab/ }).click())
+  const lab = one.getByRole('complementary', { name: 'Network lab' })
+  await act(one, () => lab.getByRole('tab', { name: 'Flags' }).click())
+  const flags = lab.getByRole('region', { name: 'Feature flags' })
+  expect(await flags.getByRole('radiogroup', { name: /Stock count/ }).innerText()).toContain('For you: on')
+
+  await listen(other)
+  await act(one, () => choose(flags.getByRole('radiogroup', { name: /Stock count/ }).getByRole('radio', { name: 'Nobody' })))
+  await heard(other)
+  expect(await counts(one)).toBe(0)
+  expect(await counts(other)).toBe(0)
+
+  // A kill switch read inside acl.ts: the links go, and the dialog says why.
+  expect(await deletes(other)).toBe(1)
+  await listen(other)
+  await act(one, () => choose(flags.getByRole('radiogroup', { name: /Deletions/ }).getByRole('radio', { name: 'Paused' })))
+  await heard(other)
+  expect(await deletes(one)).toBe(0)
+  expect(await deletes(other)).toBe(0)
+  await open(other, '#/products?remove=1')
+  const question = other.getByRole('alertdialog')
+  expect(await question.getByRole('note').innerText()).toBe('Deleting products is paused for now.')
+  expect(await question.getByRole('button', { name: 'Delete' }).isDisabled()).toBe(true)
+
+  // Back to admins only, then a moderator signs in: the flags are read again, for them.
+  await act(one, () => choose(flags.getByRole('radiogroup', { name: /Stock count/ }).getByRole('radio', { name: 'Admins only' })))
+  expect(await counts(one)).toBe(1)
+  await act(one, () => one.getByRole('button', { name: 'Close the network lab' }).click())
+  await act(one, () => one.getByRole('button', { name: 'Sign out' }).click())
+  await act(one, () => one.getByRole('button', { name: 'Sign in' }).click())
+  await signIn(one, 'Olivia')
+  expect(await one.getByRole('banner').innerText()).toContain('Moderator')
+  expect(await counts(one)).toBe(0)
+})
+
 test('the inspector shows what a press did: the write, its optimistic change, the answer worked out from the cache, and what went stale', async ({ page }) => {
   await open(page, '#/products?signin=1')
   await signIn(page)

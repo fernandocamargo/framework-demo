@@ -39,7 +39,7 @@ export default {
     apply: 'Apply to {count, number}',
   },
   large: {
-    title: 'Change these prices by more than half?',
+    title: 'Change these prices by more than {limit, number}%?',
     text: '<b>{rule}</b> is a large change. It will be applied to {count, plural, one {# product} other {# products}}.',
     back: 'Back to the preview',
     confirm: 'Yes, apply it',
