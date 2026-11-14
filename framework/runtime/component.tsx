@@ -145,6 +145,21 @@ const classes = (path: string, className: unknown) =>
 const NO_LAYER = {};
 
 /** Only the values a component reads, so spreading them over the props adds nothing else. */
+/**
+ * What wraps a folder's error file while it shows: when the address moves on (another page, other
+ * filters), the folder tries again, as "Try again" would, and its read runs for the new address.
+ * It reads the whole route, but only while it is on screen: a component that did not fail follows
+ * only the fields it reads.
+ */
+function Retrying({ children, retry }: { children?: ReactNode; retry: () => void }) {
+  const route = use(RouteContext);
+  const failedAt = useRef(route);
+  useLayoutEffect(() => {
+    if (route !== failedAt.current) retry();
+  }, [route, retry]);
+  return children;
+}
+
 const defined = (values: object) =>
   Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as Record<string, unknown>;
 
@@ -680,14 +695,19 @@ export function component(spec: Spec) {
       tree = createElement(ErrorBoundary, {
         children: tree,
         // The fallback gets an `Error` whatever was thrown, and a reset that takes no arguments.
+        // While it shows, a new address tries again (Retrying).
         fallbackRender: (fallback: FallbackProps) =>
-          createElement(ErrorFallback, {
-            ...props,
-            className,
-            ...language,
-            error: toError(fallback.error),
-            resetErrorBoundary: () => fallback.resetErrorBoundary(),
-          }),
+          createElement(
+            Retrying,
+            { retry: fallback.resetErrorBoundary },
+            createElement(ErrorFallback, {
+              ...props,
+              className,
+              ...language,
+              error: toError(fallback.error),
+              resetErrorBoundary: () => fallback.resetErrorBoundary(),
+            }),
+          ),
         onError: (error: unknown) =>
           report(error, { chain: [...chainOf(parent), spec.path], layer: 'render', path: spec.path }),
         onReset: reset,

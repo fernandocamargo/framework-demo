@@ -180,3 +180,29 @@ test('a view that spreads the route follows all of it', async () => {
   expect(container.textContent).toBe('{"edit":null,"page":2}');
   expect(rendered.get('components/address')).toBeGreaterThan(0);
 });
+
+test('a failed read shows the error file until the address it read moves on: a new value of a field it followed reads again', async () => {
+  const List = component({
+    error: () => createElement('p', null, 'failed'),
+    path: 'components/failing',
+    skins: {},
+    view: module({
+      async: {
+        default: ({ route }: { route: Props }) =>
+          route['page'] === 3 ? Promise.reject(new Error('page 3 failed')) : Promise.resolve({ page: route['page'] }),
+      },
+      render: (props: Props) =>
+        createElement('p', null, `page ${(props['async'] as { default: { page: number } }).default.page}`),
+    }),
+  });
+  const client = createQueryClient();
+  const tree = createElement(List);
+  const page = (route: Props) => createElement(Root, { client, entity, route: route as never }, tree);
+  const silenced = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const { container, rerender } = await show(page({ page: 3 }));
+  expect(container.textContent).toBe('failed');
+
+  await rerender(page({ page: 1 }));
+  expect(container.textContent).toBe('page 1');
+  silenced.mockRestore();
+});
