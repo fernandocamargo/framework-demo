@@ -100,7 +100,9 @@ export const STEPS = [
     name: 'type six keys in the title',
     act: async (page) => {
       const title = dialog(page, 'Edit Audio Interface').getByRole('textbox', { name: 'Title' })
-      await title.press('End')
+      // The caret at the end, set directly: the End key does not move it in WebKit on a Mac.
+      await title.focus()
+      await title.evaluate((field) => field.setSelectionRange(field.value.length, field.value.length))
       await title.pressSequentially(' Mk II')
     },
     check: async (page) => (await dialog(page, /Edit Audio Interface/).getByRole('textbox', { name: 'Title' }).inputValue()) === 'Audio Interface Mk II',
