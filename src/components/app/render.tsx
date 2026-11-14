@@ -10,6 +10,7 @@ import Modal from '@/components/modal';
 import Detail from '@/components/product/detail';
 import Editor from '@/components/product/editor';
 import Remove from '@/components/product/remove';
+import Report from '@/components/report';
 import Session from '@/components/session';
 import Skin from '@/components/skin';
 import Tour from '@/components/tour';
@@ -55,6 +56,7 @@ export default ({
     </header>
     <main id="main" tabIndex={-1}>
       {section === 'products' && <Catalogue />}
+      {section === 'report' && <Report />}
     </main>
     {/* The product's modal opens at once; the product's dialog waits for its read inside it. */}
     {dialogs.view !== null && (

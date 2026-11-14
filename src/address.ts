@@ -11,7 +11,7 @@ export type Filters = Pick<Route, 'category' | 'order' | 'page' | 'q' | 'sort'>;
 export const SORT_KEYS: readonly SortKey[] = ['title', 'price', 'rating', 'stock'];
 
 /** The pages of the app: the first part of the address's path (`#/products`). */
-export const SECTIONS = ['products'] as const;
+export const SECTIONS = ['products', 'report'] as const;
 export type Section = (typeof SECTIONS)[number];
 
 // Its order matters: it is the order of the address's fields.

@@ -69,6 +69,21 @@ export const reviews =
       ? []
       : (await api.get<{ reviews: Review[] }>(`/products/${id}`, { query: { select: 'reviews' } })).reviews;
 
+/** Every product, for the report: the whole list the API keeps, with this browser's overlay laid over it. */
+export const inventory =
+  ({ clients: { api, local } }) =>
+  async (): Promise<Listed[]> => {
+    const [{ products }, overlay] = await Promise.all([
+      api.get<Listing>('/products', { query: { limit: 0, select: LISTED } }),
+      local.read(),
+    ]);
+    const removed = new Set(overlay.removed);
+    return [
+      ...overlay.created.map(({ images: _, reviews: __, ...product }) => laid(product, overlay, true)),
+      ...products.filter((product) => !removed.has(product.id)).map((product) => laid(product, overlay)),
+    ];
+  };
+
 export const categories =
   ({ clients: { api } }) =>
   () =>

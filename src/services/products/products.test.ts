@@ -98,3 +98,13 @@ test('a deleted product leaves the lists and cannot be read', async () => {
   await products.reset(injection)();
   expect((await products.search(injection)(everything)).total).toBe(37);
 });
+
+test('the report reads every product, and a count taken in the stockroom reaches it', async () => {
+  const { api, injection } = world();
+  await api.session.signIn(DEMO);
+  const before = await products.inventory(injection)();
+  expect(before).toHaveLength(37);
+  expect(before.find((item) => item.id === 22)).toMatchObject({ stock: 58, title: 'Arc Floor Lamp' });
+  await products.setStock(injection)({ id: 22, stock: 40 });
+  expect((await products.inventory(injection)()).find((item) => item.id === 22)).toMatchObject({ stock: 40 });
+});

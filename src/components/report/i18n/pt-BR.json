@@ -1,0 +1,22 @@
+{
+  "components/report/deck": "{kind, select, out {{units, number} unidades em estoque, valendo {value}. {low, plural, =0 {Nada mais está acabando.} one {# a mais está acabando.} other {# a mais estão acabando.}}} low {{units, number} unidades em estoque, valendo {value}. {out, plural, =0 {Nada está esgotado.} one {# está esgotado.} other {# estão esgotados.}}} other {{units, number} unidades em estoque, valendo {value}.}}",
+  "components/report/figures/low": "Acabando",
+  "components/report/figures/out": "Esgotados",
+  "components/report/figures/products": "Produtos",
+  "components/report/figures/units": "Unidades",
+  "components/report/figures/value": "Valor",
+  "components/report/failed/message": "Não foi possível ler o relatório: {message}",
+  "components/report/failed/retry": "Tentar de novo",
+  "components/report/headline": "{kind, select, out {{count, plural, one {# produto está esgotado} other {# produtos estão esgotados}}} low {{category} está acabando: {count, plural, one {# produto com {limit, number} unidades ou menos} other {# produtos com {limit, number} unidades ou menos}}} other {Todos os produtos têm mais de {limit, number} unidades}}",
+  "components/report/loading": "Lendo o relatório…",
+  "components/report/shortest/label": "Os produtos mais perto de acabar",
+  "components/report/shortest/title": "Mais perto de acabar",
+  "components/report/stock": "{level, select, out {Esgotado} low {Restam {count, number}} other {{count, number} em estoque}}",
+  "components/report/table/caption": "Estoque por categoria",
+  "components/report/table/category": "Categoria",
+  "components/report/table/offers": "Produtos",
+  "components/report/table/prices": "Preços",
+  "components/report/table/units": "Unidades",
+  "components/report/table/value": "Valor",
+  "components/report/title": "Relatório"
+}
