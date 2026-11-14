@@ -13,7 +13,7 @@ const EDITS: [anchor: string, before: string][] = [
   // Each element a call returned remembers the call. The layout effect of the render React commits
   // marks the call behind the element it shows: a render React threw away whose output a later
   // render returns again was not wasted, and one whose output nothing shows was.
-  ['last.current = { inputs, props, shaped, allowed, rendered, element }', ';(globalThis.__callOf ??= new WeakMap()).set(element as object, __call)\n    '],
+  ['last.current = { inputs, props, shaped, allowed, rendered, element, scope }', ';(globalThis.__callOf ??= new WeakMap()).set(element as object, __call)\n    '],
   ['last.current = { ...last.current, inputs, props, shaped }', ';(globalThis.__callOf ??= new WeakMap()).set(last.current.element as object, __call)\n      '],
   ['useLayoutEffect(() => commitHandlers(scope))', 'let __call: unknown\n    useLayoutEffect(() => void globalThis.__kept?.(globalThis.__callOf?.get(last.current?.element as object)))\n    '],
   ['const module = use(loadView())', "if (loadView().status !== 'fulfilled') globalThis.__suspend?.(spec.path, 'view')\n    "],
