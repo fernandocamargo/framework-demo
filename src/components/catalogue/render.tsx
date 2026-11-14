@@ -30,7 +30,7 @@ export default ({ className, i18n, filters, categories, items, canChange, summar
         {i18n.readOnly}
       </p>
     )}
-    <Filters filters={filters} categories={categories} />
+    <Filters q={filters.q} category={filters.category} sort={filters.sort} order={filters.order} categories={categories} />
     {empty ? (
       <div className="empty">
         <p>{emptyText}</p>
