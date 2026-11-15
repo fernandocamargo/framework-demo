@@ -18,6 +18,7 @@
     "check": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run build",
     "perf": "vite build --config perf/vite.config.ts --logLevel warn && node perf/cycles.mjs",
     "perf:frames": "vite build --config perf/vite.config.ts --logLevel warn && node perf/frames.mjs",
+    "doctor": "node perf/doctor.mjs",
     "stories": "node framework/storybook/write-stories.mjs --config .storybook/stories.mjs",
     "storybook": "storybook dev --port 6006 --no-open",
     "build-storybook": "storybook build --output-dir storybook-static"
