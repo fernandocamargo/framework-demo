@@ -57,3 +57,18 @@ export function sameParts(before: unknown, after: unknown, keys: ReadonlySet<str
     if (!Object.is((before as Record<string, unknown>)[key], (after as Record<string, unknown>)[key])) return false;
   return true;
 }
+
+/**
+ * Runs `work` with `flag` up. A component's flag is up while its files run in its render (its
+ * acl.ts, its props.ts, its render, its chart being created or declared): what they read then is
+ * that render's. A handler, a key, a guard at an event find it down, and read what React committed.
+ */
+export function during<T>(flag: { current: boolean }, work: () => T): T {
+  const before = flag.current;
+  flag.current = true;
+  try {
+    return work();
+  } finally {
+    flag.current = before;
+  }
+}

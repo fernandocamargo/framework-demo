@@ -50,7 +50,7 @@ import type { Allowed, Flags, Route } from './index';
 import { type StateModule, useStateLayer } from './machine';
 import { PinContext } from './pin';
 import { report, type Scope, toError } from './pipeline';
-import { sameParts, tracking, untracked } from './reads';
+import { during, sameParts, tracking, untracked } from './reads';
 import { fieldContext, followRoute, renderingRoute, RouteContext, type RouteView, useFramework } from './root';
 import { type Entry, type ShortcutSites, shortcutsOf, useKeyboard, useShortcuts } from './shortcuts';
 import { activeSkin, loadSkin, replaceSkin, type SkinModule } from './style';
@@ -623,7 +623,7 @@ export function component(spec: Spec) {
    * keeps its identity, so react-aria's collections and memoized children inside skip it.
    */
   function useShow(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, decided?: boolean) {
-    const { access, async, decided: committed, form, judged, language, module, scope } = layers;
+    const { access, async, decided: committed, form, judged, language, module, rendering, scope } = layers;
     // What React committed last: the render before this one that reached the page. A render React
     // throws away leaves it as it was, so the next one is compared with what the page shows, and
     // shares its elements with it.
@@ -648,63 +648,69 @@ export function component(spec: Spec) {
       if (next?.keys) registered.current = next.keys;
     });
     useShortcuts(spec.path, scope, registered);
-    // Other files (an edit under the dev server) are another render: nothing before compares with it.
-    const from = (known: null | Shown) => (known?.module === module ? known : null);
-    const before = from(last.current);
-    const inputs = [scope, async, state, form, language, access, decided];
-    const again = [before, from(tried.current)].find(
-      (known) => known && sameEach(known.inputs, inputs) && sameProps(known.props, props),
-    );
-    if (again) {
-      judged.current = again.allowed;
-      showing = again.allowed;
-      if (again !== before) next = again;
-      return again.element;
-    }
-    const className = classes(spec.path, props.className);
-    const given = givenOf(props, layers, state, className);
-    const allowed = decided ?? decisionOf(module, given, access);
-    judged.current = allowed;
-    showing = allowed;
-    const shaping = readsAcl ? { ...given, acl: access.view(allowedOn(access.snapshot, allowed)) } : given;
-    // shortcuts.ts gets what props.ts gets. Its keys follow the state even when the render is skipped.
-    const keys = module.shortcuts
-      ? shortcutsOf(spec.path, module.shortcuts, shaping, state as never, scope, module.shortcutSites)
-      : undefined;
-    const output = shape(module, shaping, className);
-    // The framework's own comparison reads every key; it records none.
-    const shaped = untracked(() => shareByIdentity(before?.shaped, output)) as Props;
-    if (before && shaped === before.shaped && allowed === before.allowed) {
-      tried.current = next = { ...before, inputs, keys, props };
-      return before.element;
-    }
-    // Or what the last render worked out was given, when React has not committed that one (yet).
-    const retried = from(tried.current);
-    if (retried && retried !== before && allowed === retried.allowed) {
-      const same = untracked(() => shareByIdentity(retried.shaped, shaped));
-      if (same === retried.shaped) {
-        tried.current = next = { ...retried, inputs, keys, props };
-        return retried.element;
+    // What the files read while the render runs is this render's (`during`).
+    const element = during(rendering, () => {
+      // Other files (an edit under the dev server) are another render: nothing before compares with it.
+      const from = (known: null | Shown) => (known?.module === module ? known : null);
+      const before = from(last.current);
+      const inputs = [scope, async, state, form, language, access, decided];
+      const again = [before, from(tried.current)].find(
+        (known) => known && sameEach(known.inputs, inputs) && sameProps(known.props, props),
+      );
+      if (again) {
+        judged.current = again.allowed;
+        showing = again.allowed;
+        if (again !== before) next = again;
+        return again.element;
       }
-    }
-    // What did not change since the last output is the element React showed then, and it skips it.
-    const rendered = shareElements(
-      before?.rendered,
-      withScope(scope, () => module.render(shaped)),
-    ) as ReactNode;
-    // The same output with the same decision, in the same scope, is the element React showed, and it
-    // renders nothing below.
-    if (before && rendered === before.rendered && allowed === before.allowed && scope === before.scope) {
-      tried.current = next = { ...before, inputs, keys, props, shaped };
-      return before.element;
-    }
-    // What this folder's acl.ts decided reaches every component below, until one of them decides otherwise.
-    const element = createElement(
-      ScopeContext,
-      { value: scope },
-      module.acl ? createElement(AclContext, { value: allowed }, rendered) : rendered,
-    );
-    tried.current = next = { allowed, element, inputs, keys, module, props, rendered, scope, shaped };
+      const className = classes(spec.path, props.className);
+      const given = givenOf(props, layers, state, className);
+      const allowed = decided ?? decisionOf(module, given, access);
+      judged.current = allowed;
+      showing = allowed;
+      const shaping = readsAcl ? { ...given, acl: access.view(allowedOn(access.snapshot, allowed)) } : given;
+      // shortcuts.ts gets what props.ts gets. Its keys follow the state even when the render is skipped.
+      const keys = module.shortcuts
+        ? shortcutsOf(spec.path, module.shortcuts, shaping, state as never, scope, module.shortcutSites)
+        : undefined;
+      const output = shape(module, shaping, className);
+      // The framework's own comparison reads every key; it records none.
+      const shaped = untracked(() => shareByIdentity(before?.shaped, output)) as Props;
+      if (before && shaped === before.shaped && allowed === before.allowed) {
+        next = { ...before, inputs, keys, props };
+        return before.element;
+      }
+      // Or what the last render worked out was given, when React has not committed that one (yet).
+      const retried = from(tried.current);
+      if (retried && retried !== before && allowed === retried.allowed) {
+        const same = untracked(() => shareByIdentity(retried.shaped, shaped));
+        if (same === retried.shaped) {
+          next = { ...retried, inputs, keys, props };
+          return retried.element;
+        }
+      }
+      // What did not change since the last output is the element React showed then, and it skips it.
+      const rendered = shareElements(
+        before?.rendered,
+        withScope(scope, () => module.render(shaped)),
+      ) as ReactNode;
+      // The same output with the same decision, in the same scope, is the element React showed, and it
+      // renders nothing below.
+      if (before && rendered === before.rendered && allowed === before.allowed && scope === before.scope) {
+        next = { ...before, inputs, keys, props, shaped };
+        return before.element;
+      }
+      // What this folder's acl.ts decided reaches every component below, until one of them decides otherwise.
+      const element = createElement(
+        ScopeContext,
+        { value: scope },
+        module.acl ? createElement(AclContext, { value: allowed }, rendered) : rendered,
+      );
+      next = { allowed, element, inputs, keys, module, props, rendered, scope, shaped };
+      return element;
+    });
+    // What this render worked out answers the next one given the same (`tried`).
+    if (next) tried.current = next;
     return element;
   }
 
@@ -723,21 +729,14 @@ export function component(spec: Spec) {
   // calls a hook behind a condition. The view's module, once loaded, decides which.
   function StatefulView(props: Props) {
     const layers = useLayers();
-    // Until this render returns, what the chart reads is this render's decision.
-    layers.rendering.current = true;
-    try {
-      return useStateful(props, layers);
-    } finally {
-      layers.rendering.current = false;
-    }
-  }
-  function useStateful(props: Props, layers: ReturnType<typeof useLayers>) {
-    const { access, judged, language, module } = layers;
+    const { access, judged, language, module, rendering } = layers;
     // The decision comes before the chart, so its declaration and its guards see this render's.
     // A rule that reads the chart's state is decided after it, in useShow.
     const early = ruleReadsState
       ? undefined
-      : decisionOf(module, givenOf(props, layers, undefined, classes(spec.path, props.className)), access);
+      : during(rendering, () =>
+          decisionOf(module, givenOf(props, layers, undefined, classes(spec.path, props.className)), access),
+        );
     if (early !== undefined) judged.current = early;
     // What the declaration may read, besides the injection: the chart is declared again when a
     // part it read changes, and keeps its place (machine.ts).
@@ -770,13 +769,7 @@ export function component(spec: Spec) {
     return useShow(props, layers, state, early);
   }
   function StatelessView(props: Props) {
-    const layers = useLayers();
-    layers.rendering.current = true;
-    try {
-      return useShow(props, layers, undefined);
-    } finally {
-      layers.rendering.current = false;
-    }
+    return useShow(props, useLayers(), undefined);
   }
   StatefulView.displayName = spec.path;
   StatelessView.displayName = spec.path;

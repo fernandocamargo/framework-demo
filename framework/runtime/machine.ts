@@ -42,7 +42,7 @@ import {
 import { shareByIdentity } from './data';
 import { type Pin, PinContext } from './pin';
 import { report } from './pipeline';
-import { sameParts, tracking } from './reads';
+import { during, sameParts, tracking } from './reads';
 
 type Sources = Record<string, unknown>;
 type Config = Record<string, unknown>;
@@ -305,21 +305,23 @@ function pinnedActor(machine: AnyStateMachine, pin: Pin) {
 }
 
 /** The running chart: the declared one, once the flow is at rest; the last one until then. A pinned one is never started. */
-function useChart(declared: Declared, pin: null | Pin) {
+function useChart(declared: Declared, pin: null | Pin, creating: <T>(create: () => T) => T) {
   // Created in the render itself, not in useState's initializer: creating it runs the chart's first
   // reads, and the route being rendered is read from contexts, which a hook's callback may not read.
   // The ref is written once, in the instance's first render: if React throws that render away, the
   // instance goes with it, and the actor, never started, with both.
   const first = useRef<null | { actor: AnyActorRef; declared: Declared }>(null);
   first.current ??= {
-    actor: pin ? pinnedActor(declared.machine, pin) : (createActor(declared.machine) as AnyActorRef),
+    actor: creating(() => (pin ? pinnedActor(declared.machine, pin) : (createActor(declared.machine) as AnyActorRef))),
     declared,
   };
   const [current, setCurrent] = useState(first.current);
   let running = current;
   if (!pin && declared !== current.declared && atRest(current.actor.getSnapshot())) {
     running = {
-      actor: createActor(declared.machine, carried(declared.machine, current.actor.getSnapshot())) as AnyActorRef,
+      actor: creating(
+        () => createActor(declared.machine, carried(declared.machine, current.actor.getSnapshot())) as AnyActorRef,
+      ),
       declared,
     };
     setCurrent(running);
@@ -347,7 +349,7 @@ export function useStateLayer(
   rendering?: () => unknown,
   told: Sources = {},
   /** Whether the component is rendering now (component.tsx): what the chart reads then is that render's. */
-  active: { readonly current: boolean } = ALWAYS,
+  active: { current: boolean } = ALWAYS,
 ) {
   // The sources read the committed route. A chart is created in its component's first render,
   // and reads the route at once: for its context, and for the input of the service its first
@@ -357,8 +359,9 @@ export function useStateLayer(
   // render read. It reads them field by field, so the first change of another field after the
   // commit does not render it again either.
   //
-  // What a guard or a change reads depends on when it runs. While the component renders (the chart
-  // being created or declared, `state.can` asked by the render), it reads this render's sources.
+  // What a guard or a change reads depends on when it runs. While the component's files run in its
+  // render (the chart being created or declared, `state.can` asked by the render: `active` is up),
+  // it reads this render's sources.
   // At any other time (an event, a service answering) it reads those of the render React
   // committed: a render React throws away leaves nothing behind for them.
   const committed = useRef(false);
@@ -380,9 +383,11 @@ export function useStateLayer(
   // The declaration is kept while a new one would read the same (`stale`): a cache that checks
   // itself at each render, so one a thrown-away render left is used only if it is still right.
   const chart = useRef<Declared | null>(null);
+  // The chart's files run here, in the render: its declaration, and its first reads as it is created.
+  const reading = <T>(work: () => T) => during(active, work);
   if (!chart.current || stale(chart.current, module, injection, declared))
-    chart.current = declare(path, module, injection, declared, live);
-  const running = useChart(chart.current, pin);
+    chart.current = reading(() => declare(path, module, injection, declared, live));
+  const running = useChart(chart.current, pin, reading);
   const { actor } = running;
   const { flags } = running.declared;
   // The last snapshot that shows something else than the one before it (sameShown).
