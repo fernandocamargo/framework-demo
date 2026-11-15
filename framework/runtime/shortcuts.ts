@@ -292,16 +292,21 @@ const current = () => keyboard;
 export const useKeyboard = () => useSyncExternalStore(subscribe, current, current);
 
 /**
- * Keeps a component instance's keys registered while it is mounted. `entries` is read after each
- * commit: the keys of what is on screen.
+ * Keeps a component instance's committed keys registered while it is mounted.
  */
-export function useShortcuts(path: string, scope: Scope, entries: { readonly current: readonly Entry[] | undefined }) {
+export function useShortcuts(path: string, scope: Scope, entries: readonly Entry[] | undefined) {
   const token = useId();
   useLayoutEffect(() => {
-    if (!entries.current) return;
+    if (!entries) {
+      if (registrations.delete(token)) update();
+
+      return;
+    }
+
     const known = registrations.get(token);
-    if (known?.entries === entries.current && known.scope === scope) return;
-    registrations.set(token, { entries: entries.current, order: known?.order ?? ++shownSoFar, path, scope });
+
+    if (known?.entries === entries && known.scope === scope) return;
+    registrations.set(token, { entries, order: known?.order ?? ++shownSoFar, path, scope });
     update();
   });
   useLayoutEffect(

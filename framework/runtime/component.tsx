@@ -680,17 +680,14 @@ export function component(spec: Spec) {
     // What this render shows, kept when React commits it.
     let next: null | Shown = null;
     let showing: boolean | undefined;
+    let registered: Entry[] | undefined;
     // The handlers of the render React committed are the ones the instance's wrappers call.
     useLayoutEffect(() => commitHandlers(scope));
-    // The keys this instance answers, registered after each commit while it is mounted.
-    const registered = useRef<Entry[] | undefined>(undefined);
     useLayoutEffect(() => {
       // Its decision is the one the guards and the operations read.
       if (showing !== undefined) committed.current = showing;
       if (next) last.current = next;
-      if (next?.keys) registered.current = next.keys;
     });
-    useShortcuts(spec.path, scope, registered);
     // A folder with a handlers.ts: the hook the plugin wrote from it holds one `useCallback` per
     // export, whose dependencies are what the export reads. It reads them from what this render
     // gives the folder's files, so that is worked out first, at every render, and the callbacks are
@@ -728,6 +725,7 @@ export function component(spec: Spec) {
       if (again) {
         judged.current = again.allowed;
         showing = again.allowed;
+        registered = again.keys;
         if (again !== before) next = again;
         return again.element;
       }
@@ -738,6 +736,7 @@ export function component(spec: Spec) {
       const keys = module.shortcuts
         ? shortcutsOf(spec.path, module.shortcuts, shaping, state as never, scope, module.shortcutSites)
         : undefined;
+      registered = keys;
       const output = shape(module, shaping, className);
       if (handlers && import.meta.env.DEV && (Object.hasOwn(props, 'handlers') || Object.hasOwn(output, 'handlers')))
         throw new Error(`${spec.path}: handlers is reserved for handlers.ts`);
@@ -788,6 +787,7 @@ export function component(spec: Spec) {
       next = { allowed, element, inputs, keys, module, operations, props, rendered, scope, shaped };
       return element;
     });
+    useShortcuts(spec.path, scope, registered);
     // What this render worked out answers the next one given the same (`tried`).
     if (next) tried.current = next;
     return element;

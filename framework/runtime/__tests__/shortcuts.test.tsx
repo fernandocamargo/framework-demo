@@ -1,11 +1,11 @@
-import { act, fireEvent, render } from '@testing-library/react';
+import { act, fireEvent, render, renderHook } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { type Interaction, pipeline } from '../pipeline';
 import { Root } from '../root';
-import type { Keyboard } from '../shortcuts';
+import { type Entry, type Keyboard, useKeyboard, useShortcuts } from '../shortcuts';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
@@ -149,6 +149,36 @@ const press = (key: string, init: KeyboardEventInit = {}) =>
   act(async () => {
     fireEvent.keyDown(document.activeElement ?? document.body, { key, ...init });
   });
+
+test('removing a mounted folder’s shortcuts unregisters its keys', () => {
+  type ShortcutProps = { entries: Entry[] | undefined };
+
+  const path = 'components/removing-keys';
+  const scope = { parent: null, path };
+
+  const entry: Entry = {
+    act: () => undefined,
+    available: true,
+    combo: { alt: false, ctrl: false, key: 'z', mod: false, shift: false },
+    keys: 'z',
+    label: 'Remove me',
+  };
+
+  const initialProps: ShortcutProps = { entries: [entry] };
+  const keyboard = renderHook(() => useKeyboard());
+
+  const owner = renderHook(({ entries }: ShortcutProps) => useShortcuts(path, scope, entries), {
+    initialProps,
+  });
+
+  expect(keyboard.result.current.groups.find((group) => group.path === path)?.shortcuts[0]?.label).toBe('Remove me');
+
+  owner.rerender({ entries: undefined });
+  expect(keyboard.result.current.groups.find((group) => group.path === path)).toBeUndefined();
+
+  owner.unmount();
+  keyboard.unmount();
+});
 
 test('a key sends its event only while the chart takes it, and the list of keys says which work now', async () => {
   const shown = await show(createElement('div', null, createElement(Flow), createElement(Keys)));
