@@ -119,6 +119,13 @@ export function renderingRoute(fields: ReadonlySet<string>): Route {
   });
 }
 
+/**
+ * What a route view stands on. Not a plain object, so nothing takes a view apart to compare it
+ * with the one before (data.ts's sharing would read both through the route being rendered, and
+ * find them equal): another view is another route, and the render that reads it is called.
+ */
+class Followed {}
+
 /** The route a component's files read, and the fields they read through it, with their values. */
 export type RouteView = { read: Map<string, unknown>; route: Route };
 
@@ -151,7 +158,7 @@ export function followRoute(
     if (isTracking()) read.set(key, value);
     return value;
   };
-  const route = new Proxy({} as Route, {
+  const route = new Proxy(new Followed() as Route, {
     get: (_, key) => (typeof key === 'string' ? now(key) : undefined),
     getOwnPropertyDescriptor: (_, key) =>
       typeof key === 'string' && Reflect.has(committed, key)

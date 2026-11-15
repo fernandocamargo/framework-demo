@@ -206,3 +206,26 @@ test('a failed read shows the error file until the address it read moves on: a n
   expect(container.textContent).toBe('page 1');
   silenced.mockRestore();
 });
+
+test('a render that reads the route itself, with no props.ts, follows the fields it reads', async () => {
+  const Crumb = component({
+    path: 'components/crumb',
+    reads: { view: ['route'] },
+    skins: {},
+    view: module({
+      render: ({ route }: { route: Props }) => createElement('i', null, `page ${String(route['page'])}`),
+    }),
+  });
+  const client = createQueryClient();
+  const tree = createElement(Crumb);
+  const page = (route: Props) => createElement(Root, { client, entity, route: route as never }, tree);
+  const { container, rerender } = await show(page({ edit: null, page: 1 }));
+  expect(container.textContent).toBe('page 1');
+  rendered.clear();
+
+  await rerender(page({ edit: 4, page: 1 }));
+  expect(rendered.get('components/crumb')).toBeUndefined();
+
+  await rerender(page({ edit: 4, page: 2 }));
+  expect(container.textContent).toBe('page 2');
+});
