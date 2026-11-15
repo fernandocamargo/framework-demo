@@ -42,6 +42,21 @@ test.beforeEach(({ page }) => {
   });
 });
 
+test('starting on orders shows the catalogue at the first step', async ({ page }) => {
+  await open(page, '#/orders');
+  expect(await rows(page).count()).toBe(0);
+
+  await act(page, () => page.getByRole('button', { name: 'Take the tour' }).click());
+  expect(await visible(panel(page))).toBe(true);
+  expect(await panel(page).getByRole('heading', { name: 'The address holds the filters' }).count()).toBe(1);
+  expect(new URL(page.url()).hash).toContain('#/products?');
+  expect(await rows(page).count()).toBeGreaterThan(0);
+
+  await act(page, () => panel(page).locator('header button').click());
+  expect(await panel(page).count()).toBe(0);
+  expect(new URL(page.url()).hash).toContain('#/products?');
+});
+
 test('the tour walks every step, does each one, and finishing it tidies the lab', async ({ page }) => {
   await open(page);
   await act(page, () => page.getByRole('button', { name: 'Take the tour' }).click());

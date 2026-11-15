@@ -35,7 +35,7 @@ export const context = () => ({
 // ---- Changes and inputs ----------------------------------------------------------------------
 
 export const openAddress = ({ navigation }) =>
-  navigation.go({ ...CLOSED, category: '', order: 'desc', page: 1, q: '', sort: 'price' });
+  navigation.go({ ...CLOSED, category: '', order: 'desc', page: 1, q: '', section: 'products', sort: 'price' });
 export const openProduct = ({ navigation }) => navigation.go({ view: 4 });
 export const secondPage = ({ navigation }) => navigation.go({ page: 2, view: null });
 export const firstPage = ({ navigation }) => navigation.go({ page: 1 });

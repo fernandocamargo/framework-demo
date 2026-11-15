@@ -26,7 +26,15 @@ test('start, then next through every step: each step performs its effects in ord
   flow.send({ type: 'start' });
   await flow.settled();
   expect(flow.states).toEqual(['address']);
-  expect(go).toHaveBeenLastCalledWith({ ...CLOSED, category: '', order: 'desc', page: 1, q: '', sort: 'price' });
+  expect(go).toHaveBeenLastCalledWith({
+    ...CLOSED,
+    category: '',
+    order: 'desc',
+    page: 1,
+    q: '',
+    section: 'products',
+    sort: 'price',
+  });
 
   for (const name of ['product', 'slow', 'failing', 'healed', 'person', 'flag', 'skin', 'language', 'finished']) {
     flow.send({ type: 'next' });
@@ -35,7 +43,7 @@ test('start, then next through every step: each step performs its effects in ord
   }
 
   expect(log).toEqual([
-    ['go', { ...CLOSED, category: '', order: 'desc', page: 1, q: '', sort: 'price' }],
+    ['go', { ...CLOSED, category: '', order: 'desc', page: 1, q: '', section: 'products', sort: 'price' }],
     ['go', { view: 4 }],
     ['go', { page: 2, view: null }],
     ['lab', { latency: 1500 }],
@@ -49,6 +57,16 @@ test('start, then next through every step: each step performs its effects in ord
   flow.send({ type: 'next' });
   await flow.settled();
   expect(flow.states).toEqual(['closed']);
+  flow.stop();
+});
+
+test('starting on orders sends the tour to the catalogue', async () => {
+  const { go, services } = fakes();
+  const flow = startFlow(tour, { navigation: { go }, route: { section: 'orders' }, services });
+  flow.send({ type: 'start' });
+  await flow.settled();
+  expect(flow.states).toEqual(['address']);
+  expect(go).toHaveBeenLastCalledWith(expect.objectContaining({ section: 'products' }));
   flow.stop();
 });
 
