@@ -29,6 +29,7 @@ export default ({
   error,
   failed,
   formShown,
+  handlers,
   heading,
   i18n,
   initial,
@@ -38,16 +39,9 @@ export default ({
   readOnly,
   saves,
   saveText,
-  send,
-  set,
   unavailable,
 }) => (
-  <ModalOverlay
-    isDismissable={!busy}
-    isKeyboardDismissDisabled={busy}
-    isOpen
-    onOpenChange={(open) => !open && send({ type: 'close' })}
-  >
+  <ModalOverlay isDismissable={!busy} isKeyboardDismissDisabled={busy} isOpen onOpenChange={handlers.dismiss}>
     <Modal className={`react-aria-Modal ${className}`}>
       <Dialog>
         <header>
@@ -72,7 +66,7 @@ export default ({
             <p itemProp="error">{i18n.unavailable.message({ message: error })}</p>
             <menu>
               <li>
-                <Button onPress={() => send({ type: 'retry' })}>{i18n.unavailable.retry}</Button>
+                <Button onPress={handlers.retry}>{i18n.unavailable.retry}</Button>
               </li>
             </menu>
           </div>
@@ -81,21 +75,14 @@ export default ({
         {formShown && readOnly && <p role="note">{i18n.readOnly}</p>}
 
         {formShown && (
-          <Form
-            id="product"
-            onSubmit={(event) => {
-              event.preventDefault();
-              send({ type: 'save' });
-            }}
-            validationErrors={problems}
-          >
+          <Form id="product" onSubmit={handlers.save} validationErrors={problems}>
             <fieldset>
               <TextField
                 autoFocus
                 defaultValue={initial.title}
                 isReadOnly={locked}
                 name="title"
-                onChange={(value) => set('title', value)}
+                onChange={handlers.setTitle}
               >
                 <Label>{i18n.fields.title}</Label>
                 <Input />
@@ -105,7 +92,7 @@ export default ({
                 defaultValue={initial.description}
                 isReadOnly={locked}
                 name="description"
-                onChange={(value) => set('description', value)}
+                onChange={handlers.setDescription}
               >
                 <Label>{i18n.fields.description}</Label>
                 <TextArea />
@@ -114,7 +101,7 @@ export default ({
                 defaultSelectedKey={initial.category || null}
                 isDisabled={locked}
                 name="category"
-                onSelectionChange={(key) => set('category', String(key))}
+                onSelectionChange={handlers.setCategory}
                 placeholder={i18n.fields.choose}
               >
                 <Label>{i18n.fields.category}</Label>
@@ -128,12 +115,7 @@ export default ({
                   </ListBox>
                 </Popover>
               </Select>
-              <TextField
-                defaultValue={initial.brand}
-                isReadOnly={locked}
-                name="brand"
-                onChange={(value) => set('brand', value)}
-              >
+              <TextField defaultValue={initial.brand} isReadOnly={locked} name="brand" onChange={handlers.setBrand}>
                 <Label>{i18n.fields.brand}</Label>
                 <Input />
               </TextField>
@@ -143,7 +125,7 @@ export default ({
                 isReadOnly={locked}
                 minValue={0}
                 name="price"
-                onChange={(value) => set('price', value)}
+                onChange={handlers.setPrice}
                 step={0.01}
               >
                 <Label>{i18n.fields.price}</Label>
@@ -159,7 +141,7 @@ export default ({
                 isReadOnly={locked}
                 minValue={0}
                 name="stock"
-                onChange={(value) => set('stock', value)}
+                onChange={handlers.setStock}
                 step={1}
               >
                 <Label>{i18n.fields.stock}</Label>
@@ -180,10 +162,10 @@ export default ({
             <p itemProp="description">{i18n.conflict.message}</p>
             <menu>
               <li>
-                <Button onPress={() => send({ type: 'takeTheirs' })}>{i18n.conflict.theirs}</Button>
+                <Button onPress={handlers.takeTheirs}>{i18n.conflict.theirs}</Button>
               </li>
               <li>
-                <Button onPress={() => send({ type: 'keepMine' })}>{i18n.conflict.mine}</Button>
+                <Button onPress={handlers.keepMine}>{i18n.conflict.mine}</Button>
               </li>
             </menu>
           </div>
@@ -195,10 +177,10 @@ export default ({
             <p itemProp="error">{i18n.failed.message({ message: error })}</p>
             <menu>
               <li>
-                <Button onPress={() => send({ type: 'edit' })}>{i18n.failed.back}</Button>
+                <Button onPress={handlers.backToEditing}>{i18n.failed.back}</Button>
               </li>
               <li>
-                <Button onPress={() => send({ type: 'retry' })}>{i18n.failed.retry}</Button>
+                <Button onPress={handlers.retry}>{i18n.failed.retry}</Button>
               </li>
             </menu>
           </div>
@@ -206,7 +188,7 @@ export default ({
 
         {formShown && !conflict && !failed && (
           <footer>
-            <Button isDisabled={busy} onPress={() => send({ type: 'close' })}>
+            <Button isDisabled={busy} onPress={handlers.close}>
               {i18n.cancel}
             </Button>
             <Button form="product" isDisabled={readOnly} isPending={busy} type="submit">
@@ -218,16 +200,16 @@ export default ({
         )}
       </Dialog>
 
-      <ModalOverlay isOpen={confirmingDiscard} onOpenChange={(open) => !open && send({ type: 'keepEditing' })}>
+      <ModalOverlay isOpen={confirmingDiscard} onOpenChange={handlers.dismissQuestion}>
         <Modal>
           <Dialog role="alertdialog">
             <Heading slot="title">{i18n.discard.title}</Heading>
             <p>{i18n.discard.text}</p>
             <footer>
-              <Button autoFocus onPress={() => send({ type: 'keepEditing' })}>
+              <Button autoFocus onPress={handlers.keepEditing}>
                 {i18n.discard.keep}
               </Button>
-              <Button onPress={() => send({ type: 'discard' })}>
+              <Button onPress={handlers.discard}>
                 <span itemScope itemType="https://schema.org/DeleteAction">
                   <span itemProp="name">{i18n.discard.discard}</span>
                 </span>

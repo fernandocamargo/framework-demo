@@ -12,7 +12,6 @@ export default ({ acl, async: { default: product }, i18n, intl, route }) => {
     currency: CURRENCY,
     description: product.description,
     i18n,
-    id: product.id,
     images: images.map((src, index) => ({
       alt: i18n.pictures.picture({ index: index + 1, title: product.title }),
       src,

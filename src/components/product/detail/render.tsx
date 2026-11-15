@@ -1,6 +1,5 @@
 import { Button, Dialog, Heading } from 'react-aria-components';
 
-import { go } from '@/address';
 import RemoveLink from '@/components/product/remove-link';
 
 import Reviews from './components/reviews';
@@ -14,8 +13,8 @@ export default ({
   className,
   currency,
   description,
+  handlers,
   i18n,
-  id,
   images,
   price,
   removeHref,
@@ -73,7 +72,7 @@ export default ({
       <footer>
         <RemoveLink href={removeHref} title={title} />
         {canEdit && (
-          <Button onPress={() => go({ edit: id, view: null })}>
+          <Button onPress={handlers.editProduct}>
             <span itemProp="potentialAction" itemScope itemType="https://schema.org/UpdateAction">
               <span itemProp="name">{i18n.actions.edit}</span>
             </span>
