@@ -244,9 +244,17 @@ export function Root({
   sync,
   user,
 }: RootProps) {
-  // Services were created once and read the entity when they run, so the entity they see is live.
+  // Services were created once and read the entity when they run: the entity on screen, the one
+  // React committed. A render React throws away (an entity selected in a transition the person
+  // leaves before it arrives) hands nothing to a service that runs meanwhile. So a new entity is
+  // taken in two steps: the commit selects it for the services, then the page renders for it,
+  // before the browser paints, and its reads are keyed by it and answered for it.
   const current = useRef(entity);
-  current.current = entity;
+  const [selected, setSelected] = useState(entity);
+  useLayoutEffect(() => {
+    current.current = entity;
+    setSelected(entity);
+  }, [entity]);
   const live = useMemo<Entity>(
     () => new Proxy({} as Entity, { get: (_, key) => Reflect.get(current.current as object, key) }),
     [],
@@ -270,7 +278,10 @@ export function Root({
     committedRoute.current = route;
   }, [route]);
   const liveRoute = useMemo(() => liveView(committedRoute), []);
-  const sources = useMemo(() => ({ entity, navigation, route: liveRoute }), [entity, liveRoute, navigation]);
+  const sources = useMemo(
+    () => ({ entity: selected, navigation, route: liveRoute }),
+    [selected, liveRoute, navigation],
+  );
   // A new route counts as pending for `whenIdle()` until React commits it: a navigation in a
   // transition keeps the old page on screen with no placeholder while React renders the new one.
   useCommitted(route);
@@ -294,6 +305,8 @@ export function Root({
     };
   }, [locale, shown]);
   useCommitted(shown);
+  // Root's reads are keyed by the entity, as every read is: another entity is another person's
+  // answer, so each is made again for the entity selected.
   const userRead = useMemo(
     () =>
       user
@@ -301,7 +314,7 @@ export function Root({
             user({ ...injection, services: recording(injection.services, record.service, record.peek), signal }),
           )
         : null,
-    [data, injection, user],
+    [data, injection, user, selected],
   );
   const aclRead = useMemo(
     () =>
@@ -310,7 +323,7 @@ export function Root({
             acl({ ...injection, services: recording(injection.services, record.service, record.peek), signal }),
           )
         : null,
-    [data, injection, acl],
+    [data, injection, acl, selected],
   );
   // The flags are for a person: the read runs the `user` read's function too, through the same
   // recording, so it reads what that one reads (cached), and is read again whenever it is.
@@ -323,7 +336,7 @@ export function Root({
             return flags({ ...injection, services, signal, user: person });
           })
         : null,
-    [data, injection, user, flags],
+    [data, injection, user, flags, selected],
   );
   // The fields of the first route rendered each get a context, in the same order for Root's life,
   // so the tree around the page keeps its shape. A field that appears later is read from the whole

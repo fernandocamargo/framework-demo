@@ -169,6 +169,7 @@ Every service operation goes through it.
 - A component's `async.ts` default export runs as a query of its own. The framework records the reads it calls and the route fields it reads. Its key holds the component's path, the entity, and those fields, so another category is another query, and a dialog's `edit` does not touch the list.
 - A write that makes one of those reads stale reruns the queries on screen that used it, and drops the off-screen ones, so a revisit reads anew.
 - `Root` takes a `client` made with `createQueryClient()`. An app that keeps one for its life keeps a page's reads cached across navigations.
+- Services read the entity React committed. A new `entity` is selected for them when its render commits, and the page then renders for it before the browser paints, so its reads are keyed by it and answered for it. A render React throws away (an entity selected in a transition the person leaves) hands nothing to a service running meanwhile.
 
 **Optimistic writes.** A write's rule may say how it changes the answers of some reads, by reference, before the server confirms it:
 
