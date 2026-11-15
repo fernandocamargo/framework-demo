@@ -1,6 +1,13 @@
 // The flow perf/cycles.mjs measures, in the memory world: what a person does in one visit. Each
 // step acts, waits for `window.__framework.idle()`, then checks the page once. A check that fails
 // right after `idle()` is a miss: the signal resolved before the page was done.
+
+import { readdirSync } from 'node:fs';
+
+/** Every component folder with a chart: what the states gallery must show, one region each. */
+const CHARTS = readdirSync(new URL('../src/components', import.meta.url), { recursive: true }).filter(
+  (file) => String(file).split(/[\\/]/).pop() === 'state.ts',
+).length;
 const dialog = (page, name) => page.getByRole('dialog', { name }).or(page.getByRole('alertdialog', { name }));
 /** The list's own items, not those of the lists inside them (a row's commands). */
 const rows = (page) => page.getByRole('list', { name: 'Products' }).locator(':scope > li');
@@ -290,7 +297,7 @@ export const STEPS = [
   },
   {
     act: (page) => page.getByRole('link', { name: 'States' }).click(),
-    check: async (page) => (await page.getByRole('region').count()) === 6,
+    check: async (page) => (await page.getByRole('region').count()) === CHARTS,
     further: true,
     name: 'open the states gallery',
   },
