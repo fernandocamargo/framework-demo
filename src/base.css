@@ -392,7 +392,8 @@ select {
   border-radius: var(--radius-s);
   background: var(--surface);
   box-shadow: var(--shadow);
-  &[data-entering] {
+  /* A popover closed while it rises stops rising: nothing is left for its exit to wait for. */
+  &[data-entering]:not([data-exiting]) {
     animation: rise 140ms var(--ease);
   }
 }
