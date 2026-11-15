@@ -2,7 +2,7 @@
 
 A small back office over [DummyJSON](https://dummyjson.com) (a product catalogue, a stock report, a map of where the orders go) built on a small React framework. The app is the example. The framework is the point: it is an attempt to make the mechanical part of building software checkable, so that people and agents who hand work to each other have something firmer than prose to agree on.
 
-It runs at https://fernandocamargo.github.io/framework-demo/. An explainer of the idea, written for a team, is at [explainer/](https://fernandocamargo.github.io/framework-demo/explainer/) (its source is [`public/explainer/index.html`](public/explainer/index.html)).
+It runs at https://fernandocamargo.github.io/framework-demo/. An explainer of the idea, written for a team, is at [explainer/](https://fernandocamargo.github.io/framework-demo/explainer/) (its source is [`public/explainer/index.html`](public/explainer/index.html)). Every component folder is in its [Storybook](https://fernandocamargo.github.io/framework-demo/storybook/), where nobody wrote a story.
 
 It is meant to be read in an evening or two. The framework is about 7,100 lines in [`framework/`](framework/README.md); the app is about 13,000 in [`src/`](src), half of it CSS, fixtures and translations (tests left out of both).
 
@@ -316,7 +316,7 @@ Not one element or attribute changes between them; [`e2e/skins.spec.ts`](e2e/ski
 
 ## Storybook
 
-`npm run storybook` shows every component folder at http://localhost:6006, and nobody writes a story. The framework writes one file per folder ([`framework/storybook/`](framework/storybook)), and writes them again as folders and files come and go:
+`npm run storybook` shows every component folder at http://localhost:6006, and nobody writes a story. The live site carries its static build, at [storybook/](https://fernandocamargo.github.io/framework-demo/storybook/). The framework writes one file per folder ([`framework/storybook/`](framework/storybook)), and writes them again as folders and files come and go:
 
 - **The folder's page** lists its files, each with its job, what its functions are given and which sources the component follows because of them, as the plugin reads them; then its chart's states with their descriptions, its stories, and every file's source.
 - **A story per example** its `props.ts` exports (what a parent passes, the address it needs), or one of the component as it runs.

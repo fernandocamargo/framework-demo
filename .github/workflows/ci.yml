@@ -35,6 +35,11 @@ jobs:
         run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+      # Storybook beside it, at storybook/: its build links its files relatively, so it needs no base.
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npx storybook build --output-dir dist/storybook --quiet
+        env:
+          STORYBOOK_DISABLE_TELEMETRY: 1
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
