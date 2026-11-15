@@ -6,7 +6,7 @@
   },
   "framework/runtime/async.ts": {
     "react-hooks/refs": {
-      "count": 3
+      "count": 2
     }
   },
   "framework/runtime/component.tsx": {

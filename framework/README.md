@@ -313,6 +313,7 @@ A component's `form.ts` says how server data and the component's props become th
 ### The async layer
 
 - Each named export of `async.ts` reaches the render as `async.<name>`: a function that runs it, carrying `pending`, `error` and `data`.
+- The function keeps its identity while its state changes; its state is put on it at each render. A handler that calls it, or a control it is given to, stays the same until what it runs with changes: the module, or the injection (a new locale or person). A change of an operation's state calls the files of a component that read `async` again, even where what they were given compares equal.
 - An export takes the injection (plus a `signal`) and returns a promise, or returns a function of the call's arguments.
 - The default export runs before the component mounts, while the placeholder shows, as a query of the data layer. Its result reaches the render as `async.default`.
 - Unmounting stops state changes and aborts the operations' signals.

@@ -3,6 +3,8 @@
  *
  * - Each named export reaches the render under `async`, as a function that runs it and carries
  *   its state: `async.fetchSave()`, `fetchSave.pending`, `fetchSave.error`, `fetchSave.data`.
+ *   The function keeps its identity while its state changes, so a handler or a control given it
+ *   is the same until what it runs with changes (the module, the injection).
  * - An export receives the injection and returns a promise, or
  *   returns a function that takes the call's arguments and returns the promise.
  * - The default export runs before the component mounts, as a query of the data layer
@@ -59,12 +61,15 @@ export function useOperations(
     };
   }, []);
 
-  return useMemo(() => {
+  // Each operation is made once for what it runs with. Its state is put on that same function
+  // at each render, so a change of state gives the record of operations a new identity (the
+  // component knows it has something new to show) and leaves each operation's as it was.
+  const operations = useMemo(() => {
     // After the component left, React ignores this.
-    const update = (name: string, state: OperationState) => setStates((previous) => ({ ...previous, [name]: state }));
+    const update = (name: string, change: (state: OperationState) => OperationState) =>
+      setStates((previous) => ({ ...previous, [name]: change(previous[name] ?? idle) }));
     return Object.fromEntries(
       names.map((name) => {
-        const state = states[name] ?? idle;
         const run = (...args: unknown[]) => {
           const controller = new AbortController();
           controllers.current.add(controller);
@@ -74,17 +79,17 @@ export function useOperations(
           // an abort would not undo, only hide.
           latest.current.set(name, controller);
           const isLatest = () => latest.current.get(name) === controller;
-          update(name, { ...state, error: undefined, pending: true });
+          update(name, (state) => ({ ...state, error: undefined, pending: true }));
           const promise = hold(execute(module?.[name], { ...injection, signal: controller.signal }, args)).then(
             (data) => {
               controllers.current.delete(controller);
-              if (isLatest()) update(name, { data, error: undefined, pending: false });
+              if (isLatest()) update(name, () => ({ data, error: undefined, pending: false }));
               return data;
             },
             (thrown: unknown) => {
               controllers.current.delete(controller);
               const error = report(toError(thrown), { during: name, layer: 'async', path });
-              if (isLatest()) update(name, { data: state.data, error, pending: false });
+              if (isLatest()) update(name, (state) => ({ data: state.data, error, pending: false }));
               throw error;
             },
           );
@@ -93,8 +98,16 @@ export function useOperations(
           promise.catch(() => undefined);
           return promise;
         };
-        return [name, Object.assign(run, state)];
+        return [name, run];
       }),
     );
-  }, [names, states, module, injection, path]);
+  }, [names, module, injection, path]);
+
+  return useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(operations).map(([name, run]) => [name, Object.assign(run, states[name] ?? idle)]),
+      ) as Record<string, Operation>,
+    [operations, states],
+  );
 }

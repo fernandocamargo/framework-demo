@@ -50,17 +50,25 @@ function wired(path: string, source: string) {
 function folder(
   path: string,
   source: string,
-  layers: { form?: object; props?: { default: (given: Props) => Props }; state?: object } = {},
+  layers: {
+    async?: object;
+    form?: object;
+    props?: { default: (given: Props) => Props };
+    state?: object;
+  } = {},
   show: (props: Props) => ReactNode = () => null,
 ) {
   const seen: Handlers[] = [];
   const Component = component({
     path,
-    reads: { view: ['route', 'acl', 'flags'].filter((name) => source.includes(name)) },
+    // A folder with an async.ts here has a render that reads `async`.
+    reads: {
+      view: [...['route', 'acl', 'flags'].filter((name) => source.includes(name)), ...(layers.async ? ['async'] : [])],
+    },
     skins: {},
     view: () =>
       Promise.resolve({
-        async: undefined,
+        async: layers.async as never,
         children: [],
         form: layers.form as never,
         handlers: wired(path, source),
@@ -166,6 +174,35 @@ test("a callback of a render React threw away never reaches the page: the page's
   await rerender(page('second'));
   await act(async () => button().click());
   expect(recorded).toEqual(['first', 'second']);
+});
+
+test("a handler that calls an operation keeps its identity while the operation runs, and the render shows the operation's state", async () => {
+  let answer: ((value: unknown) => void) | undefined;
+  const { Component, seen } = folder(
+    'components/handler-operation',
+    'export const store = ({ async }) => () => async.save();',
+    { async: { save: () => new Promise((resolve) => (answer = resolve)) } },
+    // No props.ts: the render reads the state on the operation itself.
+    ({ async }) => {
+      const { save } = async as { save: { data: unknown; pending: boolean } };
+      return save.pending ? 'saving' : String(save.data ?? 'idle');
+    },
+  );
+  const { container } = await show(
+    createElement(Root, { client: createQueryClient(), entity }, createElement(Component)),
+  );
+  const handlers = seen.at(-1)!;
+  expect(container.textContent).toBe('idle');
+
+  await act(async () => void handlers.store!());
+  expect(container.textContent).toBe('saving');
+  await act(async () => answer?.('saved'));
+  await settle();
+  expect(container.textContent).toBe('saved');
+
+  // The render ran for each state, and was given the same handlers each time.
+  expect(seen.length).toBe(3);
+  for (const each of seen) expect(each).toBe(handlers);
 });
 
 test("a handler reads the form's store when it runs, and typing gives it no new function", async () => {
