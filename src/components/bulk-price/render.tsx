@@ -27,6 +27,7 @@ export default ({
   className,
   current,
   failedCount,
+  handlers,
   i18n,
   items,
   largeText,
@@ -40,7 +41,6 @@ export default ({
   ruleProblem,
   selectedIds,
   selectionText,
-  set,
   state,
   step,
   steps,
@@ -52,7 +52,7 @@ export default ({
     isDismissable={!state.applying}
     isKeyboardDismissDisabled={state.applying}
     isOpen
-    onOpenChange={(open) => !open && state.send({ type: 'close' })}
+    onOpenChange={handlers.dismiss}
   >
     <Modal className={`react-aria-Modal ${className}`}>
       <Dialog>
@@ -85,10 +85,7 @@ export default ({
 
           {step === 1 && (
             <>
-              <Select
-                onSelectionChange={(key) => state.send({ category: String(key), type: 'categoryChanged' })}
-                selectedKey={values.category}
-              >
+              <Select onSelectionChange={handlers.chooseCategory} selectedKey={values.category}>
                 <Label>{i18n.choose.category}</Label>
                 <Button>
                   <SelectValue />
@@ -107,12 +104,12 @@ export default ({
                   <p itemProp="error">{i18n.choose.failed({ message: loadError })}</p>
                   <menu>
                     <li>
-                      <Button onPress={() => state.send({ type: 'retry' })}>{i18n.choose.retry}</Button>
+                      <Button onPress={handlers.retryLoad}>{i18n.choose.retry}</Button>
                     </li>
                   </menu>
                 </div>
               ) : (
-                <CheckboxGroup onChange={(ids) => set('selected', ids.map(Number))} value={selectedIds}>
+                <CheckboxGroup onChange={handlers.selectProducts} value={selectedIds}>
                   <Label>{selectionText}</Label>
                   <div>
                     {items.map((item) => (
@@ -131,11 +128,8 @@ export default ({
                 </CheckboxGroup>
               )}
               <footer>
-                <Button onPress={() => state.send({ type: 'close' })}>{i18n.cancel}</Button>
-                <Button
-                  isDisabled={!state.choosing || selectedIds.length === 0}
-                  onPress={() => state.send({ type: 'next' })}
-                >
+                <Button onPress={handlers.closeWizard}>{i18n.cancel}</Button>
+                <Button isDisabled={!state.choosing || selectedIds.length === 0} onPress={handlers.goNext}>
                   {i18n.choose.next}
                 </Button>
               </footer>
@@ -145,10 +139,7 @@ export default ({
           {step === 2 && (
             <>
               <fieldset>
-                <RadioGroup
-                  onChange={(value) => set('direction', value as 'decrease' | 'increase')}
-                  value={values.direction}
-                >
+                <RadioGroup onChange={handlers.setDirection} value={values.direction}>
                   <Label>{i18n.rule.direction}</Label>
                   <Radio value="decrease">{i18n.rule.decrease}</Radio>
                   <Radio value="increase">{i18n.rule.increase}</Radio>
@@ -157,7 +148,7 @@ export default ({
                   formatOptions={{ style: 'unit', unit: 'percent' }}
                   isInvalid={Boolean(ruleProblem)}
                   minValue={0}
-                  onChange={(value) => set('percent', value)}
+                  onChange={handlers.setPercent}
                   step={1}
                   value={values.percent}
                 >
@@ -171,8 +162,8 @@ export default ({
               </fieldset>
               {ruleProblem && <p role="alert">{ruleProblem}</p>}
               <footer>
-                <Button onPress={() => state.send({ type: 'back' })}>{i18n.back}</Button>
-                <Button isDisabled={Boolean(ruleProblem)} onPress={() => state.send({ type: 'next' })}>
+                <Button onPress={handlers.goBack}>{i18n.back}</Button>
+                <Button isDisabled={Boolean(ruleProblem)} onPress={handlers.goNext}>
                   {i18n.rule.next}
                 </Button>
               </footer>
@@ -210,8 +201,8 @@ export default ({
               </table>
               {limitText && <p role="note">{limitText}</p>}
               <footer>
-                <Button onPress={() => state.send({ type: 'back' })}>{i18n.back}</Button>
-                <Button isDisabled={!canApply} onPress={() => state.send({ type: 'apply' })}>
+                <Button onPress={handlers.goBack}>{i18n.back}</Button>
+                <Button isDisabled={!canApply} onPress={handlers.applyChange}>
                   <span itemScope itemType="https://schema.org/ReplaceAction">
                     <span itemProp="name">{applyText}</span>
                   </span>
@@ -265,8 +256,8 @@ export default ({
               </ul>
               {state.summary && (
                 <footer>
-                  {failedCount > 0 && <Button onPress={() => state.send({ type: 'retryFailed' })}>{retryText}</Button>}
-                  <Button onPress={() => state.send({ type: 'close' })}>{i18n.done}</Button>
+                  {failedCount > 0 && <Button onPress={handlers.retryFailed}>{retryText}</Button>}
+                  <Button onPress={handlers.closeWizard}>{i18n.done}</Button>
                 </footer>
               )}
             </>
@@ -274,7 +265,7 @@ export default ({
         </div>
       </Dialog>
 
-      <ModalOverlay isOpen={state.confirmingLargeChange} onOpenChange={(open) => !open && state.send({ type: 'back' })}>
+      <ModalOverlay isOpen={state.confirmingLargeChange} onOpenChange={handlers.dismissLargeChange}>
         <Modal>
           <Dialog role="alertdialog">
             <Heading slot="title">{largeTitle}</Heading>
@@ -284,10 +275,10 @@ export default ({
               ))}
             </p>
             <footer>
-              <Button autoFocus onPress={() => state.send({ type: 'back' })}>
+              <Button autoFocus onPress={handlers.goBack}>
                 {i18n.large.back}
               </Button>
-              <Button onPress={() => state.send({ type: 'confirm' })}>
+              <Button onPress={handlers.confirmLargeChange}>
                 <span itemScope itemType="https://schema.org/ReplaceAction">
                   <span itemProp="name">{i18n.large.confirm}</span>
                 </span>

@@ -67,7 +67,6 @@ export default ({ acl, async: { default: categories }, flags, form, i18n, intl, 
     ruleProblem: problem ? i18n.problems[problem] : null,
     selectedIds: values.selected.map(String),
     selectionText: i18n.choose.selected({ count: context.items.length, selected: values.selected.length }),
-    set: form.set,
     state,
     step,
     steps: STEPS.map((name, index) => ({
