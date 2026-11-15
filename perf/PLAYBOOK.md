@@ -22,7 +22,7 @@ Use [the history](README.md), [the driver](cycles.mjs), [its instrumentation](vi
 
 Never add `calls` to committed renders, or `no-change` to `again`; they overlap. Never call 12 row instances 12 renders of one instance. `DETAIL=1` prints only no-change groups, eight per step by default. Use `TOP=1000` or read `cycles.json` for the rest.
 
-`cycles.json` contains the first run only. `runs.json` has every run's **main or features** totals, but no further totals. Printed `further:` is the first run; printed idle times are medians when `RUNS>1`. Repeat separate `RUNS=1` labels when comparing individual steps or modes.
+`cycles.json` contains the first run only. `runs.json` has every run's **main or features** totals and, under `further`, the further steps' totals and misses (`perf/totals.mjs`). Printed `further:` is the first run; printed idle times are medians when `RUNS>1`. Repeat separate `RUNS=1` labels when comparing individual steps or modes.
 
 `node perf/walk.mjs perf/out/<label>/cycles.json` reads that same trace and prints JSON with all steps, all cause groups, calls and suspends by folder, owner totals, and separate main/further/features totals. It leaves events outside step labels visible. `withoutOwner` means no view of that folder name executed in that commit; it is co-occurrence, not proof of independence, and not an instance-level selector. Its `--self-check` exercises the partition, reused calls, mounts, further failures and unassigned work.
 
@@ -240,7 +240,7 @@ Numbers in historical entries belong to the stated round, not today's baseline. 
 - **Confirm:** `steps.mjs` marks `further`; `cycles.mjs` filters those out of `runs.json`; `gate.mjs` reads only that file and gates two framework keys. Other/thrown are reported minima. A further-only check failure is also absent from numeric `misses`; page errors remain global.
 - **Cause:** historical comparability and timer variability led to a separate reported section; no further distribution or ceiling was established. Even gating its framework count would not protect an operation change whose saving is mainly in `other`.
 - **Fix:** preserve all further measurements and failures alongside the current gate before proposing separate calibrated limits. `walk.mjs` does this for a saved first run. A future driver extension should retain every run's steps and aggregate further failures without changing actions, waits or definitions. No baseline movement in this pass.
-- **Guard / applied:** Q-382 measurement reader and its self-check. Future gate tests must reject a further-only miss and retain both modes. Baseline/threshold decisions require real same-platform repeated evidence; the old gate is a regression check, not acceptance of the whole target.
+- **Guard / applied:** `runs.json` retains each run's further counts and misses beside unchanged visit figures; `perf/totals.mjs` computes both, and `totals.test.mjs` shows that a run whose only failed check is a further step did not play the whole visit. The gate prints every run's further totals without a new threshold. Baseline/threshold decisions require real same-platform repeated evidence; the gate remains a regression check, not acceptance of the whole target.
 
 ### 21. Ref removal is mistaken for render reduction
 

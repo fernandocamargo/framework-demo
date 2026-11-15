@@ -12,8 +12,8 @@
 // run on record and fails after RUNS of them; one more can pass, when a run comes in one under
 // the usual. Writing the baseline plays every visit five times and keeps the figure most of them
 // give, the higher of two as common.
-// A run with a failed check or a page error did not play the whole visit, and is left out; a
-// visit with no clean run fails.
+// A run with a failed check in the visit or further steps, or a page error, did not play the
+// whole visit, and is left out; a visit with no clean run fails. Further counts have no ceiling.
 //
 //   npm run perf:gate                 compares with the baseline
 //   npm run perf:baseline             writes the baseline (perf/README.md says when)
@@ -23,6 +23,8 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+
+import { played as clean } from './totals.mjs';
 
 const here = (file) => path.join(import.meta.dirname, file);
 const root = path.join(import.meta.dirname, '..');
@@ -38,7 +40,6 @@ const started = Date.now();
 
 const node = (args, env = {}) =>
   spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8', env: { ...process.env, ...env } });
-const clean = (run) => run.misses === 0 && run.errors.length === 0;
 const fail = (message, output = '') => {
   console.error(`${output}\n${message}`.trim());
   process.exit(1);
@@ -86,6 +87,15 @@ for (const engine of ENGINES) {
       if (played.status !== 0) fail(`${engine}, ${visit}: the visit did not run.`, output);
       all.push(...JSON.parse(readFileSync(here(`out/${label}/runs.json`), 'utf8')));
     }
+    if (all.some((run) => run.further.steps > 0))
+      console.log(
+        `${engine}, ${visit}, further: ${all
+          .map(
+            (run, index) =>
+              `run ${index + 1}: render calls ${run.further.calls}, framework rendered again ${run.further.frameworkAgain}, with no change ${run.further.frameworkUnchanged}, other rendered again ${run.further.otherAgain}, with no change ${run.further.otherUnchanged}, thrown away ${run.further.thrown}, misses ${run.further.misses}`,
+          )
+          .join('; ')}`,
+      );
     const whole = all.filter(clean);
     if (!whole.length)
       fail(

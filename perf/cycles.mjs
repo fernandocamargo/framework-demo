@@ -17,7 +17,7 @@
 //
 // CHROMIUM and WEBKIT may name browser executables, as for the end-to-end tests. Writes
 // perf/out/<LABEL>/cycles.json (every commit of the first run), summary.txt, and runs.json: each
-// run's totals for the visit, which perf/gate.mjs compares with perf/baseline.json.
+// run's visit totals and separate further totals, which perf/gate.mjs reads.
 
 import { chromium, webkit } from '@playwright/test';
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -25,6 +25,7 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 
 import { FEATURES, STEPS as VISIT } from './steps.mjs';
+import { totalsOf } from './totals.mjs';
 
 const env = process.env;
 const port = Number(env.PORT ?? 5190);
@@ -228,22 +229,10 @@ if (runs > 1) {
     `each run's visit: render calls ${each((step) => step.calls)}; thrown away ${each((step) => step.thrown)}; framework rendered again ${each((step) => step.framework.again)}, with no change ${each((step) => step.framework.unchanged.length)}; other rendered again ${each((step) => step.other.again)}, with no change ${each((step) => step.other.unchanged.length)}`,
   );
 }
-// Each run's totals for the visit, without the further steps, as numbers: what the gate reads.
-const sum = (summary, pick) =>
-  summary.filter((_, index) => !STEPS[index].further).reduce((total, step) => total + pick(step), 0);
 writeFileSync(
   here(`out/${label}/runs.json`),
   `${JSON.stringify(
-    summaries.map((summary, index) => ({
-      calls: sum(summary, (step) => step.calls),
-      errors: all[index].errors,
-      frameworkAgain: sum(summary, (step) => step.framework.again),
-      frameworkUnchanged: sum(summary, (step) => step.framework.unchanged.length),
-      misses: sum(summary, (step) => (step.ok ? 0 : 1)),
-      otherAgain: sum(summary, (step) => step.other.again),
-      otherUnchanged: sum(summary, (step) => step.other.unchanged.length),
-      thrown: sum(summary, (step) => step.thrown),
-    })),
+    summaries.map((summary, index) => totalsOf(summary, STEPS, all[index].errors)),
     null,
     1,
   )}\n`,
