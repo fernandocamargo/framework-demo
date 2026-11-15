@@ -614,7 +614,8 @@ progress {
   padding: 1rem;
   background: rgb(8 10 16 / 0.5);
   overflow: auto;
-  &[data-entering] {
+  /* A dialog closed while it enters stops entering: nothing is left for its exit to wait for. */
+  &[data-entering]:not([data-exiting]) {
     animation: fade 160ms var(--ease);
   }
   &[data-react-aria-top-layer] {
@@ -638,7 +639,7 @@ progress {
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow);
-  &[data-entering] {
+  &[data-entering]:not([data-exiting]) {
     animation: rise 200ms var(--ease);
   }
   /* A product is wide, from its placeholder on, so its modal opens once at its size. */
