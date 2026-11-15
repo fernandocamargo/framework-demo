@@ -15,9 +15,9 @@ Per step it counts:
 
 A change to the page is an attribute or a text that holds another value than before the commit, or a node added or removed. Writing a value again is not one: React sets an input's `name` and `type` at each of its renders.
 
-After the visit's 29 steps come ten more, counted apart (`further`): the lab left open for two seconds, a network slowed by 500 ms, the states gallery and the way back. The visit's totals stay comparable from one change to the next. `runs.json` keeps each run's further counts and misses under `further`, beside the existing visit figures; `cycles.json` still holds the first run's full trace.
+After the visit's 29 steps come twelve more, counted apart (`further`): the lab left open for two seconds, a network slowed by 500 ms, the states gallery and the way back, then two catalogue sort choices. The first chooses while the popover's entrance animation is running; the second waits for that animation's `finished` promise. Both check the selected text and removal, and the first checks that removal happened by the next frame. The visit's totals stay comparable from one change to the next. `runs.json` keeps each run's further counts and misses under `further`, beside the existing visit figures; `cycles.json` still holds the first run's full trace.
 
-`LABEL`, `RUNS`, `CPU` (Chromium's throttling), `ENGINE` (`chromium` or `webkit`), `DETAIL=1` (which components changed nothing, why, and which framework component they are inside of) and `CHROMIUM` / `WEBKIT` (browser executables) change the run. `node perf/cycles.mjs` runs again on the last build. Results go to `perf/out/<LABEL>/`.
+`LABEL`, `RUNS`, `CPU` (Chromium's throttling), `ENGINE` (`chromium` or `webkit`), `DETAIL=1` (which components changed nothing, why, and which framework component they are inside of) and `CHROMIUM` / `WEBKIT` (browser executables) change the run. `TIMELINE=1` prints the open, entrance start and end, choice, `data-exiting` and removal events beside every Select step, with times relative to the open. Removal is also labelled by task/frame order; the checks do not use elapsed time. The probe observes animations, so use ordinary runs for count comparisons. `node perf/cycles.mjs` runs again on the last build. Results go to `perf/out/<LABEL>/`.
 
 ## The gate
 

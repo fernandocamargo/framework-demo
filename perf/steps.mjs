@@ -16,6 +16,109 @@ const status = (page) => page.getByRole('status').first().innerText();
 const lab = (page) => page.getByRole('complementary', { name: 'Network lab' });
 const latency = (page) => lab(page).getByRole('slider', { name: 'Latency' });
 
+// Observe the Select in the page so a choice during entrance runs as soon as its animation starts.
+export const startSelectTimeline = (page, during) =>
+  page.evaluate((choiceName) => {
+    window.__selectTimeline?.observer.disconnect();
+    window.__selectTimeline?.stop();
+    const events = [];
+
+    const record = (event, detail) =>
+      events.push({
+        at: performance.now(),
+        detail,
+        event,
+        running: event === 'choice' && entrance?.playState === 'running',
+      });
+
+    let popover;
+    let entrance;
+    let chosen = false;
+    let taskPassed = false;
+    let framePassed = false;
+
+    const choose = () => {
+      if (!choiceName || chosen || entrance?.playState !== 'running') return;
+
+      const option = [...popover.querySelectorAll('[role="option"]')].find(
+        (item) => item.textContent.trim() === choiceName,
+      );
+
+      if (option) {
+        chosen = true;
+        option.click();
+      }
+    };
+
+    const watch = (node) => {
+      if (popover || !node.matches?.('.react-aria-Popover')) return;
+      popover = node;
+      record('open');
+      entrance = popover.getAnimations().find((animation) => animation.playState === 'running');
+
+      if (entrance) {
+        record('entrance start');
+        entrance.finished.then(
+          () => record('entrance end'),
+          () => record('entrance end', 'cancelled'),
+        );
+        choose();
+      }
+    };
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'attributes' && mutation.target === popover && popover.hasAttribute('data-exiting'))
+          record('data-exiting');
+
+        for (const node of mutation.addedNodes) {
+          watch(node);
+          node.querySelectorAll?.('.react-aria-Popover').forEach(watch);
+        }
+
+        for (const node of mutation.removedNodes) {
+          if (node === popover || node.contains?.(popover))
+            record('removal', !taskPassed ? 'same task' : !framePassed ? 'by next frame' : 'later');
+        }
+      }
+    });
+
+    const animationStart = (event) => {
+      if (event.target !== popover || entrance) return;
+      entrance = popover.getAnimations().find((animation) => animation.playState === 'running');
+
+      if (!entrance) return;
+      record('entrance start');
+      entrance.finished.then(
+        () => record('entrance end'),
+        () => record('entrance end', 'cancelled'),
+      );
+      choose();
+    };
+
+    const click = (event) => {
+      if (!popover?.contains(event.target) || !event.target.closest('[role="option"]')) return;
+      record('choice', event.target.closest('[role="option"]').textContent.trim());
+      queueMicrotask(() => (taskPassed = true));
+      requestAnimationFrame(() => requestAnimationFrame(() => (framePassed = true)));
+    };
+
+    document.addEventListener('animationstart', animationStart);
+    document.addEventListener('click', click, true);
+    observer.observe(document, { attributeFilter: ['data-exiting'], attributes: true, childList: true, subtree: true });
+    window.__selectTimeline = {
+      get entrance() {
+        return entrance;
+      },
+      events,
+      observer,
+      stop: () => {
+        document.removeEventListener('animationstart', animationStart);
+        document.removeEventListener('click', click, true);
+      },
+    };
+  }, during);
+
 /** In the page: serves the flags these ways, as another tab of the world would. */
 const serve = (ways) => {
   window.localStorage.setItem('memory:flags', JSON.stringify(ways));
@@ -306,6 +409,55 @@ export const STEPS = [
     check: async (page) => (await rows(page).count()) === 12,
     further: true,
     name: 'back to the catalogue',
+  },
+  {
+    act: async (page) => {
+      await startSelectTimeline(page, 'Price, low to high');
+      await page.getByRole('button', { name: /Sort/ }).click();
+      await page.waitForFunction(() => window.__selectTimeline.events.some(({ event }) => event === 'choice'));
+      await page.evaluate(() => window.__framework.idle());
+      await page.locator('.react-aria-Popover').waitFor({ state: 'detached' });
+    },
+    check: async (page) => {
+      const events = await page.evaluate(() => window.__selectTimeline.events);
+
+      return (
+        (await page.getByRole('button', { name: /Sort/ }).innerText()).includes('Price, low to high') &&
+        (await page.locator('.react-aria-Popover').count()) === 0 &&
+        events.some(({ event, running }) => event === 'choice' && running) &&
+        events.some(({ detail, event }) => event === 'removal' && detail !== 'later') &&
+        page.url().includes('sort=price') &&
+        !page.url().includes('order=')
+      );
+    },
+    further: true,
+    name: 'sort during the entrance',
+  },
+  {
+    act: async (page) => {
+      await startSelectTimeline(page);
+      await page.getByRole('button', { name: /Sort/ }).click();
+      await page.evaluate(() => window.__selectTimeline.entrance.finished);
+      await page.getByRole('option', { name: 'Title, A to Z' }).click();
+      await page.evaluate(() => window.__framework.idle());
+      await page.locator('.react-aria-Popover').waitFor({ state: 'detached' });
+    },
+    check: async (page) => {
+      const events = await page.evaluate(() => window.__selectTimeline.events);
+      const end = events.findIndex(({ event }) => event === 'entrance end');
+
+      const choice = events.findIndex(({ event }) => event === 'choice');
+
+      return (
+        (await page.getByRole('button', { name: /Sort/ }).innerText()).includes('Title, A to Z') &&
+        (await page.locator('.react-aria-Popover').count()) === 0 &&
+        end >= 0 &&
+        choice > end &&
+        !page.url().includes('sort=')
+      );
+    },
+    further: true,
+    name: 'sort after the entrance',
   },
 ];
 

@@ -10,7 +10,7 @@
 //
 //   npm run perf                      builds, then runs the flow once in Chromium
 //   node perf/cycles.mjs              runs it again on the last build
-//   [LABEL=name] [RUNS=3] [CPU=4] [ENGINE=chromium|webkit] [DETAIL=1] [PORT=5190] [VISIT=features]
+//   [LABEL=name] [RUNS=3] [CPU=4] [ENGINE=chromium|webkit] [DETAIL=1] [TIMELINE=1] [PORT=5190] [VISIT=features]
 //
 // VISIT=features plays the second visit of steps.mjs instead: the report, the orders page with its
 // live map, the command palette and the tour, with totals of their own.
@@ -24,7 +24,7 @@ import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeF
 import { createServer } from 'node:http';
 import path from 'node:path';
 
-import { FEATURES, STEPS as VISIT } from './steps.mjs';
+import { FEATURES, startSelectTimeline, STEPS as VISIT } from './steps.mjs';
 import { totalsOf } from './totals.mjs';
 
 const env = process.env;
@@ -94,13 +94,16 @@ async function run() {
     await page.evaluate((name) => (window.__phase = name), step.name).catch(() => undefined);
     // A navigation starts a new document, whose recorder starts the phase at 'load'.
     await page.addInitScript((name) => (window.__phase = name), step.name);
+
+    if (env.TIMELINE === '1') await startSelectTimeline(page);
     const started = Date.now();
     await step.act(page, base);
     await page.waitForFunction(() => Boolean(window.__framework?.idle));
     await page.evaluate(() => window.__framework.idle());
     const idleAt = Date.now() - started;
     const ok = await step.check(page).catch(() => false);
-    results.push({ idleAt, name: step.name, ok });
+    const timeline = env.TIMELINE === '1' ? await page.evaluate(() => window.__selectTimeline?.events ?? []) : [];
+    results.push({ idleAt, name: step.name, ok, timeline });
   }
   await page.waitForTimeout(300);
   // Both at once: a commit between two reads would leave its calls without it.
@@ -195,6 +198,17 @@ summaries[0].forEach((step, index) => {
       ` ${cell(step.other.mounted, 9)} ${cell(step.other.again, 5)} ${cell(step.other.unchanged.length, 9)} |` +
       ` ${cell(step.time.toFixed(1), 5)} ${cell(step.wasted.toFixed(1), 7)}`,
   );
+
+  if (env.TIMELINE === '1')
+    summaries.forEach((summary, run) => {
+      const events = summary[index].timeline;
+
+      if (!events.length) return;
+      const opened = events.find(({ event }) => event === 'open')?.at ?? events[0].at;
+      say(
+        `      timeline run ${run + 1}: ${events.map(({ at, detail, event }) => `${event}${detail ? ` (${detail})` : ''} +${(at - opened).toFixed(1)}ms`).join(' → ')}`,
+      );
+    });
   if (env.DETAIL === '1') {
     const byName = new Map();
     for (const component of [...step.framework.unchanged, ...step.other.unchanged]) {
