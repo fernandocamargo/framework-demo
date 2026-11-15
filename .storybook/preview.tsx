@@ -8,7 +8,7 @@ import type { Decorator, Preview } from '@storybook/react-vite';
 import { type ReactNode, useEffect, useMemo, useState, useTransition } from 'react';
 import { I18nProvider } from 'react-aria-components';
 
-import { type Env, type Navigation, Root, type Route } from 'framework';
+import { createQueryClient, type Env, type Navigation, Root, type Route } from 'framework';
 
 import { format, go, HOME, parse } from '../src/address';
 import memory from '../src/clients/memory';
@@ -23,6 +23,11 @@ import '../src/blueprint.css';
 const env: Env = { apiUrl: 'https://dummyjson.com', world: 'memory' };
 const entity = { id: 'memory' };
 const navigation: Navigation = { go };
+// Each person's reads, cached for as long as the stories are open: Root is given a query client, as
+// the app gives it one, and each person has their own.
+const clients = Object.fromEntries(
+  ['guest', ...DEMOS.map(({ role }) => role)].map((role) => [role, createQueryClient()]),
+);
 
 // The memory world's API client: the session it keeps is the one every story's `Root` reads.
 const api = memory({ env } as never);
@@ -59,6 +64,7 @@ const inRoot: Decorator = (Story, context) => {
           // A new Root for each person, so its reads start over for them.
           <Root
             acl={permissions}
+            client={clients[role]}
             entity={entity}
             env={env}
             flags={featureFlags}

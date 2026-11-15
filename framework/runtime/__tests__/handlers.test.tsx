@@ -178,7 +178,7 @@ export const rename = ({ form }) => (value) => form.set('title', value);
 export const submit = ({ form, record }) => () => record(form.values.title);`,
     { form: { seed: () => ({ title: 'untitled' }) } },
   );
-  await show(createElement(Root, { entity }, createElement(Component, { record })));
+  await show(createElement(Root, { client: createQueryClient(), entity }, createElement(Component, { record })));
   const handlers = seen.at(-1)!;
   handlers.submit!();
   await act(async () => void handlers.rename!('typed'));
@@ -220,7 +220,7 @@ test('a handler emits its interaction, and its failure is reported in the handle
     "export const fail = () => () => { throw new Error('failed'); };",
   );
   try {
-    await show(createElement(Root, { entity }, createElement(Component)));
+    await show(createElement(Root, { client: createQueryClient(), entity }, createElement(Component)));
     expect(() => seen[0]!.fail!()).toThrow('failed');
     await settle();
     expect(interactions).toEqual([
@@ -250,7 +250,13 @@ test.each(['passed', 'shaped'])('the handlers prop is reserved when it is %s', a
   const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
   try {
     await expect(
-      show(createElement(Root, { entity }, createElement(Component, source === 'passed' ? { handlers: {} } : {}))),
+      show(
+        createElement(
+          Root,
+          { client: createQueryClient(), entity },
+          createElement(Component, source === 'passed' ? { handlers: {} } : {}),
+        ),
+      ),
     ).rejects.toThrow(/handlers is reserved for handlers\.ts/);
   } finally {
     errors.mockRestore();
@@ -275,7 +281,7 @@ test('a folder without handlers.ts gets no handlers prop', async () => {
         state: undefined,
       }),
   });
-  await show(createElement(Root, { entity }, createElement(Plain, { label: 'plain' })));
+  await show(createElement(Root, { client: createQueryClient(), entity }, createElement(Plain, { label: 'plain' })));
   expect(seen[0]).toHaveProperty('label', 'plain');
   expect(seen[0]).not.toHaveProperty('handlers');
 });

@@ -23,7 +23,7 @@ import {
 } from 'react';
 
 import { hold, Pending, useCommitted, watch } from './activity';
-import { createDataLayer, createQueryClient, type DataLayer, recording } from './data';
+import { createDataLayer, type DataLayer, recording } from './data';
 import { activateLocale, loadShown, LocaleContext, SOURCE_LOCALE } from './i18n';
 import type { Acl, Entity, Env, Flags, Navigation, Route, User } from './index';
 import { createInjection, type Injection } from './injection';
@@ -200,11 +200,10 @@ export type RootProps = {
   acl?: (injection: Injection & { signal: AbortSignal }) => Promise<Acl>;
   children?: ReactNode;
   /**
-   * The query client the framework's data lives in, made with `createQueryClient()`. Give Root one
-   * the app keeps for its life, and a page's reads stay cached when the page goes and comes back
-   *; leave it out, and Root makes one for its own life.
+   * The query client the framework's data lives in, made with `createQueryClient()`. The app makes
+   * it and keeps it for its life, so a page's reads stay cached when the page goes and comes back.
    */
-  client?: QueryClient;
+  client: QueryClient;
   /** The selected entity. Services read `entity.id` when they run. */
   entity?: Entity;
   /** What clients receive as `env`. Keep the object stable: a new one rebuilds every client. */
@@ -254,7 +253,7 @@ export type RootProps = {
 export function Root({
   acl,
   children,
-  client: given,
+  client,
   entity = NONE,
   env = NONE,
   flags,
@@ -281,9 +280,6 @@ export function Root({
     () => new Proxy({} as Entity, { get: (_, key) => Reflect.get(current.current as object, key) }),
     [],
   );
-  // Root makes a client only when the app gives none, once for its life.
-  const own = useRef<null | QueryClient>(null);
-  const client = given ?? (own.current ??= createQueryClient());
   // Its reads and writes count as pending for `whenIdle()` while this Root uses it.
   useEffect(() => watch(client), [client]);
   const data = useMemo(() => createDataLayer(client, live as { readonly id: string }), [client, live]);
