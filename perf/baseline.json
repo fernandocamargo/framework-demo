@@ -24,7 +24,7 @@
   "linux": {
     "chromium": {
       "visit": {
-        "frameworkAgain": 254,
+        "frameworkAgain": 256,
         "frameworkUnchanged": 5
       },
       "features": {
@@ -34,11 +34,11 @@
     },
     "webkit": {
       "visit": {
-        "frameworkAgain": 256,
-        "frameworkUnchanged": 5
+        "frameworkAgain": 257,
+        "frameworkUnchanged": 6
       },
       "features": {
-        "frameworkAgain": 77,
+        "frameworkAgain": 78,
         "frameworkUnchanged": 2
       }
     }
