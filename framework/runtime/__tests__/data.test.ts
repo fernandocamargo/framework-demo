@@ -63,7 +63,7 @@ test('a re-read list in another order keeps each unchanged row, found by its ide
 
 test('an equal answer is the previous one itself, and items without an id are matched by position', () => {
   const previous = { list: { items: [row(1, 'ok')], tags: [{ name: 'a' }, { name: 'b' }] } };
-  expect(shareByIdentity(previous, JSON.parse(JSON.stringify(previous)))).toBe(previous);
+  expect(shareByIdentity(previous, structuredClone(previous))).toBe(previous);
 
   const next = { list: { items: [row(1, 'ok')], tags: [{ name: 'b' }, { name: 'a' }] } };
   const shared = shareByIdentity(previous, next) as typeof previous;

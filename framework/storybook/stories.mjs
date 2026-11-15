@@ -316,8 +316,9 @@ function storyFile(options, dir, target) {
  */
 export function writeStories(options) {
   const expected = new Map();
+  const skipped = new Set(options.skip);
   for (const dir of listComponentFolders(options.root)) {
-    if (options.skip.includes(componentPath(options.root, dir))) continue;
+    if (skipped.has(componentPath(options.root, dir))) continue;
     const target = path.join(options.out, `${componentPath(options.root, dir)}.stories.tsx`);
     expected.set(target, storyFile(options, dir, target));
   }

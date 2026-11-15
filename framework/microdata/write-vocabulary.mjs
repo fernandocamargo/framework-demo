@@ -7,7 +7,10 @@ import { writeFileSync } from 'node:fs';
 const VERSION = '30.1';
 const SOURCE = `https://schema.org/version/${VERSION}/schemaorg-current-https.jsonld`;
 
-const graph = (await (await fetch(SOURCE)).json())['@graph'];
+const answer = await fetch(SOURCE);
+// An error page is not a vocabulary: stop before anything is written over the pinned one.
+if (!answer.ok) throw new Error(`${SOURCE} answered ${answer.status} ${answer.statusText}`);
+const graph = (await answer.json())['@graph'];
 const list = (value) => (value === undefined ? [] : Array.isArray(value) ? value : [value]);
 const ids = (value) =>
   list(value)

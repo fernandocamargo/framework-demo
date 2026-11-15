@@ -63,10 +63,10 @@ export const rememberError = ({ event }) => ({
   error: event.error instanceof Error ? event.error.message : String(event.error),
   items: [],
 });
-export const queueSelected = ({ context, form }) => ({
-  queue: context.items.filter((item) => form.values.selected.includes(item.id)),
-  results: [],
-});
+export const queueSelected = ({ context, form }) => {
+  const chosen = new Set<number>(form.values.selected);
+  return { queue: context.items.filter((item) => chosen.has(item.id)), results: [] };
+};
 /** The failed ones go again; the ones that were saved stay in the results. */
 export const queueFailed = ({ context }) => {
   const failed = new Set(context.results.filter((result) => result.error !== null).map((result) => result.id));

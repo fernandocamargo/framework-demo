@@ -16,7 +16,8 @@ export default ({ acl, async: { default: categories }, flags, form, i18n, intl, 
   const { values } = form;
   const rule = form.payload();
   const money = (amount: number) => intl.formatNumber(amount, { currency: CURRENCY, style: 'currency' });
-  const selected = context.items.filter((item) => values.selected.includes(item.id));
+  const chosen = new Set<number>(values.selected);
+  const selected = context.items.filter((item) => chosen.has(item.id));
   // The flow says which step each of its states belongs to (state.ts).
   const step = Math.max(
     ...(Object.keys(STEP) as (keyof typeof STEP)[]).filter((name) => state[name]).map((name) => STEP[name]),

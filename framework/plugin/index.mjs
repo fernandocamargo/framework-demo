@@ -669,12 +669,13 @@ export default function framework(userOptions) {
         const dir = id.slice(1 + VIEW.length);
         const render = findLayer(dir, 'render');
         if (isBuild) this.addWatchFile(render);
-        const children = [];
+        const found = new Set();
         for (const node of parseAst(readFileSync(render, 'utf8'), { lang: 'tsx' }, render).body) {
           if (node.type !== 'ImportDeclaration') continue;
           const resolved = target(String(node.source.value), render);
-          if (resolved && isComponentFolder(options, resolved) && !children.includes(resolved)) children.push(resolved);
+          if (resolved && isComponentFolder(options, resolved)) found.add(resolved);
         }
+        const children = [...found];
         const layer = (name) => {
           const file = findLayer(dir, name);
           return file ? `export * as ${name} from ${JSON.stringify(file)};` : `export const ${name} = undefined;`;
