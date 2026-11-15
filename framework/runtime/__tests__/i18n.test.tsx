@@ -1,5 +1,5 @@
-import { act, render } from '@testing-library/react';
-import { createElement, type ReactNode } from 'react';
+import { act, fireEvent, render } from '@testing-library/react';
+import { createContext, createElement, type ReactNode, startTransition, use, useState } from 'react';
 
 import { component } from '../component';
 import { createQueryClient } from '../data';
@@ -53,6 +53,93 @@ const translations = {
       },
     }),
 };
+
+test('a sibling reads the new context after another consumer suspends in a transition', async () => {
+  const Language = createContext('en');
+  let finish!: (value: string) => void;
+
+  const pending = new Promise<string>((resolve) => {
+    finish = resolve;
+  });
+
+  function Reader({ delayed }: { delayed: boolean }) {
+    const locale = use(Language);
+
+    if (delayed && locale === 'pt-BR') use(pending);
+
+    return createElement('span', null, `${delayed ? 'delayed' : 'sibling'}:${locale}`);
+  }
+
+  function Page() {
+    const [locale, setLocale] = useState('en');
+
+    return createElement(
+      Language,
+      { value: locale },
+      createElement('button', { onClick: () => startTransition(() => setLocale('pt-BR')) }, 'Switch'),
+      createElement(Reader, { delayed: true }),
+      createElement(Reader, { delayed: false }),
+    );
+  }
+
+  const { container, getByRole } = render(createElement(Page));
+  expect(container.textContent).toBe('Switchdelayed:ensibling:en');
+  await act(() => fireEvent.click(getByRole('button')));
+  expect(container.textContent).toBe('Switchdelayed:ensibling:en');
+  await act(async () => finish('ready'));
+  expect(container.textContent).toBe('Switchdelayed:pt-BRsibling:pt-BR');
+});
+
+test('framework siblings receive a changed locale after a translation suspends in a transition', async () => {
+  let finish!: (value: { default: Record<string, string> }) => void;
+
+  const pending = new Promise<{ default: Record<string, string> }>((resolve) => {
+    finish = resolve;
+  });
+
+  const Speaks = component({
+    i18n: { default: { title: 'Products' } },
+    path: 'components/transition-speaks',
+    skins: {},
+    translations: { 'pt-BR': () => pending },
+    view: view(({ i18n }) => {
+      // SAFETY: This folder declares title in its source messages.
+      return createElement('span', null, (i18n as { title: string }).title);
+    }),
+  });
+
+  const Formats = component({
+    path: 'components/transition-formats',
+    reads: { view: ['intl'] },
+    skins: {},
+    view: view(({ intl }) => {
+      // SAFETY: The declared intl read supplies the framework's formatter.
+      return createElement('span', null, (intl as { formatNumber: (value: number) => string }).formatNumber(1234.5));
+    }),
+  });
+
+  const client = createQueryClient();
+
+  function Page() {
+    const [locale, setLocale] = useState('en');
+
+    return createElement(
+      Root,
+      { client, entity, locale },
+      createElement('button', { onClick: () => startTransition(() => setLocale('pt-BR')) }, 'Switch'),
+      createElement(Speaks),
+      createElement(Formats),
+    );
+  }
+
+  const { container } = await show(createElement(Page));
+  expect(container.textContent).toBe('SwitchProducts1,234.5');
+  await act(() => fireEvent.click(container.querySelector('button')!));
+  expect(container.textContent).toBe('SwitchProducts1,234.5');
+  await act(async () => finish({ default: { 'components/transition-speaks/title': 'Produtos' } }));
+  await settle();
+  expect(container.textContent).toBe('SwitchProdutos1.234,5');
+});
 
 test('a component with messages shows them in the locale on screen, and only components that read the locale render again', async () => {
   const calls: string[] = [];
