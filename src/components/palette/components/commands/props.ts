@@ -19,7 +19,7 @@ export type Props = {
 export const matches = (textValue: string, inputValue: string) =>
   textValue.toLocaleLowerCase().includes(inputValue.trim().toLocaleLowerCase());
 
-export default ({ i18n, keyboard, onClose, onType, results, searching, text, user }) => {
+export default ({ i18n, keyboard, onClose, results, searching, text, user }) => {
   // The palette is a modal: its command runs once it has closed, so the page under it is live again.
   const perform = (act: () => void) => () => {
     onClose();
@@ -99,7 +99,7 @@ export default ({ i18n, keyboard, onClose, onType, results, searching, text, use
     }))
     .filter((section) => section.items.length > 0);
 
-  return { empty: shown.length === 0, i18n, onType, searching, sections: shown, text };
+  return { empty: shown.length === 0, i18n, searching, sections: shown, text };
 };
 
 /** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */

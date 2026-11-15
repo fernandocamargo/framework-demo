@@ -144,6 +144,51 @@ export const keep = ({ record, value }) => () => record(value);`,
   expect(recorded).toEqual(['first', 'second']);
 });
 
+test('the palette input forwards each text once through the committed parent callback', async () => {
+  const interactions: Interaction[] = [];
+
+  const listen = (event: Event) => {
+    if (event instanceof CustomEvent) interactions.push(event.detail);
+  };
+
+  const first = vi.fn();
+
+  const second = vi.fn();
+
+  const { Component, seen } = folder(
+    'components/palette/components/commands',
+    'export const type = ({ onType }) => (text) => onType(text);',
+  );
+
+  const client = createQueryClient();
+
+  const page = (onType: (text: string) => void) =>
+    createElement(Root, { client, entity }, createElement(Component, { onType }));
+
+  pipeline.addEventListener('interaction', listen);
+
+  try {
+    const { rerender } = await show(page(first));
+
+    const old = seen.at(-1)!.type!;
+
+    old('lamp');
+    await rerender(page(second));
+    expect(seen.at(-1)!.type).not.toBe(old);
+    seen.at(-1)!.type!('desk');
+    await settle();
+
+    expect(first.mock.calls).toEqual([['lamp']]);
+    expect(second.mock.calls).toEqual([['desk']]);
+    expect(interactions.map(({ name }) => name)).toEqual([
+      'components/palette/components/commands#handlers.type',
+      'components/palette/components/commands#handlers.type',
+    ]);
+  } finally {
+    pipeline.removeEventListener('interaction', listen);
+  }
+});
+
 test("a callback of a render React threw away never reaches the page: the page's handler reads what its render had", async () => {
   const recorded: unknown[] = [];
   const record = (value: unknown) => recorded.push(value);
