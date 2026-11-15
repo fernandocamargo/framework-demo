@@ -230,15 +230,20 @@ const HOT = Boolean((import.meta as { hot?: unknown }).hot);
 
 /** A folder's files as the dev server last sent them: who listens for the next ones, and how many came. */
 type Edits = { listeners: Set<() => void>; version: number };
+
 /** Renders the component again when its folder's files are sent again. */
-const useEdits = (edits: Edits) =>
-  useSyncExternalStore(
-    (listener) => {
+const useEdits = (edits: Edits) => {
+  const subscribe = useCallback(
+    (listener: () => void) => {
       edits.listeners.add(listener);
+
       return () => edits.listeners.delete(listener);
     },
-    () => edits.version,
+    [edits],
   );
+
+  return useSyncExternalStore(subscribe, () => edits.version);
+};
 
 /** For a component that does not read a source: nothing, and no hook. */
 const useNothing = (..._: unknown[]) => undefined;

@@ -30,6 +30,101 @@ async function show(element: ReactNode) {
   return shown!.container;
 }
 
+test('unchanged dev renders keep the edit subscription until the instance or type leaves', async () => {
+  const files = {
+    async: undefined,
+    form: undefined,
+    props: undefined,
+    render: () => createElement('i', null, 'original'),
+    state: undefined,
+  };
+
+  const spec = { path: 'components/edit-listeners', skins: {}, view: () => Promise.resolve(files) };
+  // SAFETY: This test runs the dev runtime, which adds replace to each component type.
+  const Watched = component(spec) as Hot & ReturnType<typeof component>;
+  const client = createQueryClient();
+
+  const page = (Type: typeof Watched, round: number, two = true) =>
+    createElement(
+      Root,
+      { client, entity },
+      createElement(Type, { key: 'first', round }),
+      two && createElement(Type, { key: 'second', round }),
+    );
+
+  const shown = await act(async () => render(page(Watched, 0)));
+  await settle();
+
+  const add = vi.spyOn(Set.prototype, 'add');
+  const remove = vi.spyOn(Set.prototype, 'delete');
+  const notify = vi.spyOn(Set.prototype, Symbol.iterator);
+
+  try {
+    const before = notify.mock.contexts.length;
+    let edited = 0;
+    await act(async () => {
+      Watched.replace({
+        ...files,
+        render: () => {
+          edited++;
+
+          return createElement('i', null, 'edited');
+        },
+      });
+    });
+    await settle();
+    const listeners = notify.mock.contexts[before];
+
+    if (!(listeners instanceof Set)) throw new Error('Edit listeners were not observed');
+    expect(listeners.size).toBe(2);
+    expect(shown.container.textContent).toBe('editededited');
+    expect(edited).toBe(2);
+    add.mockClear();
+    remove.mockClear();
+
+    await act(async () => shown.rerender(page(Watched, 1)));
+    await settle();
+    expect([
+      add.mock.contexts.filter((set) => set === listeners).length,
+      remove.mock.contexts.filter((set) => set === listeners).length,
+    ]).toEqual([0, 0]);
+
+    let again = 0;
+    await act(async () =>
+      Watched.replace({
+        ...files,
+        render: () => {
+          again++;
+
+          return createElement('i', null, 'again');
+        },
+      }),
+    );
+    await settle();
+    expect(shown.container.textContent).toBe('againagain');
+    expect(listeners.size).toBe(2);
+    expect(again).toBe(2);
+
+    await act(async () => shown.rerender(page(Watched, 1, false)));
+    await settle();
+    expect(listeners.size).toBe(1);
+    expect(remove.mock.contexts.filter((set) => set === listeners)).toHaveLength(1);
+
+    // SAFETY: The replacement type is created under the same dev runtime.
+    const Replacement = component(spec) as Hot & ReturnType<typeof component>;
+    await act(async () => shown.rerender(page(Replacement, 1, false)));
+    await settle();
+    expect(listeners.size).toBe(0);
+    await act(async () => Replacement.replace({ ...files, render: () => createElement('i', null, 'replacement') }));
+    await settle();
+    expect(shown.container.textContent).toBe('replacement');
+  } finally {
+    add.mockRestore();
+    remove.mockRestore();
+    notify.mockRestore();
+  }
+});
+
 test('an edited render shows in the instance on screen, which keeps its chart where it was and what was typed', async () => {
   let state: State | undefined;
   const chart = {
