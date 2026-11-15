@@ -11,18 +11,18 @@ export default ({
   close,
   count,
   error,
+  handlers,
   heading,
   index,
   label,
   next,
   open,
   progress,
-  send,
   text,
   title,
 }) => (
   <div className={className}>
-    <Button aria-describedby="tour-shortcut" aria-expanded={open} onPress={() => send({ type: 'start' })}>
+    <Button aria-describedby="tour-shortcut" aria-expanded={open} onPress={handlers.startTour}>
       {label}
       <span hidden id="tour-shortcut">
         T
@@ -39,7 +39,7 @@ export default ({
         >
           <header>
             <h2 itemProp="name">{heading}</h2>
-            <Button onPress={() => send({ type: 'leave' })} slot="close">
+            <Button onPress={handlers.leaveTour} slot="close">
               {close}
             </Button>
           </header>
@@ -54,12 +54,12 @@ export default ({
           {error && <p role="alert">{error}</p>}
           <menu>
             <li>
-              <Button isDisabled={!canBack} onPress={() => send({ type: 'back' })}>
+              <Button isDisabled={!canBack} onPress={handlers.goBack}>
                 {back}
               </Button>
             </li>
             <li>
-              <Button isDisabled={!canNext} onPress={() => send({ type: 'next' })}>
+              <Button isDisabled={!canNext} onPress={handlers.goNext}>
                 {next}
               </Button>
             </li>

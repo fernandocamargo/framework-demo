@@ -104,6 +104,70 @@ test('a render beside a props.ts gets what props.ts returns; props.ts gets what 
   assert.deepEqual(syntaxErrors(render, 'seen.tsx'), []);
 });
 
+test('named handlers get the injected values, and the render gets their returned functions', () => {
+  const shapedDir = path.join(root, 'components', 'shaped');
+  const handlerSource =
+    'export const choose = ({ state, navigation, services, entity }) => (key: string) => navigation.go({ key });\n';
+  writeFileSync(path.join(shapedDir, 'handlers.ts'), handlerSource);
+  const handler = transform('components/shaped/handlers.ts', handlerSource).text;
+  const shaped = transform(
+    'components/shaped/render.tsx',
+    'export default ({ handlers }) => <Button onPress={handlers.choose} />;\n',
+  ).text;
+  assert.match(handler, /HandlerArgs<\{ .* \}, .*Clients<.*, .*ServiceTree<.*>/);
+  assert.match(
+    shaped,
+    /ShapedProps<.*\/components\/shaped\/props"\), typeof import\(".*\/components\/shaped\/handlers"\)>/,
+  );
+  assert.deepEqual(syntaxErrors(handler), []);
+
+  const plainDir = path.join(root, 'components', 'plain');
+  writeFileSync(path.join(plainDir, 'handlers.ts'), 'export const choose = ({ route }) => () => route.page;\n');
+  const plain = transform(
+    'components/plain/render.tsx',
+    'export default ({ handlers }) => <Button onPress={handlers.choose} />;\n',
+  ).text;
+  assert.match(plain, /RenderProps<\{ handlers: typeof import\(".*\/components\/plain\/handlers"\) \}>/);
+  rmSync(path.join(shapedDir, 'handlers.ts'));
+  rmSync(path.join(plainDir, 'handlers.ts'));
+});
+
+test('a handler event type must match the attribute that receives it', () => {
+  const dir = path.join(root, 'components', 'event-type');
+  mkdirSync(dir, { recursive: true });
+  const handlerFile = path.join(dir, 'handlers.ts');
+  const renderFile = path.join(dir, 'render.tsx');
+  const frameworkDir = path.join(root, 'node_modules', 'framework');
+  mkdirSync(frameworkDir, { recursive: true });
+  writeFileSync(
+    path.join(frameworkDir, 'index.d.ts'),
+    'export type Clients<T> = unknown;\nexport type ServiceTree<T> = unknown;\nexport type HandlerArgs<F, C, S> = {};\nexport type RenderProps<F> = F extends { handlers: infer H } ? { handlers: { [K in keyof H]: H[K] extends (given: never) => infer Fn ? Fn : never } } : {};\n',
+  );
+  const renderSource =
+    'declare namespace JSX { interface Element {} }\ndeclare function Button(props: { onPress: (value: string) => unknown }): JSX.Element;\nexport default ({ handlers }) => <Button onPress={handlers.choose} />;\n';
+  writeFileSync(renderFile, renderSource);
+  const check = (eventType) => {
+    const handlerSource = 'export const choose = ({}) => (value: ' + eventType + ') => value;\n';
+    writeFileSync(handlerFile, transform('components/event-type/handlers.ts', handlerSource).text);
+    writeFileSync(renderFile, transform('components/event-type/render.tsx', renderSource).text);
+    const program = ts.createProgram([handlerFile, renderFile], {
+      jsx: ts.JsxEmit.Preserve,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Node10,
+      noEmit: true,
+      skipLibCheck: true,
+      strict: true,
+      target: ts.ScriptTarget.ES2020,
+      types: [],
+    });
+    return ts
+      .getPreEmitDiagnostics(program)
+      .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
+  };
+  assert.ok(check('number').some((message) => message.includes('not assignable to type')));
+  assert.deepEqual(check('string'), []);
+});
+
 test('an i18n.ts is read as const, so each message is its literal text', () => {
   const dir = path.join(root, 'components', 'plain');
   const file = path.join(dir, 'i18n.ts');

@@ -51,6 +51,7 @@ A folder under `components/` with a `render` file and no `index` is a component.
 | `async.ts`                    | The default export is the read before the first render. Named exports are operations.                                                                                                                                                                             |
 | `state.ts`                    | The flow, as a statechart. `examples` says what each state needs on screen in the states gallery and in Storybook.                                                                                                                                                |
 | `form.ts`                     | `seed` (server data and the props to values) and `payload` (values to a request).                                                                                                                                                                                 |
+| `handlers.ts`                 | Named functions for the render's event attributes. Each takes the component's values and returns the event function under `handlers.<name>`.                                                                                                                      |
 | `placeholder.tsx`             | Shows while the view loads and reads. Adds a `Suspense`.                                                                                                                                                                                                          |
 | `error.tsx`                   | Shows when the view fails. Adds an error boundary around both. While it shows, a change of the route tries again, as "Try again" does: the address is the page's state, so a new one is a new question.                                                           |
 | `acl.ts`                      | Whether what the component offers may be done: a function of what `props.ts` gets, the route, and the backend's snapshot with what is inherited, returning a boolean. The component and everything below it get it as `acl.allowed`.                              |
@@ -69,6 +70,50 @@ What the framework guarantees about them:
 - **Every render of a component calls the same hooks.** Which hooks a component needs depends on its folder: whether a file reads the person, the snapshot, the flags or the keys, whether the view has a default read or a chart. Each of those is a choice between two hooks made once, when the component's type is created or its view has loaded, so no hook sits behind a condition and `eslint-plugin-react-hooks`' `rules-of-hooks` can check the runtime. One call remains that it cannot check: the route is read from its contexts on demand, as a file reads a field (`reading` in `runtime/root.tsx`), with `use`, the one hook React lets a render call behind a condition.
 - **An edit keeps the page, under the dev server.** Authors write `export default (props) => …`, which React's Fast Refresh does not take for a component, and a render is not one: it is called as a function. So the folder's module takes the edit itself. An edit to a file of the view (the render, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `acl.ts`, `shortcuts.ts`) shows in every instance on screen, which keeps what it holds: what was typed in its fields, its open dialog, its chart's state when the edited chart still has it. An edit to a skin changes its sheet. An edit that changes the hooks an instance calls (a default read or a chart, added or removed) mounts those instances again. An edit to `i18n.ts`, the placeholder or the error file mounts the folder's components again, with the page around them as it was. An edit that changes what the folder's files read, a file added or removed, and an edit outside the component folders reload the page.
 - **What a parent passes is checked** when the child's `props.ts` exports a type named `Props`: the plugin writes the folder's declaration from it. A folder without one takes any props.
+
+### The handlers layer
+
+Each named export of `handlers.ts` takes what it needs and returns the function the render gives to an event:
+
+```ts
+// handlers.ts
+export const startTour = ({ state }) => () => state.send({ type: 'start' });
+export const goTo = ({ state }) => ({ target: { value } }: React.ChangeEvent<HTMLSelectElement>) =>
+  state.send({ type: 'to', value });
+// render.tsx
+<Button onPress={handlers.startTour}>{i18n.start}</Button>;
+<select onChange={handlers.goTo} />;
+```
+
+A handler gets what `props.ts` gets: the props a parent passes, `className`, and the available `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags` and `keyboard` layers. It also gets `navigation`, `services` and `entity`, as a chart's functions do. The render gets one `handlers` object beside what `props.ts` returns, or beside the props and layers without a `props.ts`. Each named export is a function under its export name. The TypeScript plugin types the outer parameter and the render's `handlers` object. The name says what happens, and the type the author gives the returned function's parameter says which event it handles. TypeScript checks that event type where the render wires the function.
+
+The wiring is a hook the plugin writes from the file, one `useCallback` per export, as someone would write it by hand:
+
+```js
+// Generated for components/tour (framework-handlers:…/components/tour), shortened.
+export function useHandlers(given, scope) {
+  const state_send = given.state?.send;
+  // startTour reads state.send.
+  const startTour = useCallback(
+    (...event) =>
+      interact(sites.startTour, scope, event, () => {
+        const handle = exported.startTour({ state: { send: state_send } });
+        return handle(...event);
+      }),
+    [scope, state_send],
+  );
+  // …one per export
+  return useMemo(() => ({ startTour, leaveTour, goBack, goNext }), [startTour, leaveTour, goBack, goNext]);
+}
+```
+
+- **The dependencies are read from the source.** The plugin reads what each export's parameter destructures and how the function uses it. Of the framework's own objects (`state`, `form`, `async`, `acl`, `flags`, `route`) a handler depends on the members it reads: `state.send`, `acl.allowed`, `route.page`. Of everything else (a prop, `navigation`, `services`, `entity`, `i18n`, `intl`, `user`) it depends on the value as it is, since an object of the app's may need to stay whole. One of the framework's objects that is passed on, or read by a computed name (`flags[name]`), is a dependency whole, and the generated code says so in a comment.
+- **A handler gets only its dependencies.** Each is read into a local before the callback, and the export is called with an object built from those locals. So a handler cannot read a value that is not in its list, and React's `exhaustive-deps` rule accepts the lists as written.
+- **Handles where there are some.** `state.send`, `form.set`, `navigation` and `services` are the same for the instance's life, so a handler that reads only those is one function for that long. The form's values are read from its store when the handler runs (`form.values`, `form.unsaved`), as a chart's guards read them: typing renders nothing again and gives the handler no new function. A handler that reads what React holds (a prop, `acl.allowed`, a field of the route, `state.context`) is a new function when that changes, and the component follows it: what handlers read counts among what the view reads.
+- **A handler reads what its render had.** The hook runs at every render of the component, before anything is skipped, with what that render gives the folder's files. React keeps a callback with the render it commits, and drops one with a render it throws away, so the function on the page is always the one of the render on the page. Nothing is copied after a commit.
+- **Each callback is tracked where it is made.** It emits the interaction and reports a failure in the handler layer, with the export's place in `handlers.ts` as the site (`components/tour#handlers.startTour`). So in a folder with this layer, the plugin leaves an attribute given `handlers.<name>` as written; `track` wraps the others.
+
+A handler whose parameter is not destructured, or has a rest element, depends on everything it is given, and is a new function at every render: a convention error, as is an export that is not a function written in the file. A prop passed by a parent or returned by `props.ts` named `handlers` throws in development when the folder has this layer. A named export beginning `on` or `handle` followed by a capital letter is a convention error, as is an inline arrow or function expression in an `on…` JSX attribute. Folders without this layer may still use inline handlers during the migration. Other JSX functions, such as collection children and `className` callbacks, keep their existing rules.
 
 ### The i18n layer
 
@@ -328,6 +373,7 @@ Nobody writes them. The TypeScript plugin shows TypeScript each layer file with 
 | ---------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `render`               | the default export                          | what `props.ts` returns, or the props with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags`, `keyboard` |
 | `shortcuts`            | the default export, and what it returns     | what `props.ts` gets; keys whose `send` takes the chart's events                                                                                        |
+| `handlers`             | every named export                          | what `props.ts` gets, plus `navigation`, `services` and `entity`; returned functions reach the render under `handlers`                                  |
 | `props`, `acl`         | the default export                          | the file's own `Props`, with `className`, `async`, `state`, `form`, `i18n`, `intl`, `locale`, `user`, `acl`, `route`, `flags`                           |
 | `async`                | the default and every named export          | the injection, the route, a `signal`                                                                                                                    |
 | `state`                | the default export; every exported function | the injection with `acl`, `user`, `flags` and the locale; `context`, `event`, the route, the form…                                                      |
@@ -351,6 +397,9 @@ Every convention mistake that would otherwise fail silently, or far from its cau
 - a service `meta.ts` with no `index` beside it, and a client folder with no `index`;
 - JSX outside a component folder's `render.tsx`, `placeholder.tsx` or `error.tsx` under `components/`, `services/` or `clients/`, where the plugin would not track its handlers;
 - a second component in one of those files: JSX outside its default export, or an element whose tag is a component declared in the file.
+- an inline `on…` arrow or function expression in a `render.tsx` whose folder has `handlers.ts`: move it to that layer.
+- a `handlers.ts` export named for an event (`onPress`, `handleClick`): name it for what it does.
+- a `handlers.ts` export whose dependencies cannot be read: a parameter that is not destructured or has a rest element, or an export that is not a function written in the file. Write `({ state }) => (event) => …`.
 - an `i18n.ts` whose default export is not an object literal of strings, functions and objects of them, so its messages cannot be read without running it, and a message that is not valid ICU;
 - a translation that misses a message, names one `i18n.ts` does not have, translates a function, or loses or adds an argument or a tag (`"components/catalogue/paging/page" loses {pages}`), and translations in a folder with no `i18n.ts`.
 

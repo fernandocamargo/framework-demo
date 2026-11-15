@@ -19,6 +19,7 @@ const JOBS: Record<string, string> = {
   async: 'What it reads before it shows (the default export), and the operations it may run.',
   error: 'What shows when it fails, with a way to try again.',
   form: 'Its fields: server data in, a request out, and what is wrong with them.',
+  handlers: 'The functions its render gives to events, each given what it reads.',
   i18n: 'Its words, in English. Translations sit beside it, checked key by key.',
   module: 'A helper of the folder.',
   placeholder: 'What shows while it waits for its view, its skin or its read.',

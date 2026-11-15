@@ -27,7 +27,18 @@ const path = require('node:path');
 
 const folders = require('../shared/folders.cjs');
 
-const LAYERS = new Set(['render', 'props', 'async', 'placeholder', 'error', 'state', 'i18n', 'acl', 'shortcuts']);
+const LAYERS = new Set([
+  'render',
+  'props',
+  'async',
+  'placeholder',
+  'error',
+  'state',
+  'handlers',
+  'i18n',
+  'acl',
+  'shortcuts',
+]);
 
 /**
  * @param {typeof import('typescript')} ts
@@ -105,14 +116,17 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
     const { clients, services } = trees();
     switch (found.name) {
       case 'acl':
-      case 'props':
+      case 'handlers':
       // acl.ts gets what props.ts gets, with the route and the `acl` inherited from above.
+      case 'props':
       case 'render':
       // shortcuts.ts gets what props.ts gets too.
       case 'shortcuts': {
         // With a props.ts, the render gets what it returns; props.ts gets what the render would have.
         const shaping = folders.findLayer(found.dir, 'props');
-        if (found.name === 'render' && shaping) return `${types}.ShapedProps<${moduleType(shaping)}>`;
+        const handlers = folders.findLayer(found.dir, 'handlers');
+        if (found.name === 'render' && shaping)
+          return `${types}.ShapedProps<${moduleType(shaping)}${handlers ? `, ${moduleType(handlers)}` : ''}>`;
         const layers = [];
         const async = folders.findLayer(found.dir, 'async');
         const state = folders.findLayer(found.dir, 'state');
@@ -124,12 +138,16 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
             `events: ${exportsEvents(state) ? `${typeImport(state)}.Events` : 'object'}`,
           );
         if (form) layers.push(`form: ${moduleType(form)}`);
+        if (found.name === 'render' && handlers) layers.push(`handlers: ${moduleType(handlers)}`);
         const i18n = folders.findLayer(found.dir, 'i18n');
         if (i18n) layers.push(`i18n: ${moduleType(i18n)}`);
         // What a parent passes, when props.ts states it (`export type Props`).
         const passed = folders.declaredProps(found.dir);
         if (passed) layers.push(`passed: ${typeImport(passed)}.Props`);
-        return `${types}.RenderProps<{ ${layers.join('; ')} }>`;
+        const folder = `{ ${layers.join('; ')} }`;
+        return found.name === 'handlers'
+          ? `${types}.HandlerArgs<${folder}, ${clients}, ${services}>`
+          : `${types}.RenderProps<${folder}>`;
       }
       case 'async':
         return `${types}.AsyncInjection<${clients}, ${services}>`;
@@ -257,7 +275,7 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
       const found = kind(fileName);
       if (!found) return '';
       const layers = found.dir
-        ? ['props', 'async', 'state', 'form', 'i18n', 'acl']
+        ? ['props', 'async', 'state', 'form', 'handlers', 'i18n', 'acl']
             .map((name) => folders.findLayer(found.dir, name) ?? '')
             .join(',')
         : '';
@@ -271,7 +289,8 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
     transform(fileName, text) {
       const found = kind(fileName);
       if (!found) return { insertions: [], text };
-      const named = found.name === 'async' || found.name === 'service' || found.name === 'state';
+      const named =
+        found.name === 'async' || found.name === 'service' || found.name === 'state' || found.name === 'handlers';
       const found_points = (
         found.name === 'i18n'
           ? constPoints(text, fileName)

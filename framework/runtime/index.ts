@@ -57,7 +57,7 @@ export {
 export { Root, type RootProps } from './root';
 export type { Keyboard } from './shortcuts';
 export { css, selector } from './style';
-export { keep, track } from './track';
+export { interact, keep, track } from './track';
 export type {
   Access,
   AsyncInjection,
@@ -68,6 +68,8 @@ export type {
   Clients,
   ErrorProps,
   FormProps,
+  HandlerArgs,
+  HandlerProps,
   Injection,
   Language,
   Operation,

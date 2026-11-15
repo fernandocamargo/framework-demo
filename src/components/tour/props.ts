@@ -21,7 +21,6 @@ export default ({ i18n, state }) => {
     next: current === 'finished' ? i18n.finish : i18n.next,
     open: !state.closed,
     progress: i18n.progress({ count: STEPS.length, index }),
-    send: state.send,
     text: current === 'flag' && remote ? i18n.remote : (step?.text ?? ''),
     title: step?.title ?? '',
   };

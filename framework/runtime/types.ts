@@ -310,7 +310,20 @@ export type StateProps<Module, Payloads = object> = Shown<
 type Passed = { [prop: string]: unknown; children?: ReactNode };
 
 /** A component folder's layers, as the TypeScript plugin passes them to `RenderProps`. */
-type Layers = { async?: unknown; events?: unknown; form?: unknown; i18n?: unknown; passed?: unknown; state?: unknown };
+type Layers = {
+  async?: unknown;
+  events?: unknown;
+  form?: unknown;
+  handlers?: unknown;
+  i18n?: unknown;
+  passed?: unknown;
+  state?: unknown;
+};
+
+/** Each named handler export reaches the render as the function it returns. */
+export type HandlerProps<Module> = Shown<{
+  [Name in Exclude<keyof Module, 'default'>]: Created<Module[Name]>;
+}>;
 
 /**
  * What a render receives: the props (as `props.ts` states them with `export type Props`, when it
@@ -321,6 +334,7 @@ export type RenderProps<Folder extends Layers = Layers> = ('async' extends keyof
   ? { async: AsyncProps<Folder['async']> }
   : unknown) &
   ('form' extends keyof Folder ? { form: FormProps<Folder['form']> } : unknown) &
+  ('handlers' extends keyof Folder ? { handlers: HandlerProps<Folder['handlers']> } : unknown) &
   ('passed' extends keyof Folder ? Folder['passed'] : Passed) &
   ('state' extends keyof Folder ? { state: StateProps<Folder['state'], Folder['events']> } : unknown) &
   Access &
@@ -329,6 +343,14 @@ export type RenderProps<Folder extends Layers = Layers> = ('async' extends keyof
     keyboard: Keyboard;
     route: Route;
   };
+
+/** What each named export of handlers.ts receives when an event calls it. */
+export type HandlerArgs<Folder extends Layers = Layers, Clients = Tree, Services = Tree> = Pick<
+  Injection<Clients, Services>,
+  'entity' | 'services'
+> &
+  Pick<Sources, 'navigation'> &
+  RenderProps<Folder>;
 
 /**
  * One key of a `shortcuts.ts`: what it says, and what it does. `send` takes the chart's events, so
@@ -356,9 +378,12 @@ export type Shortcuts<StateModule = undefined> = Record<
  * and the `className`. `props.ts` receives what the render would have (`RenderProps`) and shapes
  * it, so the render only interpolates flags and markup.
  */
-export type ShapedProps<Module> = Module extends { default: (...args: never[]) => infer Shaped }
-  ? Shaped & { className: string }
-  : { className: string };
+export type ShapedProps<Module, Handlers = undefined> = ([Handlers] extends [undefined]
+  ? unknown
+  : { handlers: HandlerProps<Handlers> }) &
+  (Module extends { default: (...args: never[]) => infer Shaped }
+    ? Shaped & { className: string }
+    : { className: string });
 
 /** What a placeholder receives: the component's props and its `className`, and the folder's messages when it has an `i18n.ts`. */
 export type PlaceholderProps<I18nModule = undefined> = ([I18nModule] extends [undefined]

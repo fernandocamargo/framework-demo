@@ -9,6 +9,10 @@
  * only new props are its handlers' closures is the same element as before, and React skips it
  * (elements.ts). A render React throws away never reaches a handler. Outside an instance (a
  * placeholder, an error file), one wrapper per site, handler and key.
+ *
+ * A folder with a handlers.ts needs none of that for the handlers it wires as `handlers.<name>`:
+ * each is a `useCallback` of the hook the plugin writes, which calls `interact` itself. The plugin
+ * leaves those attributes as written.
  */
 
 import { currentRoute, type Interaction, nextId, pipeline, report, type Scope, type Site } from './pipeline';
@@ -59,39 +63,50 @@ export function commitHandlers(scope: Scope) {
   entered.clear();
 }
 
+/**
+ * Runs one interaction: emits it, then runs `run` with it as the active one, and reports a
+ * failure, thrown or rejected, in the handler layer with the site's tags. Whoever calls it says
+ * which instance it is in (`scope`): the wrappers below, and the hook the plugin writes from a
+ * folder's handlers.ts, whose callbacks call it themselves.
+ */
+export function interact<T>(site: Site, scope: null | Scope, args: readonly unknown[], run: () => T, key?: unknown): T {
+  const first = args[0];
+  const interaction: Interaction = {
+    id: nextId(),
+    kind: 'interaction',
+    ...(active ? { cause: active.id } : {}),
+    chain: chainOf(scope),
+    name: `${site.path}#${site.element}.${site.prop}`,
+    site,
+    ...(key === undefined ? {} : { key }),
+    ...(first && typeof first === 'object' && 'nativeEvent' in first
+      ? { type: String((first as unknown as { type: unknown }).type) }
+      : {}),
+    at: performance.now(),
+    route: currentRoute(),
+  };
+  pipeline.emit(interaction);
+  const previous = active;
+  active = interaction;
+  const tags = { chain: interaction.chain, during: site.id, layer: 'handler' as const, path: site.path, site };
+  try {
+    const result = run();
+    const pending = result as undefined | { then?: unknown };
+    if (pending && typeof pending.then === 'function') {
+      (pending as Promise<unknown>).then(undefined, (error: unknown) => report(error, tags));
+    }
+    return result;
+  } catch (error) {
+    report(error, tags);
+    throw error;
+  } finally {
+    active = previous;
+  }
+}
+
 function wrap(handlerOf: () => Handler, site: Site, scope: null | Scope, key: unknown): Handler {
   return function tracked(this: unknown, ...args: unknown[]) {
-    const first = args[0];
-    const interaction: Interaction = {
-      id: nextId(),
-      kind: 'interaction',
-      ...(active ? { cause: active.id } : {}),
-      chain: chainOf(scope),
-      name: `${site.path}#${site.element}.${site.prop}`,
-      site,
-      ...(key === undefined ? {} : { key }),
-      ...(first && typeof first === 'object' && 'nativeEvent' in first
-        ? { type: String((first as unknown as { type: unknown }).type) }
-        : {}),
-      at: performance.now(),
-      route: currentRoute(),
-    };
-    pipeline.emit(interaction);
-    const previous = active;
-    active = interaction;
-    const tags = { chain: interaction.chain, during: site.id, layer: 'handler' as const, path: site.path, site };
-    try {
-      const result = handlerOf().apply(this, args);
-      if (result && typeof (result as Promise<unknown>).then === 'function') {
-        (result as Promise<unknown>).then(undefined, (error: unknown) => report(error, tags));
-      }
-      return result;
-    } catch (error) {
-      report(error, tags);
-      throw error;
-    } finally {
-      active = previous;
-    }
+    return interact(site, scope, args, () => handlerOf().apply(this, args), key);
   };
 }
 

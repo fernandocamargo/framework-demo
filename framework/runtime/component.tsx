@@ -66,6 +66,13 @@ type ViewModule = {
   /** The components the render shows, from the plugin: their loads start when this view has loaded. */
   children?: readonly { preload?: () => void }[];
   form: FormModule | undefined;
+  /**
+   * `handlers.ts`, as the plugin wrote it into a hook: one `useCallback` per export, each given
+   * what its export reads. `route` says how they read the route: some of its fields, or all of it.
+   * `shape` names the hook's callbacks and their dependencies: another shape is other hooks.
+   */
+  handlers?:
+    undefined | { route?: 'fields' | 'whole'; shape: string; useHandlers: (given: Props, scope: Scope) => Props };
   /** `props.ts`: what the render would get, shaped into what it gets. */
   props: undefined | { default?: unknown };
   render: (props: Props) => ReactNode;
@@ -295,9 +302,12 @@ export function component(spec: Spec) {
   // And one chosen when the view has loaded: whether it has a default read. A view with none has
   // no query: a stand-in would cost every such component a subscription.
   let useAnswer: (query: null | Read) => unknown = useNothing;
+  // And whether it has a handlers.ts: then the hook the plugin wrote from it.
+  let useHandlers: (given: Props, scope: Scope) => Props | undefined = useNothing;
   /** What follows from a view's files, taken when it has loaded. */
   const taken = (module: ViewModule) => {
     useAnswer = typeof module.async?.default === 'function' ? useAnswerOf : useNothing;
+    useHandlers = module.handlers?.useHandlers ?? useNothing;
     for (const child of module.children ?? []) child.preload?.();
     return module;
   };
@@ -612,6 +622,16 @@ export function component(spec: Spec) {
     return decide(rule, { ...given, acl: access.view(allowedOn(access.snapshot, access.inherited)) });
   }
 
+  /** What props.ts gets in this render, with this render's decision on it. */
+  function worked(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, decided?: boolean) {
+    const { access, module } = layers;
+    const className = classes(spec.path, props.className);
+    const given = givenOf(props, layers, state, className);
+    const allowed = decided ?? decisionOf(module, given, access);
+    const shaping = readsAcl ? { ...given, acl: access.view(allowedOn(access.snapshot, allowed)) } : given;
+    return { allowed, className, shaping };
+  }
+
   /**
    * Calls the render as a plain function, inside the component instance's scope. A render and its
    * props.ts are pure functions of what they get, with no hooks, so a render that would get what
@@ -650,12 +670,37 @@ export function component(spec: Spec) {
       if (next?.keys) registered.current = next.keys;
     });
     useShortcuts(spec.path, scope, registered);
+    // A folder with a handlers.ts: the hook the plugin wrote from it holds one `useCallback` per
+    // export, whose dependencies are what the export reads. It reads them from what this render
+    // gives the folder's files, so that is worked out first, at every render, and the callbacks are
+    // this render's: React keeps them with the render it commits, and drops them with one it
+    // throws away. A handler gets what props.ts gets, and handles to what lives outside React: the
+    // form's store (read when the handler runs), the navigation, the services and the entity. The
+    // route is the one being rendered: the fields the handlers read, each from its own context, so
+    // the component follows those; or all of it, for a handler that takes it whole.
+    const wiring = module.handlers;
+    const first = wiring ? during(rendering, () => worked(props, layers, state, decided)) : undefined;
+    const handlers = useHandlers(
+      first && wiring
+        ? {
+            ...first.shaping,
+            ...(module.form ? { form: layers.withForm.form } : {}),
+            ...(wiring.route
+              ? { route: wiring.route === 'whole' ? use(RouteContext) : renderingRoute(layers.fields) }
+              : {}),
+            entity: layers.sources.entity,
+            navigation: layers.sources.navigation,
+            services: layers.injection.services,
+          }
+        : props,
+      scope,
+    );
     // What the files read while the render runs is this render's (`during`).
     const element = during(rendering, () => {
       // Other files (an edit under the dev server) are another render: nothing before compares with it.
       const from = (known: null | Shown) => (known?.module === module ? known : null);
       const before = from(last.current);
-      const inputs = [scope, async, state, form, language, access, decided];
+      const inputs = [scope, async, state, form, language, access, decided, handlers];
       const again = [before, from(tried.current)].find(
         (known) => known && sameEach(known.inputs, inputs) && sameProps(known.props, props),
       );
@@ -665,19 +710,20 @@ export function component(spec: Spec) {
         if (again !== before) next = again;
         return again.element;
       }
-      const className = classes(spec.path, props.className);
-      const given = givenOf(props, layers, state, className);
-      const allowed = decided ?? decisionOf(module, given, access);
+      const { allowed, className, shaping } = first ?? worked(props, layers, state, decided);
       judged.current = allowed;
       showing = allowed;
-      const shaping = readsAcl ? { ...given, acl: access.view(allowedOn(access.snapshot, allowed)) } : given;
       // shortcuts.ts gets what props.ts gets. Its keys follow the state even when the render is skipped.
       const keys = module.shortcuts
         ? shortcutsOf(spec.path, module.shortcuts, shaping, state as never, scope, module.shortcutSites)
         : undefined;
       const output = shape(module, shaping, className);
+      if (handlers && import.meta.env.DEV && (Object.hasOwn(props, 'handlers') || Object.hasOwn(output, 'handlers')))
+        throw new Error(`${spec.path}: handlers is reserved for handlers.ts`);
       // The framework's own comparison reads every key; it records none.
-      const shaped = untracked(() => shareByIdentity(before?.shaped, output)) as Props;
+      const shaped = untracked(() =>
+        shareByIdentity(before?.shaped, handlers ? { ...output, handlers } : output),
+      ) as Props;
       if (before && shaped === before.shaped && allowed === before.allowed) {
         next = { ...before, inputs, keys, props };
         return before.element;
@@ -781,7 +827,10 @@ export function component(spec: Spec) {
     const module = use(loadView());
     const Chosen = module.state ? StatefulView : StatelessView;
     // The key says which hooks the view calls, so an edit that changes them mounts it again.
-    return createElement(Chosen, HOT ? { ...props, key: useAnswer === useAnswerOf ? 'read' : 'none' } : props);
+    return createElement(
+      Chosen,
+      HOT ? { ...props, key: `${useAnswer === useAnswerOf ? 'read' : 'none'} ${module.handlers?.shape ?? ''}` } : props,
+    );
   }
   View.displayName = spec.path;
 

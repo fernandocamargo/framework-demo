@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { after, before, test } = require('node:test');
 
-const { declaredProps, problems } = require('./folders.cjs');
+const { declaredProps, problems, readsOf } = require('./folders.cjs');
 
 let root;
 const write = (relative, text) => {
@@ -99,4 +99,73 @@ test('a props file that exports a type named Props states what a parent passes',
   assert.equal(declaredProps(path.join(root, 'components/typed')), path.join(root, 'components/typed/props.ts'));
   assert.equal(declaredProps(path.join(root, 'components/untyped')), null);
   assert.equal(declaredProps(path.join(root, 'components/clean')), null);
+});
+
+test('inline event functions move to handlers.ts only in folders that have that layer', () => {
+  write('components/with-handlers/handlers.ts', 'export const press = () => () => {};\n');
+  write(
+    'components/with-handlers/render.tsx',
+    'export default () => <><Button onPress={() => {}} onClick={function () {}} className={() => "x"} /></>;\n',
+  );
+  write('components/without-handlers/render.tsx', 'export default () => <Button onPress={() => {}} />;\n');
+  const found = about('components/with-handlers');
+  assert.equal(found.length, 2);
+  assert.deepEqual(
+    found.map((problem) => problem.file),
+    ['components/with-handlers/render.tsx:1', 'components/with-handlers/render.tsx:1'],
+  );
+  assert.ok(found.every((problem) => problem.message.includes('handlers.ts')));
+  assert.deepEqual(about('components/without-handlers'), []);
+});
+
+test('named handlers count as reads even when props.ts shapes the render', () => {
+  write('components/handler-reads/render.tsx', 'export default ({ press }) => <Button onPress={press} />;\n');
+  write('components/handler-reads/props.ts', 'export default () => ({ label: "Press" });\n');
+  write('components/handler-reads/handlers.ts', 'export const press = ({ user, route }) => () => [user, route];\n');
+  const reads = readsOf(root, path.join(root, 'components/handler-reads'));
+  assert.deepEqual(reads.byLayer.handlers, ['user', 'route']);
+  assert.deepEqual(reads.names.handlers, ['route', 'user']);
+});
+
+test('handler exports name the action, not the event', () => {
+  write('components/handler-names/render.tsx', 'export default () => <p />;\n');
+  write(
+    'components/handler-names/handlers.ts',
+    'export const onPress = () => () => {};\nexport function handleClick() { return () => {}; }\nconst move = () => () => {};\nexport { move as onChange };\nexport const goTo = () => () => {};\n',
+  );
+  const found = about('components/handler-names');
+  assert.deepEqual(
+    found.map((problem) => problem.file),
+    [
+      'components/handler-names/handlers.ts:1',
+      'components/handler-names/handlers.ts:2',
+      'components/handler-names/handlers.ts:4',
+    ],
+  );
+  assert.ok(found.every((problem) => problem.message.includes('name it for what it does')));
+});
+
+test('a handler whose dependencies cannot be read is named, with what to write', () => {
+  write('components/handler-reads-all/render.tsx', 'export default () => <p />;\n');
+  write(
+    'components/handler-reads-all/handlers.ts',
+    [
+      'export const passOn = (given) => () => given.state.send({ type: "go" });',
+      'export const rest = ({ state, ...others }) => () => others;',
+      'export const made = make("next");',
+      'export { other } from "./other";',
+      'export const fine = ({ state: { send } }) => () => send({ type: "go" });',
+      'export const none = () => () => {};',
+      '',
+    ].join('\n'),
+  );
+  const found = about('components/handler-reads-all');
+  assert.deepEqual(
+    found.map((problem) => problem.file),
+    [1, 2, 3, 4].map((line) => `components/handler-reads-all/handlers.ts:${line}`),
+  );
+  assert.match(found[0].message, /handler passOn takes a parameter that is not destructured/);
+  assert.match(found[1].message, /handler rest takes the rest of what it is given/);
+  assert.match(found[2].message, /handler made is not a function written in this file/);
+  assert.ok(found.every((problem) => problem.message.includes('destructuring what it uses')));
 });

@@ -133,7 +133,19 @@ function listSkins(dir) {
     .filter((skin) => skin.file);
 }
 
-const LAYER_NAMES = ['render', 'props', 'async', 'state', 'form', 'placeholder', 'error', 'i18n', 'acl', 'shortcuts'];
+const LAYER_NAMES = [
+  'render',
+  'props',
+  'async',
+  'state',
+  'form',
+  'handlers',
+  'placeholder',
+  'error',
+  'i18n',
+  'acl',
+  'shortcuts',
+];
 /** The layer files that render, where the Vite plugin tracks every `on…` handler. */
 const RENDERING_LAYERS = ['render', 'placeholder', 'error'];
 const JSX_FILE = /\.[jt]sx$/;
@@ -219,6 +231,124 @@ function secondComponents(root, file) {
   return found;
 }
 
+/** Inline event handlers in a render whose folder has a handlers.ts. */
+function inlineHandlers(root, file) {
+  const ts = typescriptFor(root);
+  const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const found = [];
+  const visit = (node) => {
+    if (
+      ts.isJsxAttribute(node) &&
+      /^on[A-Z]/.test(node.name.text) &&
+      node.initializer &&
+      ts.isJsxExpression(node.initializer)
+    ) {
+      let expression = node.initializer.expression;
+      while (
+        expression &&
+        (ts.isParenthesizedExpression(expression) ||
+          ts.isAsExpression(expression) ||
+          ts.isSatisfiesExpression(expression))
+      )
+        expression = expression.expression;
+      if (expression && (ts.isArrowFunction(expression) || ts.isFunctionExpression(expression)))
+        found.push(source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
+/** Named handler exports should say what happens, not which event calls them. */
+function eventNamedHandlers(root, file) {
+  const ts = typescriptFor(root);
+  const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+  const found = [];
+  const check = (name, node) => {
+    if (/^(?:on|handle)[A-Z]/.test(name))
+      found.push({ line: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1, name });
+  };
+  for (const statement of source.statements) {
+    const exported =
+      ts.canHaveModifiers(statement) &&
+      (ts.getModifiers(statement) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
+    if (exported && ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations)
+        if (ts.isIdentifier(declaration.name)) check(declaration.name.text, declaration.name);
+    } else if (exported && ts.isFunctionDeclaration(statement) && statement.name)
+      check(statement.name.text, statement.name);
+    else if (
+      ts.isExportDeclaration(statement) &&
+      !statement.isTypeOnly &&
+      statement.exportClause &&
+      ts.isNamedExports(statement.exportClause)
+    )
+      for (const element of statement.exportClause.elements)
+        if (!element.isTypeOnly) check(element.name.text, element.name);
+  }
+  return found;
+}
+
+/**
+ * Handler exports whose dependencies cannot be read from their source, so the handler depends on
+ * everything it is given and is a new function at every render: one whose parameter is not
+ * destructured or has a rest element, and one that is not a function written in the file.
+ */
+function unreadableHandlers(root, file) {
+  const ts = typescriptFor(root);
+  const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+  const found = [];
+  const line = (node) => source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
+  const unwrap = (node) => {
+    while (node && (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node)))
+      node = node.expression;
+    return node;
+  };
+  const check = (name, fn, node) => {
+    if (!fn || !(ts.isArrowFunction(fn) || ts.isFunctionExpression(fn) || ts.isFunctionDeclaration(fn)))
+      return void found.push({ line: line(node), name, why: 'is not a function written in this file' });
+    const parameter = fn.parameters[0];
+    if (!parameter) return;
+    if (!ts.isObjectBindingPattern(parameter.name))
+      found.push({ line: line(node), name, why: 'takes a parameter that is not destructured' });
+    else if (parameter.name.elements.some((element) => element.dotDotDotToken))
+      found.push({ line: line(node), name, why: 'takes the rest of what it is given (`...`)' });
+  };
+  const declared = new Map();
+  for (const statement of source.statements) {
+    if (ts.isVariableStatement(statement))
+      for (const declaration of statement.declarationList.declarations)
+        if (ts.isIdentifier(declaration.name)) declared.set(declaration.name.text, unwrap(declaration.initializer));
+    if (ts.isFunctionDeclaration(statement) && statement.name) declared.set(statement.name.text, statement);
+  }
+  for (const statement of source.statements) {
+    const exported =
+      ts.canHaveModifiers(statement) &&
+      (ts.getModifiers(statement) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
+    if (exported && ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations)
+        if (ts.isIdentifier(declaration.name))
+          check(declaration.name.text, declared.get(declaration.name.text), declaration.name);
+    } else if (exported && ts.isFunctionDeclaration(statement) && statement.name)
+      check(statement.name.text, statement, statement.name);
+    else if (
+      ts.isExportDeclaration(statement) &&
+      !statement.isTypeOnly &&
+      statement.exportClause &&
+      ts.isNamedExports(statement.exportClause)
+    )
+      for (const element of statement.exportClause.elements)
+        if (!element.isTypeOnly && element.name.text !== 'default')
+          check(
+            element.name.text,
+            statement.moduleSpecifier ? undefined : declared.get((element.propertyName ?? element.name).text),
+            element.name,
+          );
+  }
+  return found;
+}
+
 /**
  * What the framework may give a component beyond its props and its own layers. Each is read by
  * the component only when one of its files asks for it (`readsOf`), so a change of locale, of
@@ -247,7 +377,7 @@ function readsOf(root, dir) {
   let read;
   let named;
   const shaped = Boolean(findLayer(dir, 'props'));
-  const files = ['props', 'async', 'state', 'acl', 'shortcuts', ...(shaped ? [] : ['render'])];
+  const files = ['props', 'async', 'state', 'acl', 'handlers', 'shortcuts', ...(shaped ? [] : ['render'])];
   const exported = (node) =>
     ts.canHaveModifiers(node) &&
     (ts.getModifiers(node) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
@@ -280,7 +410,7 @@ function readsOf(root, dir) {
     if (!file) continue;
     read = new Set();
     named = new Set();
-    const callsNamed = layer === 'async' || layer === 'state';
+    const callsNamed = layer === 'async' || layer === 'state' || layer === 'handlers';
     const source = ts.createSourceFile(
       file,
       readFileSync(file, 'utf8'),
@@ -524,6 +654,19 @@ function problems(root) {
         file: relative(dir),
         message: `has ${layers.map((name) => `${name}.*`).join(', ')} but no render.tsx, so it is not a component`,
       });
+    const handlers = findLayer(dir, 'handlers');
+    if (handlers)
+      for (const { line, name } of eventNamedHandlers(root, handlers))
+        found.push({
+          file: `${relative(handlers)}:${line}`,
+          message: `handler ${name} names an event: name it for what it does`,
+        });
+    if (handlers)
+      for (const { line, name, why } of unreadableHandlers(root, handlers))
+        found.push({
+          file: `${relative(handlers)}:${line}`,
+          message: `handler ${name} ${why}, so what it reads cannot be told and it is a new function at every render: write it as \`({ state }) => (event) => …\`, destructuring what it uses`,
+        });
     if (isComponentFolder(root, dir)) found.push(...i18nProblems(root, dir));
   });
 
@@ -571,6 +714,12 @@ function problems(root) {
         file: `${relative(file)}:${line}`,
         message: `holds a second component, ${what}: one component per file, so give it a folder of its own, with a render.tsx`,
       });
+    if (stripExtension(path.basename(file)) === 'render' && findLayer(path.dirname(file), 'handlers'))
+      for (const line of inlineHandlers(root, file))
+        found.push({
+          file: `${relative(file)}:${line}`,
+          message: 'has an inline on… function: put the handler in handlers.ts',
+        });
   }
   return found;
 }
