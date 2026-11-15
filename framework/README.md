@@ -113,7 +113,7 @@ export function useHandlers(given, scope) {
 - **A handler reads what its render had.** The hook runs at every render of the component, before anything is skipped, with what that render gives the folder's files. React keeps a callback with the render it commits, and drops one with a render it throws away, so the function on the page is always the one of the render on the page. Nothing is copied after a commit.
 - **Each callback is tracked where it is made.** It emits the interaction and reports a failure in the handler layer, with the export's place in `handlers.ts` as the site (`components/tour#handlers.startTour`). So in a folder with this layer, the plugin leaves an attribute given `handlers.<name>` as written; `track` wraps the others.
 
-A handler whose parameter is not destructured, or has a rest element, depends on everything it is given, and is a new function at every render: a convention error, as is an export that is not a function written in the file. A prop passed by a parent or returned by `props.ts` named `handlers` throws in development when the folder has this layer. A named export beginning `on` or `handle` followed by a capital letter is a convention error, as is an inline arrow or function expression in an `on…` JSX attribute. Folders without this layer may still use inline handlers during the migration. Other JSX functions, such as collection children and `className` callbacks, keep their existing rules.
+A handler whose parameter is not destructured, or has a rest element, depends on everything it is given, and is a new function at every render: a convention error, as is an export that is not a function written in the file. A prop passed by a parent or returned by `props.ts` named `handlers` throws in development when the folder has this layer. A named export beginning `on` or `handle` followed by a capital letter is a convention error, as is an inline arrow or function expression in an `on…` JSX attribute. Every render follows it: an event's function is always a handler of its folder. Other JSX functions, such as collection children and `className` callbacks, keep their existing rules.
 
 ### The i18n layer
 
@@ -397,7 +397,7 @@ Every convention mistake that would otherwise fail silently, or far from its cau
 - a service `meta.ts` with no `index` beside it, and a client folder with no `index`;
 - JSX outside a component folder's `render.tsx`, `placeholder.tsx` or `error.tsx` under `components/`, `services/` or `clients/`, where the plugin would not track its handlers;
 - a second component in one of those files: JSX outside its default export, or an element whose tag is a component declared in the file.
-- an inline `on…` arrow or function expression in a `render.tsx` whose folder has `handlers.ts`: move it to that layer.
+- an inline `on…` arrow or function expression in a `render.tsx`: move it to the folder's `handlers.ts`.
 - a `handlers.ts` export named for an event (`onPress`, `handleClick`): name it for what it does.
 - a `handlers.ts` export whose dependencies cannot be read: a parameter that is not destructured or has a rest element, or an export that is not a function written in the file. Write `({ state }) => (event) => …`.
 - an `i18n.ts` whose default export is not an object literal of strings, functions and objects of them, so its messages cannot be read without running it, and a message that is not valid ICU;

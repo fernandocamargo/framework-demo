@@ -101,7 +101,7 @@ test('a props file that exports a type named Props states what a parent passes',
   assert.equal(declaredProps(path.join(root, 'components/clean')), null);
 });
 
-test('inline event functions move to handlers.ts only in folders that have that layer', () => {
+test('an inline event function in any render is a mistake: it belongs in handlers.ts', () => {
   write('components/with-handlers/handlers.ts', 'export const press = () => () => {};\n');
   write(
     'components/with-handlers/render.tsx',
@@ -115,7 +115,9 @@ test('inline event functions move to handlers.ts only in folders that have that 
     ['components/with-handlers/render.tsx:1', 'components/with-handlers/render.tsx:1'],
   );
   assert.ok(found.every((problem) => problem.message.includes('handlers.ts')));
-  assert.deepEqual(about('components/without-handlers'), []);
+  const without = about('components/without-handlers');
+  assert.equal(without.length, 1);
+  assert.ok(without[0].message.includes('handlers.ts'));
 });
 
 test('named handlers count as reads even when props.ts shapes the render', () => {

@@ -231,7 +231,7 @@ function secondComponents(root, file) {
   return found;
 }
 
-/** Inline event handlers in a render whose folder has a handlers.ts. */
+/** Inline event handlers in a render: every event a render wires is a handler of its folder's handlers.ts. */
 function inlineHandlers(root, file) {
   const ts = typescriptFor(root);
   const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -714,7 +714,7 @@ function problems(root) {
         file: `${relative(file)}:${line}`,
         message: `holds a second component, ${what}: one component per file, so give it a folder of its own, with a render.tsx`,
       });
-    if (stripExtension(path.basename(file)) === 'render' && findLayer(path.dirname(file), 'handlers'))
+    if (stripExtension(path.basename(file)) === 'render')
       for (const line of inlineHandlers(root, file))
         found.push({
           file: `${relative(file)}:${line}`,
