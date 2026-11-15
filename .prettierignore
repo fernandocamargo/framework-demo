@@ -4,3 +4,5 @@ package-lock.json
 public/explainer/
 # Written by framework/microdata/write-vocabulary.mjs, on one line.
 framework/microdata/vocabulary.json
+# Written by ESLint (`--suppress-all`, `--prune-suppressions`), in its own layout.
+eslint-suppressions.json

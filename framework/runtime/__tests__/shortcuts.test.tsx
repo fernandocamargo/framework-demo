@@ -276,3 +276,35 @@ test('of two instances of a folder, a listed key runs the last shown, as pressin
   await act(async () => run());
   expect(who).not.toHaveBeenCalled();
 });
+
+test('two Roots on a page each keep their own keys: one leaving takes only its own', async () => {
+  const root = (name: string) =>
+    createElement(
+      Root,
+      { client: createQueryClient(), entity },
+      createElement('div', null, createElement(Named, { name }), createElement(Runner)),
+    );
+  let first: ReturnType<typeof render> | undefined;
+  let second: ReturnType<typeof render> | undefined;
+  await act(async () => {
+    first = render(root('first'));
+    second = render(root('second'));
+  });
+  await settle();
+  const run = listed!.groups.find((group) => group.path === 'components/named')!.shortcuts[0]!.run;
+  who.mockClear();
+
+  await act(async () => run());
+  expect(who).toHaveBeenLastCalledWith('second');
+
+  await act(async () => second!.unmount());
+  await settle();
+  await act(async () => run());
+  expect(who).toHaveBeenLastCalledWith('first');
+
+  who.mockClear();
+  await act(async () => first!.unmount());
+  await settle();
+  await act(async () => run());
+  expect(who).not.toHaveBeenCalled();
+});

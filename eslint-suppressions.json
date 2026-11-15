@@ -1,0 +1,50 @@
+{
+  "framework/runtime/activity.ts": {
+    "react-hooks/refs": {
+      "count": 3
+    }
+  },
+  "framework/runtime/async.ts": {
+    "react-hooks/refs": {
+      "count": 3
+    }
+  },
+  "framework/runtime/component.tsx": {
+    "react-hooks/immutability": {
+      "count": 7
+    },
+    "react-hooks/refs": {
+      "count": 19
+    }
+  },
+  "framework/runtime/form.ts": {
+    "react-hooks/immutability": {
+      "count": 5
+    },
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "framework/runtime/machine.ts": {
+    "react-hooks/immutability": {
+      "count": 3
+    },
+    "react-hooks/refs": {
+      "count": 9
+    }
+  },
+  "framework/runtime/root.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 3
+    },
+    "react-hooks/refs": {
+      "count": 2
+    },
+    "react-hooks/rules-of-hooks": {
+      "count": 1
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  }
+}

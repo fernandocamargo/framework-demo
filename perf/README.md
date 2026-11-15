@@ -17,6 +17,18 @@ After the visit's 29 steps come ten more, counted apart (`further`): the lab lef
 
 `LABEL`, `RUNS`, `CPU` (Chromium's throttling), `ENGINE` (`chromium` or `webkit`), `DETAIL=1` (which components changed nothing, why, and which framework component they are inside of) and `CHROMIUM` / `WEBKIT` (browser executables) change the run. `node perf/cycles.mjs` runs again on the last build. Results go to `perf/out/<LABEL>/`.
 
+## The gate
+
+`npm run perf:gate` (`perf/gate.mjs`) fails when the framework's re-renders grow, and CI runs it as a job of its own. It builds the perf build, plays both visits in Chromium and in WebKit, and compares two figures per engine and visit with `perf/baseline.json`: the framework components **rendered again**, and those of them **with no change** in the page. More than the baseline fails; fewer passes, and says to write the baseline again so the gain is kept.
+
+- **The figure is the least of the runs.** Timing only ever adds a render: a commit that lands apart from another. Five runs of each visit in each engine on a quiet machine: Chromium's visit rendered again 254, 254, 254, 255, 254 (5 with no change, every run); its features visit 78 (3), every run; WebKit's visit 255 (5) and its features visit 77 (2), every run. On the same machine with every core busy (a load average of 27): Chromium's visit 254, 254, 254, 255, 254 still, WebKit's visit 255, 255, 256, 257, 257 (5, 5, 6, 6, 6) and its features visit 80, 79, 78, 78, 79. So neither a median nor the least of a fixed few is the code's own count on a busy machine.
+- **A visit is played until its least figures are within the baseline**, ten times at most (`RUNS`). On a quiet machine that is once per engine and visit, and the gate takes about forty seconds. Code that renders more is over the baseline in every run, and fails after the tenth, some five minutes later. A machine too busy to play a visit once in ten runs as a quiet one does fails too: run it again before reading it as the code's.
+- **Reported, never failing:** react-aria's and the shell's re-renders and the renders React threw away. They move from run to run (4390 to 4474 of the former in Chromium's visit; 22, 49 and 23 thrown away in three WebKit runs of the features visit).
+- A run with a failed check or a page error did not play the whole visit: it is left out, and a visit with no clean run fails.
+- The further steps are not gated: they wait on timers.
+
+`npm run perf:baseline` plays each visit five times in each engine and writes the least figures to `perf/baseline.json`; on a quiet machine, so they are the code's. Write it again when a change is meant to cost renders (a new step in a visit, a new component on a page the visits open, a layer that must render where none did), or when a change saved some. The commit that changes the baseline says why, in its message: the file's history is the history of what the framework's renders cost. A baseline is not written again to get a red gate green: `DETAIL=1 node perf/cycles.mjs` says which components rendered, and why.
+
 ## Baseline
 
 Before the i18n, ACL and other layers (`a54f01e`), Chromium, one run:

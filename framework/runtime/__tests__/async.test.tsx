@@ -72,3 +72,35 @@ test("an operation's latest call sets its state, whichever call answers last", a
   // The earlier call still answers its own caller.
   await expect(first).resolves.toBe('answer a');
 });
+
+test('an operation that answers after its component left sets no state, and still answers its caller', async () => {
+  let answer: ((value: unknown) => void) | undefined;
+  let signal: AbortSignal | undefined;
+  const module: AsyncModule = {
+    load: (given: { signal: AbortSignal }) => {
+      signal = given.signal;
+      return new Promise((resolve) => (answer = resolve));
+    },
+  };
+  const complaints = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const { result, unmount } = renderHook(() => useOperations('components/demo', module, injection));
+
+  let call: Promise<unknown> | undefined;
+  act(() => {
+    call = result.current.load?.();
+  });
+  expect(result.current.load?.pending).toBe(true);
+  const shown = result.current;
+
+  unmount();
+  expect(signal?.aborted).toBe(true);
+  answer?.('late');
+  await expect(call).resolves.toBe('late');
+  await flush();
+
+  // What the component last showed is what it was left with, and React had nothing to say.
+  expect(result.current).toBe(shown);
+  expect(result.current.load?.pending).toBe(true);
+  expect(complaints).not.toHaveBeenCalled();
+  complaints.mockRestore();
+});

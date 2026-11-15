@@ -421,6 +421,16 @@ After a change to the plugin's own files (`framework/typescript/`), run "TypeScr
 - `runtime/__tests__/`: the idle signal, the async layer, components (what re-renders and what does not), the data layer, the pipelines. `npx vitest run framework`.
 - `shared/folders.test.cjs` and `typescript/transform.test.cjs`: the convention checks, and the annotations the TypeScript plugin inserts. `node --test`.
 
+### The hooks lint
+
+`npm run lint` runs `eslint-plugin-react-hooks` over `runtime/` and the app, with the rules React Compiler checks (`refs`, `immutability`, `purity`, `set-state-in-effect` and the rest of the plugin's recommended set), all as errors. The runtime did not pass them when they were turned on: it reads and writes refs while rendering, and changes values React holds. What the rules found then is listed in `eslint-suppressions.json` at the repository's root, a count per file and rule. The file is a list to burn down, not a place to add to:
+
+- a new violation fails the lint: a count in the file is a ceiling, and a rule or a file that is not in it has none;
+- to take one off the list, fix it, then run `npx eslint . --prune-suppressions` and commit the smaller file with the fix. Until it is pruned, the lint fails and says so, so the file never holds more than the code does;
+- nothing is added to it. `--suppress-all` wrote it once; a violation that cannot be avoided gets an `eslint-disable` comment where it is, with its reason.
+
+The app's code has none. What is left in the runtime: `refs` 37 and `immutability` 15 (in `component.tsx`, `machine.ts`, `form.ts`, `async.ts`, `activity.ts`, `root.tsx`), and in `root.tsx` three `exhaustive-deps`, one `rules-of-hooks` (the route read on demand, above) and one `set-state-in-effect`.
+
 ## Not in it, or open
 
 - **Typing:** ESLint and Vitest do not load the TypeScript plugin, so a test file gets the injected types only through `check.cjs`. The language-service requests the plugin does not map (outlines, formatting, refactors) see the file as written.

@@ -31,7 +31,7 @@
  * `keyboard`, for a list of them.
  */
 
-import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { useId, useLayoutEffect, useSyncExternalStore } from 'react';
 
 import { report, type Scope, type Site } from './pipeline';
 import { track, withScope } from './track';
@@ -231,7 +231,8 @@ export function shortcutsOf(
 
 type Registration = { entries: readonly Entry[]; order: number; path: string; scope: Scope };
 
-const registrations = new Map<object, Registration>();
+/** By instance: each one's `useId`. */
+const registrations = new Map<string, Registration>();
 let shownSoFar = 0;
 let keyboard: Keyboard = Object.freeze({ groups: Object.freeze([]) });
 let signature = '';
@@ -295,7 +296,7 @@ export const useKeyboard = () => useSyncExternalStore(subscribe, current, curren
  * commit: the keys of what is on screen.
  */
 export function useShortcuts(path: string, scope: Scope, entries: { readonly current: readonly Entry[] | undefined }) {
-  const token = useRef({}).current;
+  const token = useId();
   useLayoutEffect(() => {
     if (!entries.current) return;
     const known = registrations.get(token);

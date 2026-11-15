@@ -8,7 +8,7 @@
  * - The default export runs before the component mounts, as a query of the data layer
  *   (data.ts): it reruns when a service it read is made stale, or a route parameter it read
  *   changes. Its result reaches the render as `async.default`.
- * - Unmounting stops every state change and aborts the `signal` the operations got.
+ * - Unmounting stops every state change (React ignores one made after it) and aborts the `signal` the operations got.
  * - A failure the services did not report already is reported as the async layer's.
  */
 
@@ -47,25 +47,21 @@ export function useOperations(
 ): Record<string, Operation> {
   const names = useMemo(() => Object.keys(module ?? {}).filter((name) => name !== 'default'), [module]);
   const [states, setStates] = useState<Record<string, OperationState>>({});
-  const mounted = useRef(true);
   const controllers = useRef(new Set<AbortController>());
   /** Each operation's latest call. Only it sets the operation's state. */
   const latest = useRef(new Map<string, AbortController>());
 
   useEffect(() => {
-    mounted.current = true;
     const running = controllers.current;
     return () => {
-      mounted.current = false;
       for (const controller of running) controller.abort();
       running.clear();
     };
   }, []);
 
   return useMemo(() => {
-    const update = (name: string, state: OperationState) => {
-      if (mounted.current) setStates((previous) => ({ ...previous, [name]: state }));
-    };
+    // After the component left, React ignores this.
+    const update = (name: string, state: OperationState) => setStates((previous) => ({ ...previous, [name]: state }));
     return Object.fromEntries(
       names.map((name) => {
         const state = states[name] ?? idle;

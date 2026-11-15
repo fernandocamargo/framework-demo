@@ -36,6 +36,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   useSyncExternalStore,
 } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
@@ -176,10 +177,10 @@ type Shown = {
  */
 function Retrying({ children, retry }: { children?: ReactNode; retry: () => void }) {
   const route = use(RouteContext);
-  const failedAt = useRef(route);
+  const [failedAt] = useState(route);
   useLayoutEffect(() => {
-    if (route !== failedAt.current) retry();
-  }, [route, retry]);
+    if (route !== failedAt) retry();
+  }, [route, failedAt, retry]);
   return children;
 }
 

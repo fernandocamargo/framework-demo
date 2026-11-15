@@ -45,6 +45,20 @@ jobs:
         with:
           path: dist
 
+  # The framework's re-renders, counted over both visits of perf/steps.mjs in both engines, against
+  # perf/baseline.json: more of them fails (perf/README.md, "The gate").
+  renders:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run perf:gate
+
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: check

@@ -9,6 +9,7 @@
 //   component's keys (listed as declared), an object under a comment that says its order matters,
 //   the statements of a file, Maps and Sets.
 import perfectionist from 'eslint-plugin-perfectionist';
+import reactHooks from 'eslint-plugin-react-hooks';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
@@ -85,5 +86,15 @@ export default defineConfig([
       '@typescript-eslint/no-empty-object-type': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
     },
+  },
+  // React's own rules, the ones React Compiler checks among them (`refs`, `immutability`, …), over
+  // the runtime and the app. All are errors: what they found when they were turned on is listed in
+  // eslint-suppressions.json, a list to burn down (framework/README.md, "The hooks lint").
+  {
+    files: ['framework/runtime/**/*.{ts,tsx}', 'src/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: Object.fromEntries(
+      Object.keys(reactHooks.configs['recommended-latest'].rules).map((rule) => [rule, 'error']),
+    ),
   },
 ]);
