@@ -82,3 +82,101 @@ test('a render React throws away leaves the decision the guards read as the page
   await settle();
   expect(shown!.container.textContent).toBe('done');
 });
+
+test('a render React throws away is not what the next render is compared with: what the page shows is', async () => {
+  const calls: unknown[] = [];
+  // A piece of the page that says whether the page is odd: the same on pages 1 and 3.
+  let marked = 0;
+  const Marker = ({ odd }: { odd: boolean }) => {
+    marked++;
+    return createElement('b', null, odd ? 'odd ' : 'even ');
+  };
+  const Paged = component({
+    path: 'components/paged',
+    reads: { view: ['route'] },
+    skins: {},
+    view: () =>
+      Promise.resolve({
+        async: undefined,
+        children: [],
+        form: undefined,
+        props: { default: ({ route }: { route: { page: number } }) => ({ page: route.page }) },
+        render: ({ page }: Props) => {
+          calls.push(page);
+          return createElement(
+            'p',
+            null,
+            createElement(Marker, { odd: (page as number) % 2 === 1 }),
+            `page ${String(page)}`,
+          );
+        },
+        // The key's label follows the page, so the keys on screen say which render registered them.
+        shortcuts: { default: ({ route }: Props) => ({ g: { label: `page ${(route as { page: number }).page}` } }) },
+        state: undefined,
+      }) as never,
+  });
+  /** The keys on screen, as the framework lists them. */
+  const Keys = component({
+    path: 'components/keys',
+    reads: { view: ['keyboard'] },
+    skins: {},
+    view: () =>
+      Promise.resolve({
+        async: undefined,
+        children: [],
+        form: undefined,
+        props: undefined,
+        render: ({ keyboard }: Props) =>
+          createElement(
+            'i',
+            null,
+            (keyboard as { groups: { shortcuts: { label: string }[] }[] }).groups
+              .flatMap((group) => group.shortcuts.map((shortcut) => shortcut.label))
+              .join(),
+          ),
+        state: undefined,
+      }) as never,
+  });
+  const never = new Promise<never>(() => undefined);
+  const Slow = ({ wait }: { wait: boolean }) => (wait ? use(never) : null);
+  let turn: (page: number) => void = () => undefined;
+  const client = createQueryClient();
+  const Page = () => {
+    const [page, setPage] = useState(1);
+    turn = setPage;
+    return createElement(
+      Root,
+      { client, entity, route: { page } as never },
+      createElement(
+        Suspense,
+        { fallback: null },
+        createElement(Paged),
+        createElement(Slow, { wait: page === 2 }),
+        createElement(Keys),
+      ),
+    );
+  };
+  let shown: ReturnType<typeof render> | undefined;
+  await act(async () => {
+    shown = render(createElement(Page));
+  });
+  await settle();
+  // The page, then the keys on screen: the one key, labelled by the page.
+  expect(shown!.container.textContent).toBe('odd page 1page 1');
+  const mounted = calls.length;
+  const markedOnce = marked;
+
+  // React renders page 2, waits for the sibling, and commits nothing.
+  await act(async () => startTransition(() => turn(2)));
+  await settle();
+  expect(shown!.container.textContent).toBe('odd page 1page 1');
+  expect(calls.slice(mounted)).toEqual([2]);
+  expect(marked).toBe(markedOnce + 1);
+  // The person moves on to page 3. Its render is compared with page 1, which the page shows, not
+  // with page 2, which it never showed: the marker is the element React showed, and is skipped.
+  await act(async () => startTransition(() => turn(3)));
+  await settle();
+  expect(shown!.container.textContent).toBe('odd page 3page 3');
+  expect(calls.slice(mounted)).toEqual([2, 3]);
+  expect(marked).toBe(markedOnce + 1);
+});

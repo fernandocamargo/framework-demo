@@ -12,7 +12,7 @@
  * chart's guards and the operations read the latest values when they run, and follow none.
  */
 
-import { useMemo, useRef, useSyncExternalStore } from 'react';
+import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { sameParts, tracking } from './reads';
 
@@ -31,12 +31,10 @@ const same = (a: Values, b: Values) => {
 
 /** `start`: values over the empty ones, for a component held in one state in the states gallery. */
 export function useFormLayer(module: FormModule, start?: Values) {
-  const kept = useRef<null | { listeners: Set<() => void>; shown: null | { state: State }; state: State }>(null);
-  if (!kept.current) {
+  const [store] = useState<{ listeners: Set<() => void>; shown: null | { state: State }; state: State }>(() => {
     const values = { ...(module.seed ? module.seed(undefined as never) : {}), ...start };
-    kept.current = { state: { initial: values, values }, listeners: new Set(), shown: null };
-  }
-  const store = kept.current;
+    return { state: { initial: values, values }, listeners: new Set(), shown: null };
+  });
   // The values this component's files read.
   const keys = useRef(new Set<string>()).current;
 

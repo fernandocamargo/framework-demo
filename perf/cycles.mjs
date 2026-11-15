@@ -203,6 +203,17 @@ const total = (name, totals) =>
   );
 total('total', visit);
 if (further.steps) total('further', further);
+// Counts move a little from one run of a build to the next (which of react-aria's commits fall in a
+// wait, which step a late commit lands in): the visit's totals of every run, for telling a change from that.
+if (runs > 1) {
+  const each = (pick) =>
+    summaries
+      .map((summary) => summary.filter((_, index) => !STEPS[index].further).reduce((sum, step) => sum + pick(step), 0))
+      .join(', ');
+  say(
+    `each run's visit: render calls ${each((step) => step.calls)}; thrown away ${each((step) => step.thrown)}; framework rendered again ${each((step) => step.framework.again)}, with no change ${each((step) => step.framework.unchanged.length)}; other rendered again ${each((step) => step.other.again)}, with no change ${each((step) => step.other.unchanged.length)}`,
+  );
+}
 if (all.some((run) => run.errors.length))
   say(`page errors: ${[...new Set(all.flatMap((run) => run.errors))].join(' | ')}`);
 writeFileSync(here(`out/${label}/summary.txt`), `${lines.join('\n')}\n`);

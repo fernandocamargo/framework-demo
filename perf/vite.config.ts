@@ -16,16 +16,18 @@ const EDITS: [anchor: string, before: string][] = [
   // marks the call behind the element it shows: a render React threw away whose output a later
   // render returns again was not wasted, and one whose output nothing shows was.
   [
-    'last.current = { allowed, element, inputs, props, rendered, scope, shaped }',
+    'tried.current = next = { allowed, element, inputs, keys, props, rendered, scope, shaped }',
     ';(globalThis.__callOf ??= new WeakMap()).set(element as object, __call)\n    ',
   ],
   [
-    'last.current = { ...last.current, inputs, props, shaped }',
-    ';(globalThis.__callOf ??= new WeakMap()).set(last.current.element as object, __call)\n      ',
+    'tried.current = next = { ...before, inputs, keys, props, shaped }',
+    ';(globalThis.__callOf ??= new WeakMap()).set(before.element as object, __call)\n      ',
   ],
+  ['useLayoutEffect(() => commitHandlers(scope))', 'let __call: unknown\n    '],
+  // After the effect that keeps what this render showed: `last` then holds the element it returned.
   [
-    'useLayoutEffect(() => commitHandlers(scope))',
-    'let __call: unknown\n    useLayoutEffect(() => void globalThis.__kept?.(globalThis.__callOf?.get(last.current?.element as object)))\n    ',
+    'useShortcuts(spec.path, scope, registered);',
+    'useLayoutEffect(() => void globalThis.__kept?.(globalThis.__callOf?.get(last.current?.element as object)))\n    ',
   ],
   [
     'const module = use(loadView())',

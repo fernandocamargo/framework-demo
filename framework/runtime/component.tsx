@@ -45,7 +45,7 @@ import { recording, recordingRoute, shareByIdentity } from './data';
 import { shareElements } from './elements';
 import { type FormModule, useFormLayer } from './form';
 import { activeLocale, intlFor, loadMessages, LocaleContext, showing, SOURCE_LOCALE } from './i18n';
-import type { Allowed, Flags } from './index';
+import type { Allowed, Flags, Route } from './index';
 import { type StateModule, useStateLayer } from './machine';
 import { PinContext } from './pin';
 import { report, type Scope, toError } from './pipeline';
@@ -144,6 +144,19 @@ const classes = (path: string, className: unknown) =>
 
 const NO_LAYER = {};
 
+/** A render of a component, as React showed it: what it was given, what it returned, and what was decided. */
+type Shown = {
+  allowed: boolean;
+  element: ReactNode;
+  inputs: unknown[];
+  /** The keys its shortcuts.ts declared, for a folder with one. */
+  keys: Entry[] | undefined;
+  props: Props;
+  rendered: ReactNode;
+  scope: Scope;
+  shaped: Props;
+};
+
 /** Only the values a component reads, so spreading them over the props adds nothing else. */
 /**
  * What wraps a folder's error file while it shows: when the address moves on (another page, other
@@ -194,9 +207,21 @@ const NO_READ = {
 // order, with no hook behind a condition, and a lint can check it.
 
 /** For a component that does not read a source: nothing, and no hook. */
-const useNothing = () => undefined;
+const useNothing = (..._: unknown[]) => undefined;
 /** The person signed in, from Root's `user` read: `null` when nobody is, or Root has no such read. */
 const useUserRead = (): unknown => useSuspenseQuery(useFramework().user ?? NO_READ).data;
+/**
+ * The route a view's files read, followed field by field (root.tsx). Each render starts from the
+ * view React committed last: one a thrown-away render made is not kept.
+ */
+function useFollowedRoute(fields: ReadonlySet<string>, rendering: { readonly current: boolean }, committed: Route) {
+  const shown = useRef<null | RouteView>(null);
+  const view = followRoute(shown.current, fields, rendering, committed);
+  useLayoutEffect(() => {
+    shown.current = view;
+  });
+  return view.route;
+}
 /** The answer of the component's default read. */
 const useAnswerOf = (query: null | Read): unknown => useSuspenseQuery(query ?? NO_READ).data;
 type Followed = { decided: boolean | undefined; flags: Seen | undefined; parts: Seen | undefined };
@@ -245,6 +270,7 @@ export function component(spec: Spec) {
   const useUser = readsUser ? useUserRead : useNothing;
   const useFollowed = readsAcl || readsFlags ? useFollowedReads : useNothing;
   const useKeys = readsKeyboard ? useKeyboard : useNothing;
+  const useRouteView = viewReadsRoute ? useFollowedRoute : useNothing;
   // And one chosen when the view has loaded: whether it has a default read. A view with none has
   // no query: a stand-in would cost every such component a subscription.
   let useAnswer: (query: null | Read) => unknown = useNothing;
@@ -366,9 +392,7 @@ export function component(spec: Spec) {
     // is this render's (the route being rendered, the decision); what runs after it, the committed.
     const rendering = useRef(false);
     // The route its files read, followed field by field (root.tsx).
-    const routeView = useRef<null | RouteView>(null);
-    if (viewReadsRoute) routeView.current = followRoute(routeView.current, fields, rendering, sources.route);
-    const route = viewReadsRoute ? routeView.current!.route : undefined;
+    const route = useRouteView(fields, rendering, sources.route);
     const keyboard = useKeys();
     // The decision, twice. `judged` is this render's, for what runs inside the render: the chart's
     // declaration, and its first reads when it is created. `decided` is the one React committed,
@@ -415,9 +439,10 @@ export function component(spec: Spec) {
         values[key] = fields.has(key)
           ? use(fieldContext(key))
           : (use(RouteContext) as unknown as Record<string, unknown>)[key];
-      // The same fields with the same values are the same object, so the query below stays the same.
+      // The same fields with the same values as React committed last are the same object, so the
+      // query below stays the same.
       const last = routeShown.current;
-      return last && sameRoute(last, values) ? last : (routeShown.current = values);
+      return last && sameRoute(last, values) ? last : values;
     })();
     const userId = (user as null | undefined | { id?: unknown })?.id ?? null;
     const query = useMemo(
@@ -465,7 +490,8 @@ export function component(spec: Spec) {
     );
     useLayoutEffect(() => {
       shown.current = initial;
-    }, [initial]);
+      routeShown.current = readRoute;
+    }, [initial, readRoute]);
 
     // A component held in one state in the states gallery starts its form with the example's values.
     const pin = use(PinContext);
@@ -565,29 +591,40 @@ export function component(spec: Spec) {
    */
   function useShow(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, decided?: boolean) {
     const { access, async, decided: committed, form, judged, language, module, scope } = layers;
-    const last = useRef<null | {
-      allowed: boolean;
-      element: ReactNode;
-      inputs: unknown[];
-      props: Props;
-      rendered: ReactNode;
-      scope: Scope;
-      shaped: Props;
-    }>(null);
+    // What React committed last: the render before this one that reached the page. A render React
+    // throws away leaves it as it was, so the next one is compared with what the page shows, and
+    // shares its elements with it.
+    const last = useRef<null | Shown>(null);
+    // The last render worked out, committed or not. While something beside a component is still
+    // loading, React renders the component again with what it was given before, as often as
+    // another commit lands, and each time gets the output worked out the first time, without the
+    // render being called. It answers only for the same inputs, so a thrown-away render's output
+    // is returned only where a render would return the same.
+    const tried = useRef<null | Shown>(null);
+    // What this render shows, kept when React commits it.
+    let next: null | Shown = null;
+    let showing: boolean | undefined;
     // The handlers of the render React committed are the ones the instance's wrappers call.
     useLayoutEffect(() => commitHandlers(scope));
-    // And its decision is the one the guards and the operations read.
-    let showing: boolean | undefined;
-    useLayoutEffect(() => {
-      if (showing !== undefined) committed.current = showing;
-    });
     // The keys this instance answers, registered after each commit while it is mounted.
-    const keys = useRef<Entry[] | undefined>(undefined);
-    useShortcuts(spec.path, scope, keys);
+    const registered = useRef<Entry[] | undefined>(undefined);
+    useLayoutEffect(() => {
+      // Its decision is the one the guards and the operations read.
+      if (showing !== undefined) committed.current = showing;
+      if (next) last.current = next;
+      if (next?.keys) registered.current = next.keys;
+    });
+    useShortcuts(spec.path, scope, registered);
+    const before = last.current;
     const inputs = [module, scope, async, state, form, language, access, decided];
-    if (last.current && sameEach(last.current.inputs, inputs) && sameProps(last.current.props, props)) {
-      showing = last.current.allowed;
-      return last.current.element;
+    const again = [before, tried.current].find(
+      (known) => known && sameEach(known.inputs, inputs) && sameProps(known.props, props),
+    );
+    if (again) {
+      judged.current = again.allowed;
+      showing = again.allowed;
+      if (again !== before) next = again;
+      return again.element;
     }
     const className = classes(spec.path, props.className);
     const given = givenOf(props, layers, state, className);
@@ -596,30 +633,35 @@ export function component(spec: Spec) {
     showing = allowed;
     const shaping = readsAcl ? { ...given, acl: access.view(allowedOn(access.snapshot, allowed)) } : given;
     // shortcuts.ts gets what props.ts gets. Its keys follow the state even when the render is skipped.
-    if (module.shortcuts)
-      keys.current = shortcutsOf(spec.path, module.shortcuts, shaping, state as never, scope, module.shortcutSites);
+    const keys = module.shortcuts
+      ? shortcutsOf(spec.path, module.shortcuts, shaping, state as never, scope, module.shortcutSites)
+      : undefined;
     const output = shape(module, shaping, className);
     // The framework's own comparison reads every key; it records none.
-    const shaped = untracked(() => shareByIdentity(last.current?.shaped, output)) as Props;
-    if (last.current && shaped === last.current.shaped && allowed === last.current.allowed) {
-      last.current = { ...last.current, inputs, props };
-      return last.current.element;
+    const shaped = untracked(() => shareByIdentity(before?.shaped, output)) as Props;
+    if (before && shaped === before.shaped && allowed === before.allowed) {
+      tried.current = next = { ...before, inputs, keys, props };
+      return before.element;
+    }
+    // Or what the last render worked out was given, when React has not committed that one (yet).
+    const retried = tried.current;
+    if (retried && retried !== before && allowed === retried.allowed) {
+      const same = untracked(() => shareByIdentity(retried.shaped, shaped));
+      if (same === retried.shaped) {
+        tried.current = next = { ...retried, inputs, keys, props };
+        return retried.element;
+      }
     }
     // What did not change since the last output is the element React showed then, and it skips it.
     const rendered = shareElements(
-      last.current?.rendered,
+      before?.rendered,
       withScope(scope, () => module.render(shaped)),
     ) as ReactNode;
     // The same output with the same decision, in the same scope, is the element React showed, and it
     // renders nothing below.
-    if (
-      last.current &&
-      rendered === last.current.rendered &&
-      allowed === last.current.allowed &&
-      scope === last.current.scope
-    ) {
-      last.current = { ...last.current, inputs, props, shaped };
-      return last.current.element;
+    if (before && rendered === before.rendered && allowed === before.allowed && scope === before.scope) {
+      tried.current = next = { ...before, inputs, keys, props, shaped };
+      return before.element;
     }
     // What this folder's acl.ts decided reaches every component below, until one of them decides otherwise.
     const element = createElement(
@@ -627,7 +669,7 @@ export function component(spec: Spec) {
       { value: scope },
       module.acl ? createElement(AclContext, { value: allowed }, rendered) : rendered,
     );
-    last.current = { allowed, element, inputs, props, rendered, scope, shaped };
+    tried.current = next = { allowed, element, inputs, keys, props, rendered, scope, shaped };
     return element;
   }
 
@@ -688,6 +730,7 @@ export function component(spec: Spec) {
       layers.withForm,
       () => renderingRoute(layers.fields),
       told,
+      layers.rendering,
     );
     return useShow(props, layers, state, early);
   }
