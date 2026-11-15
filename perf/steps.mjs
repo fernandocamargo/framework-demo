@@ -308,3 +308,126 @@ export const STEPS = [
     name: 'back to the catalogue',
   },
 ];
+
+// A second visit, counted on its own (`VISIT=features`): the pages and pieces the visit above does
+// not open. The report, the orders page (signed in as an admin, a state, an order, the live map
+// behind its flag), the command palette and the first steps of the tour.
+const navigation = (page) => page.getByRole('navigation').first();
+const tiles = (page) => page.getByRole('list', { name: 'Orders by state' }).locator(':scope > li');
+const ledger = (page) => page.getByRole('list', { exact: true, name: 'Orders' }).locator(':scope > li');
+const palette = (page) => dialog(page, 'Commands');
+const tour = (page) => page.getByRole('complementary', { name: 'Guided tour' });
+/** The canvas MapLibre draws on, once the map shows. */
+const canvas = (page) => page.locator('figure .maplibregl-map:not([hidden]) canvas');
+
+export const FEATURES = [
+  {
+    act: (page, base) => page.goto(`${base}/?world=memory#/report`),
+    check: async (page) => (await page.getByRole('article').getByRole('table').first().getByRole('row').count()) > 1,
+    name: 'open the stock report',
+  },
+  {
+    act: (page) => navigation(page).getByRole('link', { name: 'Orders' }).click(),
+    check: async (page) => (await page.getByRole('note').innerText()).includes('Orders are for admins and moderators.'),
+    name: 'the orders, as a guest',
+  },
+  {
+    act: async (page) => {
+      await page.getByRole('link', { name: 'Sign in to see them.' }).click();
+      await dialog(page, 'Sign in')
+        .getByRole('button', { name: /^Emily,/ })
+        .click();
+      await dialog(page, 'Sign in').getByRole('button', { name: 'Sign in' }).click();
+    },
+    check: async (page) => (await tiles(page).count()) === 51 && (await ledger(page).count()) > 0,
+    name: 'sign in as an admin: the map and the ledger',
+  },
+  {
+    act: (page) => page.getByRole('link', { name: /^Texas,/ }).click(),
+    check: async (page) => page.url().includes('region=TX') && (await ledger(page).count()) === 3,
+    name: 'choose Texas',
+  },
+  {
+    act: (page) => ledger(page).first().getByRole('link').first().click(),
+    check: async (page) =>
+      (await page.getByRole('dialog').getByRole('list', { name: 'Items' }).locator(':scope > li').count()) > 0,
+    name: 'open an order',
+  },
+  {
+    act: (page) => page.keyboard.press('Escape'),
+    check: async (page) => !page.url().includes('cart=') && page.url().includes('region=TX'),
+    name: 'close the order',
+  },
+  {
+    // The library and the style load outside the framework: the step waits for the canvas itself.
+    // Where WebGL 2 is missing the map never shows, and the check says so.
+    act: async (page) => {
+      await page.evaluate(serve, { liveMap: 'on' });
+      await canvas(page)
+        .waitFor({ timeout: 8000 })
+        .catch(() => undefined);
+    },
+    check: async (page) => (await canvas(page).count()) === 1 && (await tiles(page).count()) === 51,
+    name: 'the live map served on',
+  },
+  {
+    // With the map on, the list shows the states that have orders.
+    act: (page) => page.getByRole('link', { name: /^Florida,/ }).click(),
+    check: async (page) => page.url().includes('region=FL') && (await canvas(page).count()) === 1,
+    name: 'choose Florida, the map on',
+  },
+  {
+    act: (page) => page.evaluate(serve, {}),
+    check: async (page) => (await page.locator('figure .maplibregl-map').count()) === 0,
+    name: 'the live map served off',
+  },
+  {
+    act: (page) => page.keyboard.press('ControlOrMeta+k'),
+    check: (page) => shown(palette(page)),
+    name: 'open the command palette',
+  },
+  {
+    // The palette searches a quarter second after the last key: a timer the framework does not see.
+    act: async (page) => {
+      await palette(page).getByRole('searchbox').pressSequentially('lamp');
+      await page.waitForTimeout(350);
+    },
+    check: async (page) => (await palette(page).locator('[itemtype="https://schema.org/Product"]').count()) === 3,
+    name: 'type "lamp" in the palette',
+  },
+  {
+    act: (page) => page.keyboard.press('Enter'),
+    check: async (page) => page.url().includes('view=22') && (await palette(page).count()) === 0,
+    name: 'run the first command: a product',
+  },
+  {
+    act: (page) => page.keyboard.press('Escape'),
+    check: async (page) => !page.url().includes('view='),
+    name: 'close the product',
+  },
+  {
+    act: (page) => navigation(page).getByRole('link', { name: 'Products' }).click(),
+    check: async (page) => (await rows(page).count()) === 12,
+    name: 'back to the products',
+  },
+  {
+    act: (page) => page.getByRole('button', { name: 'Take the tour' }).click(),
+    check: async (page) => (await shown(tour(page))) && page.url().includes('sort=price'),
+    name: 'take the tour: the address',
+  },
+  {
+    act: (page) => tour(page).locator('menu li').last().getByRole('button').click(),
+    check: (page) => shown(page.getByRole('dialog')),
+    name: 'the tour: a product',
+  },
+  {
+    act: (page) => tour(page).locator('menu li').last().getByRole('button').click(),
+    check: async (page) => page.url().includes('page=2'),
+    name: 'the tour: a slow network',
+  },
+  {
+    act: (page) => tour(page).locator('header button').click(),
+    check: async (page) => (await tour(page).count()) === 0,
+    name: 'leave the tour',
+  },
+];

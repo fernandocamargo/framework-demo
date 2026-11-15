@@ -10,7 +10,10 @@
 //
 //   npm run perf                      builds, then runs the flow once in Chromium
 //   node perf/cycles.mjs              runs it again on the last build
-//   [LABEL=name] [RUNS=3] [CPU=4] [ENGINE=chromium|webkit] [DETAIL=1] [PORT=5190]
+//   [LABEL=name] [RUNS=3] [CPU=4] [ENGINE=chromium|webkit] [DETAIL=1] [PORT=5190] [VISIT=features]
+//
+// VISIT=features plays the second visit of steps.mjs instead: the report, the orders page with its
+// live map, the command palette and the tour, with totals of their own.
 //
 // CHROMIUM and WEBKIT may name browser executables, as for the end-to-end tests. Writes
 // perf/out/<LABEL>/cycles.json (every commit of the first run) and summary.txt.
@@ -20,7 +23,7 @@ import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeF
 import { createServer } from 'node:http';
 import path from 'node:path';
 
-import { STEPS } from './steps.mjs';
+import { FEATURES, STEPS as VISIT } from './steps.mjs';
 
 const env = process.env;
 const port = Number(env.PORT ?? 5190);
@@ -28,6 +31,9 @@ const runs = Number(env.RUNS ?? 1);
 const cpu = Number(env.CPU ?? 1);
 const engine = env.ENGINE ?? 'chromium';
 const label = env.LABEL ?? 'current';
+// The visit, or the second one over the pages it does not open (steps.mjs).
+const features = env.VISIT === 'features';
+const STEPS = features ? FEATURES : VISIT;
 const here = (file) => path.join(import.meta.dirname, file);
 const DIST = here('dist');
 const RENDERS = new Set(['StatefulView', 'StatelessView']);
@@ -35,6 +41,8 @@ const PLUMBING = new Set(['Component', 'View']);
 // The framework's wrappers carry the folder's path as their name; react-aria has a `Component` of its own.
 const isPlumbing = (component) => PLUMBING.has(component.fn) && component.name !== component.fn;
 const recorder = readFileSync(here('recorder.js'), 'utf8');
+const BASEMAP = /^https:\/\/(tiles\.openfreemap\.org\/styles\/|api\.maptiler\.com\/maps\/)/;
+const EMPTY_STYLE = JSON.stringify({ layers: [], sources: {}, version: 8 });
 
 if (!existsSync(path.join(DIST, 'index.html')))
   throw new Error('No perf build: run `npm run perf`, or `npx vite build --config perf/vite.config.ts`');
@@ -44,6 +52,7 @@ const TYPES = {
   '.html': 'text/html',
   '.js': 'text/javascript',
   '.json': 'application/json',
+  '.mjs': 'text/javascript',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
   '.woff2': 'font/woff2',
@@ -65,9 +74,13 @@ async function run() {
   const page = await browser.newPage({ viewport: { height: 1000, width: 1400 } });
   page.setDefaultTimeout(10_000);
   // The memory world needs no network; pictures and fonts from elsewhere are left out.
+  // The live map's basemap is the one thing the app asks elsewhere for: it gets a style with nothing in it.
   await page.route(
     (url) => url.hostname !== 'localhost',
-    (route) => route.abort(),
+    (route) =>
+      BASEMAP.test(route.request().url())
+        ? route.fulfill({ body: EMPTY_STYLE, contentType: 'application/json' })
+        : route.abort(),
   );
   await page.addInitScript(recorder);
   if (cpu > 1 && engine === 'chromium')
@@ -201,7 +214,7 @@ const total = (name, totals) =>
     `${name}: ${totals.steps} steps, ${totals.misses} misses; ${totals.calls} render calls, ${totals.thrown} of them thrown away; framework mounted ${totals.fwNew}, rendered again ${totals.fwAgain}, ${totals.fwUnchanged} with no change; ` +
       `other rendered again ${totals.otherAgain}, ${totals.otherUnchanged} with no change; render time ${totals.time.toFixed(1)} ms, ${totals.wasted.toFixed(1)} ms of it changing nothing`,
   );
-total('total', visit);
+total(features ? 'features' : 'total', visit);
 if (further.steps) total('further', further);
 // Counts move a little from one run of a build to the next (which of react-aria's commits fall in a
 // wait, which step a late commit lands in): the visit's totals of every run, for telling a change from that.
