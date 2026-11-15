@@ -194,3 +194,21 @@ Microdata from schema.org, HTML's elements and ARIA's roles in place of presenta
 
 - The framework renders exactly as before. react-aria's progress bar and the hidden labels of the selects are gone (a native `progress`, and the selects' own `aria-label`), so a few of its components no longer render.
 - steps.mjs counts a list's own items (`:scope > li`): a product's row now holds a list of its commands.
+
+## After Broadsheet and the five features
+
+Broadsheet, Blueprint, the pages in the address, the stock report, the orders page and its live map, the guided tour and the command palette (`29336a1` to `a313dbc`). The same 39 steps, before and after on one day, three runs each; counts from the first run.
+
+| Visit                                                | Chromium before | after         | WebKit before | after         |
+| ---------------------------------------------------- | --------------- | ------------- | ------------- | ------------- |
+| misses                                               | 0               | 0             | 0             | 0             |
+| render calls, thrown away                            | 419, 17         | 432, 21       | 417, 14       | 430, 18       |
+| framework mounted; rendered again (changing nothing) | 158; 246 (5)    | 161; 252 (5)  | 158; 247 (5)  | 161; 253 (5)  |
+| other rendered again (changing nothing)              | 4,544 (1,799)   | 4,589 (1,822) | 4,290 (1,606) | 4,467 (1,712) |
+| further steps: framework (changing nothing)          | 34 (4)          | 34 (4)        | 34 (3)        | 34 (3)        |
+| further steps: other (changing nothing)              | 571 (229)       | 613 (261)     | 568 (220)     | 618 (252)     |
+
+- The visit does not open the new pages (the report, the orders): this is what the features cost the pages that were already there.
+- **The header holds three more framework components**: the skin's switch, the tour's button and the palette. They mount with the page (3 more at "open the catalogue" and at "back to the catalogue"), and each renders again at a switch of language, changing the page (3 more at each switch). Nothing else in the framework's counts moved.
+- **Their react-aria buttons and links**: 32 more mounted with the page, and 45 to 60 more re-renders at each switch of language. The other steps' differences are within what runs of one build vary by.
+- **The states gallery's step counted 6 charts.** The tour and the palette brought two more, so the step missed in every run of both engines until it counted the folders with a chart, as the end-to-end flow does. Measured again with that check: no misses, the same counts, and WebKit's thrown-away renders at 33, which vary with how many of react-aria's commits fall in React's 300 ms wait.

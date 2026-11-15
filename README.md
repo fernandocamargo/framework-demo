@@ -1,10 +1,10 @@
 # Stockroom: requirements held by code
 
-A small back office (a product catalogue over [DummyJSON](https://dummyjson.com)) built on a small React framework. The app is the example. The framework is the point: it is an attempt to make the mechanical part of building software checkable, so that people and agents who hand work to each other have something firmer than prose to agree on.
+A small back office over [DummyJSON](https://dummyjson.com) (a product catalogue, a stock report, a map of where the orders go) built on a small React framework. The app is the example. The framework is the point: it is an attempt to make the mechanical part of building software checkable, so that people and agents who hand work to each other have something firmer than prose to agree on.
 
 It runs at https://fernandocamargo.github.io/framework-demo/. An explainer of the idea, written for a team, is at [explainer/](https://fernandocamargo.github.io/framework-demo/explainer/) (its source is [`public/explainer/index.html`](public/explainer/index.html)).
 
-It is meant to be read in an evening or two. The framework is about 5,700 lines in [`framework/`](framework/README.md); the app is about 6,000 in [`src/`](src), a third of it CSS, fixtures and translations.
+It is meant to be read in an evening or two. The framework is about 7,100 lines in [`framework/`](framework/README.md); the app is about 13,000 in [`src/`](src), half of it CSS, fixtures and translations (tests left out of both).
 
 ## The idea
 
@@ -26,7 +26,7 @@ What this does not do: it does not decide what to build, and it does not judge w
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Component folder | The module. A folder under `components/` with a `render.tsx`. Importing the folder gives the component. Its path (`components/product/editor`) is its identity and its CSS class.                                                                                                                      |
 | Layer file       | A file with a fixed name and job inside a component folder: `render.tsx`, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `i18n.ts`, `acl.ts`, `shortcuts.ts`, `placeholder.tsx`, `error.tsx`.                                                                                                          |
-| `shortcuts.ts`   | The keys a component answers while it is on screen, translated, each sending a chart's event, focusing an element or running a function, and working only while the chart takes the event or its `when` holds. `?` lists them.                                                                         |
+| `shortcuts.ts`   | The keys a component answers while it is on screen, translated, each sending a chart's event, focusing an element or running a function, and working only while the chart takes the event or its `when` holds. `?` lists them; the command palette (⌘K) runs them.                                     |
 | `acl.ts`         | Whether what a component offers may be done, as a boolean. The component and everything below it get `acl.allowed`, until a folder below says otherwise.                                                                                                                                               |
 | Flags            | What the person signed in gets of each feature flag, as `flags`, through OpenFeature. Any file may read them; a component follows only the flags it reads.                                                                                                                                             |
 | `props.ts`       | The module's interface. `export type Props` says what a parent passes; the default export shapes what the render gets.                                                                                                                                                                                 |
@@ -51,7 +51,7 @@ editor/
   i18n/pt-BR.json  The same words in Brazilian Portuguese, checked against i18n.ts key by key.
   shortcuts.ts  Its key: mod+s sends `save`, and does nothing while the chart takes no `save`.
   state.test.ts The editor's rules, tested without React.
-  style/skins/default/index.ts   Plain CSS.
+  style/skins/<name>/index.ts   Plain CSS, one sheet per skin: default, broadsheet, blueprint.
 ```
 
 The flow reads as the requirement does ([`state.ts`](src/components/product/editor/state.ts), shortened):
@@ -175,6 +175,23 @@ Clients are injected, never imported by components or by each other's callers. T
 
 Add `?world=memory` to the address and the app runs with no network: same services, same flows, same components. The unit tests and the end-to-end tests use that world, so CI does not depend on DummyJSON being up.
 
+## Pages, and what a feature costs
+
+The hash's path names the page: `#/products`, the catalogue; `#/report`, the stock report; `#/orders`, where the orders go; `#/states`, the gallery. Filters and dialogs stay in its query, so a link to a product, a state or an order opens the same view for anyone who may see it ([`address.ts`](src/address.ts)).
+
+Five features came after the layers, to see what one costs here; the last, orders on a map, came in two steps. Each landed as one commit that argues for itself: what it shows, what that proves, what it cost, how it was checked. None of them changed how the framework wires a folder.
+
+| Feature                                                                                                                                                               | Try                                                                      | What it cost                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A third skin, Blueprint ([`47c3c85`](https://github.com/fernandocamargo/framework-demo/commit/47c3c85))                                                               | `?skin=blueprint`, or the header's switch                                | A sheet for the page and one per folder, most of them a line that re-exports the default. Nothing else: the markup already said what each piece is ([Three skins](#three-skins-one-markup)).                                                                                                                                                                                                                                                                                                                                         |
+| The stock report ([`2482683`](https://github.com/fernandocamargo/framework-demo/commit/2482683))                                                                      | `#/report` in each skin; count a unit in another tab                     | A folder, one word in `SECTIONS` and one read in the products service. Its headline and figures are a pure function ([`summary.ts`](src/components/report/summary.ts)), tested without React. It follows the other tabs' counts with no wiring: the products' writes already said, in `meta.ts`, which reads they make stale.                                                                                                                                                                                                        |
+| A guided tour ([`4ae0b89`](https://github.com/fernandocamargo/framework-demo/commit/4ae0b89))                                                                         | "Take the tour", in the header                                           | One folder. Its chart of eleven states calls the services the rest of the app calls (`lab.change`, `auth.signIn`, `flags.serve`) and moves the same address, so it drives the network, the session, the flags, the skin and the locale with no special access to any of them. Leaving puts the page back as it was.                                                                                                                                                                                                                  |
+| A command palette ([`297a5d6`](https://github.com/fernandocamargo/framework-demo/commit/297a5d6))                                                                     | ⌘K (Ctrl K elsewhere), over anything, a dialog included                  | One folder. None of its commands is written for it: they are the keys the folders' `shortcuts.ts` already declare, each run through `run()`, which the framework gained for it in a commit of its own ([`fa593c7`](https://github.com/fernandocamargo/framework-demo/commit/fa593c7)). Over the editor it offers "Save the product ⌘S", and only while the editor's chart can save.                                                                                                                                                  |
+| Orders ([`e1f7c79`](https://github.com/fernandocamargo/framework-demo/commit/e1f7c79), [`9ef72e0`](https://github.com/fernandocamargo/framework-demo/commit/9ef72e0)) | `#/orders` as Emily, Olivia and Avery; then `?region=TX`, and `?cart=12` | A service that joins DummyJSON's carts with their customers, with fixtures for the memory world; three folders under a page folder; two address fields and one word in `SECTIONS`. The map is 51 tiles in markup, each a schema.org Observation whose count is a `<meter>` the skin turns into a fill. Orders are for admins and moderators, and a customer's name and street for the grant to read customers, so Olivia sees "Amara A.". A plain user who types `?cart=12` gets nothing: the app does not mount the order's reader. |
+| A live map ([`a313dbc`](https://github.com/fernandocamargo/framework-demo/commit/a313dbc))                                                                            | The network lab's Flags tab: "Live map" on, then off                     | A flag, one dependency (MapLibre, loaded the first time the map shows), and a React ref callback ([`src/widgets/live-map/`](src/widgets/live-map)) that is given no data: it reads the figure's schema.org items, as a search engine would, and draws a circle per state. The tiles stay, as its legend and as what a keyboard and a screen reader use.                                                                                                                                                                              |
+
+The tour found one thing the framework lacked, fixed in a commit of its own ([`ea1a3f6`](https://github.com/fernandocamargo/framework-demo/commit/ea1a3f6)): a folder showing its error stayed failed after the address moved on. It now tries again when the route changes, as "Try again" would.
+
 ## How the checks catch mistakes
 
 These are real messages from `npm run typecheck`, each from a one-line mistake.
@@ -225,15 +242,17 @@ Nobody wrote the type `{ page: number; pages: number }`: it is read from `'Page 
 
 ## Tests at the seams
 
-`npm test` runs about 130 tests in a few seconds: over 110 in Vitest, and 20 for the plugin in Node. A few of them, by what they pin down:
+`npm test` runs about 190 tests in a few seconds: over 160 in Vitest, and 20 for the plugin in Node. A few of them, by what they pin down:
 
 - [`editor/state.test.ts`](src/components/product/editor/state.test.ts): "closing with unsaved changes asks first", "a save refused as a conflict keeps the changes". The flow runs as the framework runs it, with services the test passes in.
-- [`app/props.test.ts`](src/components/app/props.test.ts): "changing the catalogue needs a session", as a table over one pure function.
+- [`app/props.test.ts`](src/components/app/props.test.ts): "changing the catalogue needs a session", and "an order does not open for someone who may not read orders, however the address names it", as tables over one pure function.
 - [`products.test.ts`](src/services/products/products.test.ts): the services against the memory client: "a save from an older version is refused as a conflict".
+- [`report/summary.test.ts`](src/components/report/summary.test.ts): the front page's headline, "anything out of stock leads the headline, counted".
+- [`tour/state.test.ts`](src/components/tour/state.test.ts): "leaving puts back the locale and the skin the page had when the tour started".
 - [`http.test.ts`](src/clients/dummyjson/http.test.ts): the client on a bad network: "requests that meet a 401 at the same time share one refresh".
 - [`framework/runtime/__tests__/`](framework/runtime/__tests__): the framework's own guarantees.
 
-The end-to-end tests ([`e2e/flows.spec.ts`](e2e/flows.spec.ts)) drive the production build. After each action they wait on one promise, `window.__framework.idle()`, then look once. It resolves when no read or write is pending, no view or skin is loading, no operation is running and no placeholder is on screen. A flow across two tabs also waits on `window.__framework.fromTab()`, which resolves once a tab has handled another's message. There are no sleeps and no retried assertions, with one stated exception for a list that refreshes on a timer. [`e2e/microdata.spec.ts`](e2e/microdata.spec.ts) runs the framework's microdata check on every page the flows reach: the catalogue, a product, the editor, the dialogs and the lab name their pieces as schema.org does.
+The end-to-end tests ([`e2e/`](e2e)) drive the production build: the main flows ([`flows.spec.ts`](e2e/flows.spec.ts)), and one spec per feature (the report, the orders, the palette, the tour, the skins). After each action they wait on one promise, `window.__framework.idle()`, then look once. It resolves when no read or write is pending, no view or skin is loading, no operation is running and no placeholder is on screen. A flow across two tabs also waits on `window.__framework.fromTab()`, which resolves once a tab has handled another's message. There are no sleeps and no retried assertions, with one stated exception for a list that refreshes on a timer. [`e2e/microdata.spec.ts`](e2e/microdata.spec.ts) runs the framework's microdata check on every page the flows reach: the catalogue, a product, the editor, the dialogs and the lab name their pieces as schema.org does. The features' specs run it on their own pages, the orders' in every skin.
 
 ## The network lab
 
@@ -255,6 +274,7 @@ The end-to-end tests ([`e2e/flows.spec.ts`](e2e/flows.spec.ts)) drive the produc
 | The "Flags" tab: stock count served to "Nobody"   | The rows' − and + go, in every tab, and nothing else renders. "Admins only" brings them back for Emily; sign in as Olivia and they are not hers.                                                                                                                                                                                                             |
 | The "Flags" tab: deletions "Paused"               | The delete links go, and a delete dialog opened from its address says deletions are paused. The rule is in `acl.ts`, so everything below follows `acl.allowed` without reading the flag.                                                                                                                                                                     |
 | Bulk change by 15%, as Olivia                     | Moderators are asked a second time above 10%, others above 50% (the `largeChangeAt` flag, read by the chart's guard).                                                                                                                                                                                                                                        |
+| The "Flags" tab: live map "On", on `#/orders`     | A map of the states appears over the tiles, a circle for each state with orders. A click on Texas's circle is a click on Texas's tile. "Off" takes the map away, with no reload.                                                                                                                                                                             |
 
 DummyJSON allows about 100 requests in a window it does not state, so sustained stress can earn a real 429. The client retries those too.
 
@@ -277,18 +297,20 @@ Two rules hold for every render:
 - **Unchanged parts are reused.** What a render gets keeps every part that is still equal, and a render that would get the same is not called. What it returns shares every element equal to the last one, so React skips it.
 - **Handlers are stable.** Each handler keeps one function for the instance's life, which calls the last committed closure. A function in the JSX that uses nothing of the render (a list's `{(item) => <Item … />}`) is made once, outside it; one that reads the render's values is kept while those values are the same.
 
-[`perf/`](perf/README.md) measures this. `npm run perf` drives a visit of 29 steps, and ten more beyond it, through a profiling build. It counts every render, the ones that changed nothing on the page, and the ones React threw away. Its README holds the numbers after each change. For the last one:
+[`perf/`](perf/README.md) measures this. `npm run perf` drives a visit of 29 steps, and ten more beyond it, through a profiling build. It counts every render, the ones that changed nothing on the page, and the ones React threw away. Its README holds the numbers after each change. Where they stand:
 
-- framework components re-rendered 246 times, 5 of them changing nothing (248 and 9 two changes before);
-- a product's modal opens once, with its skeleton inside it (it opened twice);
+- framework components render again 252 times in the visit, 5 of them changing nothing. Broadsheet and the five features added 6, all at a switch of language, which reaches the three components they put in the header (the skin's switch, the tour, the palette), each changing the page;
+- a product's modal opens once, with its skeleton inside it (it opened twice before the third rendering round);
 - the network lab, open and idle, renders nothing (two renders a second before);
 - typing six keys in the editor renders no framework component, and 50 of react-aria's (602 at the baseline).
 
-## Two skins, one markup
+## Three skins, one markup
 
-The same app wears two skins, and `?skin=broadsheet` (or the switch in the header) changes it in place. The default is a quiet back office. Broadsheet sets the shop as a newspaper: a masthead over a double rule, the catalogue as columns of products with greyscale photographs, a product as an article with a drop cap and its reviews as letters, the bulk change as the market page.
+The same app wears three skins, and `?skin=broadsheet` or `?skin=blueprint` (or the switch in the header) changes it in place. The default is a quiet back office. Broadsheet sets the shop as a newspaper: a masthead over a double rule, the catalogue as columns of products with greyscale photographs, a product as an article with a drop cap and its reviews as letters, the bulk change as the market page, the stock report as a front page, the orders' states as an engraving.
 
-Not one element or attribute changes between them; [`e2e/skins.spec.ts`](e2e/skins.spec.ts) checks it. A skin is a sheet per component folder (`style/skins/broadsheet/index.ts`) and one for the page ([`src/broadsheet.css`](src/broadsheet.css), as [`base.css`](src/base.css) is for the default). They style what the markup says each piece is: an `itemprop`, an element, a role. Storybook has the same switch in its toolbar.
+Blueprint draws the page as itself, on blue paper. Every item is outlined and tagged with its schema.org type (Product, Offer, Review, UpdateAction), every property with its name, and the values a page normally hides are written where they sit (`priceCurrency: USD`). Nobody built a debug mode: the markup already said all of it, so the skin only shows the names. One rule labels every type, so a type added later names itself.
+
+Not one element or attribute changes between them; [`e2e/skins.spec.ts`](e2e/skins.spec.ts) and [`e2e/blueprint.spec.ts`](e2e/blueprint.spec.ts) check it. A skin is a sheet per component folder (`style/skins/<name>/index.ts`) and one for the page ([`src/broadsheet.css`](src/broadsheet.css), [`src/blueprint.css`](src/blueprint.css), as [`base.css`](src/base.css) is for the default), and [`src/skins.test.ts`](src/skins.test.ts) fails when a folder lacks a sheet for a skin. They style what the markup says each piece is: an `itemprop`, an element, a role. A skin also decides the layout, folder by folder: Blueprint gives the folders laid out on a grid a sheet of their own, so each label sits beside what it names. Storybook has the same switch in its toolbar.
 
 ## Storybook
 
@@ -311,6 +333,8 @@ npm run dev        # http://localhost:5180, on DummyJSON
 ```
 
 GrowthBook serves the DummyJSON world's flags when `.env.local` holds its client key, `VITE_GROWTHBOOK_CLIENT_KEY=sdk-…` (GrowthBook's wizard, `npx @growthbook/wizard --language react`, writes it). Without it, the in-memory provider serves them.
+
+The live map draws OpenFreeMap's basemap, which needs no key. With `VITE_MAPTILER_KEY=…` in `.env.local` it draws MapTiler's instead.
 
 | Script                                         | What it does                                                                                                                                                                                                                                                                                                      |
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -358,10 +382,11 @@ The mechanism differs. The idea carries: give each kind of decision one place, t
 
 ## What is not here
 
-- The `Route` and the hash router in [`src/main.tsx`](src/main.tsx) stand in for a routing layer. `form.ts` stands in for a form manager.
+- The `Route` and the hash router in [`src/main.tsx`](src/main.tsx) stand in for a routing layer: the hash's path names a page, and its query the rest. `form.ts` stands in for a form manager.
+- The live map is the app's one imperative widget, a React ref callback in `src/widgets/`, outside the component folders. Where such widgets belong is open.
 - Services receive no `AbortSignal` from the data layer yet. The client honours one; a stale answer is ignored by its cache key instead.
 - The local overlay keeps the API's paging, so a page that lost a product is one short.
-- The live site's build has no GrowthBook key, so its flags come from memory.
+- The live site's build has no GrowthBook key, so its flags come from memory, and the live map is off until the lab turns it on.
 - Offline use, and where the session and other stored data live, are not designed yet.
 - The framework is a working sketch, not a library.
 
@@ -373,14 +398,17 @@ src/
   main.tsx          The shell: which world and locale, the router's stand-in, Root, failures as toasts.
   locales.ts        The locales the app speaks, and `?lang=` in the address.
   env.d.ts          What this app injects: Env, Route, Flags, Navigation.
-  address.ts        The address, as the route and back.
+  address.ts        The address, as the route and back: the page in the hash's path, the rest in its query.
+  format.ts         How values read across components: the currency, what counts as low stock, availability.
   reads.ts          What Root reads for the app: who is signed in, what they may do, their flags.
   base.css          Design tokens and the look of the controls, for the default skin.
   broadsheet.css    The same, for the Broadsheet skin.
+  blueprint.css     The same, for the Blueprint skin.
   skins.ts          The skins, and `?skin=` in the address.
   clients/          Transports.
   services/         Operations, and what makes what stale.
   components/       Component folders.
+  widgets/          Imperative widgets, outside the folders: the live map.
 e2e/                The end-to-end flows.
 perf/               Render cycles, step by step, against a baseline.
 .storybook/         Which folders Storybook shows, and the stage its stories render on.
