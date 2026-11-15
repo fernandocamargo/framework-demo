@@ -230,10 +230,10 @@ Merged into entry 5. The static-function case and its historical counts are ther
 ### 17. The shell and providers execute before the page commits
 
 - **Symptom:** main Root and QueryClientProvider each execute again 62 times, 22/23 unchanged C/W. Features: 54 each, 23 unchanged. A product open has two unchanged executions each of Shell, two I18nProvider functions, Root and QueryClientProvider.
-- **Confirm:** inspect `useTransition`, pending `navigating`, the old/new route, and freshly constructed child elements in `src/main.tsx`. Root is in `other`, not `fw`.
-- **Cause:** urgent pending state and the destination transition execute the shell/provider chain; children are rebuilt while Suspense can retain the old page. A context delivery with unchanged DOM can be necessary.
-- **Fix:** preserve transition and address semantics. A provider/boundary split needs a trace showing which inputs can remain unchanged; root memoization cannot erase real context delivery. Route ownership is the owner's decision, R-14. No executable reduction is established yet.
-- **Guard / applied:** new investigation Q-382; pending indicator, stale page continuity, navigation supersession, locale and skin transitions. Do not subtract the entire shell bucket as waste that can be deleted.
+- **Confirm:** decode Shell's hooks in `src/main.tsx`: route slots 0–4, locale 5–9, skin 10–12. Slots 6–7 and 11–12 are the two `useTransition` hooks whose pending flags are discarded. Both start on every `popstate`, including when neither address value changes. Root is in `other`, not `fw`.
+- **Cause:** starting each unused transition sets and clears pending state in Shell. In the saved main trace, locale/skin flag slots alone account for 28 Shell executions, 21 of its 22 unchanged executions; the features trace has 28 such executions, 23 unchanged. Each executes the provider chain. Route's pending flag is used by `navigating` and remains necessary.
+- **Fix:** use React's `startTransition` for locale and skin state updates. It keeps the address changes in a transition without pending state in Shell. Keep `useRoute` and its pending indicator. A further unchanged execution needs a separate cause before another change.
+- **Guard / applied:** `src/main.test.tsx` fails on four extra Root executions for an unchanged `popstate` before the fix and passes after it; it also checks a changed locale and skin and `<html lang>`. Measured by the reviewer, three runs per engine and visit: other updates with no change in main 1,763 → 1,658 (Chromium), about 1,715 → 1,608 (WebKit); features about 500 → 385 in both; the further steps 266 → 211 and 257 → 202; framework and thrown counts unchanged; all 92 end-to-end runs pass. Preserve stale page continuity, navigation supersession, locale and skin controls, back/forward and shared addresses. Do not subtract the entire shell bucket as waste that can be deleted.
 
 ### 18. A closing popover overlaps another step
 

@@ -2,7 +2,7 @@
 // app sees, stands in for a router, hands `Root` what the framework injects, and shows what the
 // failure pipeline carries. The app itself starts at components/app.
 
-import { StrictMode, use, useEffect, useMemo, useState, useTransition } from 'react';
+import { startTransition, StrictMode, use, useEffect, useMemo, useState, useTransition } from 'react';
 import {
   Button,
   I18nProvider,
@@ -123,9 +123,8 @@ function Frame({ path, state }: { path: string; state: string }) {
 // percentage) in the same locale.
 function useLocale() {
   const [locale, setLocale] = useState<Locale>(currentLocale);
-  const [, startSwitch] = useTransition();
   useEffect(() => {
-    const follow = () => startSwitch(() => setLocale(currentLocale()));
+    const follow = () => startTransition(() => setLocale(currentLocale()));
     window.addEventListener('localechange', follow);
     window.addEventListener('popstate', follow);
     return () => {
@@ -143,9 +142,8 @@ function useLocale() {
 // transition: the page keeps the old skin until every component on it has its new sheet.
 function useSkin() {
   const [skin, setSkin] = useState<Skin>(currentSkin);
-  const [, startSwitch] = useTransition();
   useEffect(() => {
-    const follow = () => startSwitch(() => setSkin(currentSkin()));
+    const follow = () => startTransition(() => setSkin(currentSkin()));
     window.addEventListener('skinchange', follow);
     window.addEventListener('popstate', follow);
     return () => {
