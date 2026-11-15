@@ -83,14 +83,29 @@ export function fieldContext(key: string): Context<unknown> {
 }
 
 /**
+ * A field of the route being rendered, from its own context when it has one, and from the whole
+ * route when it has none; `*` is the whole route. This is the one place the framework reads a
+ * context on demand: a component follows the fields its files read, and which those are is known
+ * only as they read them, through a Proxy, while it renders. `use` is the hook React lets a render
+ * call behind a condition, but a lint cannot see that this function runs only during a render:
+ * `followRoute` guards it with `rendering`, and a chart reads `renderingRoute` only while its
+ * component's first render creates it.
+ */
+function reading(fields: ReadonlySet<string>, key: string): unknown {
+  const own = key !== '*' && fields.has(key);
+  const value = use(own ? fieldContext(key) : (RouteContext as unknown as Context<unknown>));
+  return own || key === '*' ? value : (value as Record<string, unknown>)[key];
+}
+
+/**
  * The route being rendered, read field by field as it is read: the component follows the fields it
  * read, and no other, until it renders again. Read it during a render only (`use` reads contexts).
  * Its keys, and spreading it, read the whole route.
  */
 export function renderingRoute(fields: ReadonlySet<string>): Route {
-  const whole = () => use(RouteContext) as object;
+  const whole = () => reading(fields, '*') as object;
   const field = (key: string | symbol) =>
-    typeof key === 'string' && fields.has(key) ? { value: use(fieldContext(key)) } : null;
+    typeof key === 'string' && fields.has(key) ? { value: reading(fields, key) } : null;
   return new Proxy({} as Route, {
     get: (_, key) => (field(key) ?? { value: Reflect.get(whole(), key) }).value,
     getOwnPropertyDescriptor: (_, key) => {
@@ -121,8 +136,8 @@ export function followRoute(
   rendering: { readonly current: boolean },
   committed: Route,
 ): RouteView {
-  const whole = () => use(RouteContext) as unknown as Record<string, unknown>;
-  const field = (key: string) => (key === '*' ? whole() : fields.has(key) ? use(fieldContext(key)) : whole()[key]);
+  const whole = () => reading(fields, '*') as Record<string, unknown>;
+  const field = (key: string) => reading(fields, key);
   if (last) {
     let same = true;
     // Every field is read, not only up to the first that changed, so the component keeps following all of them.

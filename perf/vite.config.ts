@@ -36,7 +36,7 @@ const EDITS: [anchor: string, before: string][] = [
     "if (loadThisSkin && loadSkin(spec.path, skin, loadThisSkin).status !== 'fulfilled') globalThis.__suspend?.(spec.path, 'skin')\n    ",
   ],
   [
-    'const answer: unknown = query ? useSuspenseQuery(',
+    'const answer = useAnswer(query)',
     "if (query && __client.getQueryData(query.queryKey) === undefined) globalThis.__suspend?.(spec.path, 'data')\n    ",
   ],
   ['const parent = use(ScopeContext);\n    const scope', 'const __client = useQueryClient()\n    '],

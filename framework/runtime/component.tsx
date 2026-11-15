@@ -178,6 +178,34 @@ const sameProps = (a: Props, b: Props) => {
   );
 };
 
+type Read = NonNullable<ReturnType<typeof useFramework>['user']>;
+
+/** For a Root without one of its reads: a read that is there from the start and holds nothing. */
+const NO_READ = {
+  initialData: null,
+  queryFn: () => null,
+  queryKey: ['framework/none'],
+  staleTime: Infinity,
+} as unknown as Read;
+
+// Which hooks a component calls is fixed when its type is created, from what its folder's files
+// read, and for the rest once its view has loaded, before its first render. Each choice below is
+// between two hooks, made once: every render of a component then calls the same hooks in the same
+// order, with no hook behind a condition, and a lint can check it.
+
+/** For a component that does not read a source: nothing, and no hook. */
+const useNothing = () => undefined;
+/** The person signed in, from Root's `user` read: `null` when nobody is, or Root has no such read. */
+const useUserRead = (): unknown => useSuspenseQuery(useFramework().user ?? NO_READ).data;
+/** The answer of the component's default read. */
+const useAnswerOf = (query: null | Read): unknown => useSuspenseQuery(query ?? NO_READ).data;
+type Followed = { decided: boolean | undefined; flags: Seen | undefined; parts: Seen | undefined };
+/** One subscription to Root's `acl` and `flags` reads, as `combine` shows them to the component. */
+const useFollowedReads = (
+  combine: (results: readonly Pick<QueryObserverResult, 'data'>[]) => Followed,
+  queries: Read[],
+): Followed | undefined => useSuspenseQueries({ combine, queries });
+
 export function component(spec: Spec) {
   const inView = new Set(spec.reads?.view ?? []);
   const inAcl = new Set(spec.reads?.acl ?? []);
@@ -210,6 +238,16 @@ export function component(spec: Spec) {
   // A rule that reads the chart's state is decided after the chart; any other, before it, so the
   // chart's declaration and its guards see this render's decision.
   const ruleReadsState = inAcl.has('state') || inAcl.has('*');
+  // The placeholder and the error file show the folder's messages too, so the component's
+  // wrapper reads them when the folder has both.
+  const fallbacksSpeak = Boolean(spec.i18n) && Boolean(spec.placeholder || spec.error);
+  // The hooks this type calls, chosen here from what the folder's files read.
+  const useUser = readsUser ? useUserRead : useNothing;
+  const useFollowed = readsAcl || readsFlags ? useFollowedReads : useNothing;
+  const useKeys = readsKeyboard ? useKeyboard : useNothing;
+  // And one chosen when the view has loaded: whether it has a default read. A view with none has
+  // no query: a stand-in would cost every such component a subscription.
+  let useAnswer: (query: null | Read) => unknown = useNothing;
   let view: Promise<ViewModule> | undefined;
   // Once the view has loaded, the components it shows start loading theirs, so a child does not
   // wait to render before its own view starts, and React does not render its parent again when
@@ -218,6 +256,7 @@ export function component(spec: Spec) {
     (view ??= tracked(
       hold(
         spec.view().then((module) => {
+          if (typeof module.async?.default === 'function') useAnswer = useAnswerOf;
           for (const child of module.children ?? []) child.preload?.();
           return module;
         }),
@@ -253,11 +292,11 @@ export function component(spec: Spec) {
 
   /** Every layer of the view but the state layer, called in the same order on every render. */
   function useLayers() {
-    const { acl: aclRead, data, fields, flags: flagsRead, injection, skin, sources, user: userRead } = useFramework();
+    const { acl: aclRead, data, fields, flags: flagsRead, injection, skin, sources } = useFramework();
     const language = useLanguage();
     // The person signed in, from Root's `user` read: a sign-in or a sign-out makes it stale, and
     // only the components that read it render again.
-    const user = readsUser ? (userRead ? (useSuspenseQuery(userRead).data as unknown) : null) : undefined;
+    const user = useUser();
     const module = use(loadView());
     const inherited = readsAcl || module.acl ? use(AclContext) : true;
     // The parts of the backend's snapshot and of the flags this component's files read, recorded as
@@ -287,7 +326,7 @@ export function component(spec: Spec) {
     );
     const rule = folderRule ? module.acl?.default : undefined;
     // Which of Root's reads this component subscribes to, in a fixed order: whether it reads each is
-    // fixed once its view has loaded, and whether Root has each, for Root's life.
+    // fixed for its type, and whether Root has each, for Root's life.
     const aclAt = readsAcl && aclRead ? 0 : -1;
     const flagsAt = readsFlags && flagsRead ? aclAt + 1 : -1;
     const seen = useRef<{ acl: null | Seen; flags: null | Seen }>({ acl: null, flags: null }).current;
@@ -303,13 +342,11 @@ export function component(spec: Spec) {
       },
       [rule, inherited, keys, flagKeys, aclAt, flagsAt, seen],
     );
-    const subscribed = [...(aclAt < 0 ? [] : [aclRead!]), ...(flagsAt < 0 ? [] : [flagsRead!])];
-    const followed =
-      readsAcl || readsFlags
-        ? subscribed.length
-          ? useSuspenseQueries({ combine, queries: subscribed })
-          : combine([])
-        : undefined;
+    const subscribed = useMemo(
+      () => [...(aclAt < 0 ? [] : [aclRead!]), ...(flagsAt < 0 ? [] : [flagsRead!])],
+      [aclAt, aclRead, flagsAt, flagsRead],
+    );
+    const followed = useFollowed(combine, subscribed);
     // What this render shows: a later change is compared with it.
     if (followed) {
       seen.acl = followed.parts ?? null;
@@ -332,7 +369,7 @@ export function component(spec: Spec) {
     const routeView = useRef<null | RouteView>(null);
     if (viewReadsRoute) routeView.current = followRoute(routeView.current, fields, rendering, sources.route);
     const route = viewReadsRoute ? routeView.current!.route : undefined;
-    const keyboard = readsKeyboard ? useKeyboard() : undefined;
+    const keyboard = useKeys();
     // The decision, twice. `judged` is this render's, for what runs inside the render: the chart's
     // declaration, and its first reads when it is created. `decided` is the one React committed,
     // for what runs later: the chart's guards and the operations. A render React throws away (a
@@ -416,11 +453,9 @@ export function component(spec: Spec) {
             ),
       [data, exported, injection, injected, readRoute, learned, sources, locale, userId, snapshot, flagged],
     );
-    // A view with no default read has no query. A stand-in query would suspend the first instance
-    // of each such component once, and React would render everything inside the boundary again
-    // for each one, a level deeper each time. Whether the view has a default read is
-    // fixed once it has loaded, so any one component makes this call on every render or on none.
-    const answer: unknown = query ? useSuspenseQuery(query).data : undefined;
+    // A view with no default read has no query, and `useAnswer` is then no hook at all: which of
+    // the two it is was chosen when the view loaded.
+    const answer = useAnswer(query);
     // An answer keeps every part equal to the last answer this component showed, under any key,
     // so a child given an equal part gets the same object and its memo holds.
     const shown = useRef<unknown>(undefined);
@@ -528,7 +563,7 @@ export function component(spec: Spec) {
    * nothing the render reads) does not call the render either, and a part that did not change
    * keeps its identity, so react-aria's collections and memoized children inside skip it.
    */
-  function show(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, decided?: boolean) {
+  function useShow(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, decided?: boolean) {
     const { access, async, decided: committed, form, judged, language, module, scope } = layers;
     const last = useRef<null | {
       allowed: boolean;
@@ -614,15 +649,15 @@ export function component(spec: Spec) {
     // Until this render returns, what the chart reads is this render's decision.
     layers.rendering.current = true;
     try {
-      return stateful(props, layers);
+      return useStateful(props, layers);
     } finally {
       layers.rendering.current = false;
     }
   }
-  function stateful(props: Props, layers: ReturnType<typeof useLayers>) {
+  function useStateful(props: Props, layers: ReturnType<typeof useLayers>) {
     const { access, judged, language, module } = layers;
     // The decision comes before the chart, so its declaration and its guards see this render's.
-    // A rule that reads the chart's state is decided after it, in show.
+    // A rule that reads the chart's state is decided after it, in useShow.
     const early = ruleReadsState
       ? undefined
       : decisionOf(module, givenOf(props, layers, undefined, classes(spec.path, props.className)), access);
@@ -654,13 +689,13 @@ export function component(spec: Spec) {
       () => renderingRoute(layers.fields),
       told,
     );
-    return show(props, layers, state, early);
+    return useShow(props, layers, state, early);
   }
   function StatelessView(props: Props) {
     const layers = useLayers();
     layers.rendering.current = true;
     try {
-      return show(props, layers, undefined);
+      return useShow(props, layers, undefined);
     } finally {
       layers.rendering.current = false;
     }
@@ -675,15 +710,14 @@ export function component(spec: Spec) {
 
   const { error: ErrorFallback, placeholder: Placeholder } = spec;
 
-  // The placeholder and the error file show the folder's messages too, so the component's
-  // wrapper reads them when the folder has both.
-  const fallbacksSpeak = Boolean(spec.i18n) && Boolean(spec.placeholder || spec.error);
+  const useFallbackLanguage = fallbacksSpeak ? useLanguage : useNothing;
 
   function Component(props: Props) {
     const className = classes(spec.path, props.className);
     const { reset } = useQueryErrorResetBoundary();
     const parent = use(ScopeContext);
-    const language = fallbacksSpeak ? defined(useLanguage()) : null;
+    const spoken = useFallbackLanguage();
+    const language = spoken ? defined(spoken) : null;
     let tree: ReactNode = createElement(View, props);
     if (Placeholder)
       tree = createElement(
