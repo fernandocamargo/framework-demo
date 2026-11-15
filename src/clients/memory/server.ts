@@ -20,6 +20,36 @@ type Data = {
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
 
+const select = <T extends { id: number }>(item: T, fields?: string[]) =>
+  fields
+    ? Object.fromEntries([
+        ['id', item.id],
+        ...fields.filter((field) => field in item).map((field) => [field, item[field as keyof T]]),
+      ])
+    : item;
+
+export const listing = <T extends { id: number }>(
+  key: string,
+  items: T[],
+  query: URLSearchParams,
+  sortable = false,
+) => {
+  const sortBy = query.get('sortBy') as keyof T | null;
+  const sorted =
+    sortable && sortBy
+      ? [...items].sort((a, b) => {
+          const [x, y] = [a[sortBy], b[sortBy]];
+          const order = typeof x === 'string' ? x.localeCompare(String(y)) : Number(x) - Number(y);
+          return query.get('order') === 'desc' ? -order : order;
+        })
+      : items;
+  const skip = Number(query.get('skip') ?? 0);
+  const limit = Number(query.get('limit') ?? 30) || sorted.length;
+  const fields = query.get('select')?.split(',');
+  const selected = sorted.slice(skip, skip + limit).map((item) => select(item, fields));
+  return { [key]: selected, limit: selected.length, skip, total: items.length };
+};
+
 export function createServer({
   data = fixtures as Data,
   now = Date.now,
@@ -36,37 +66,6 @@ export function createServer({
     return kind === 'access' && extra === undefined && Number(expiresAt) > now()
       ? (data.users.find((user) => user.id === Number(id)) ?? null)
       : null;
-  };
-
-  const page = (items: Product[], query: URLSearchParams) => {
-    const sortBy = query.get('sortBy') as keyof Product | null;
-    const sorted = sortBy
-      ? [...items].sort((a, b) => {
-          const [x, y] = [a[sortBy], b[sortBy]];
-          const order = typeof x === 'string' ? x.localeCompare(String(y)) : Number(x) - Number(y);
-          return query.get('order') === 'desc' ? -order : order;
-        })
-      : items;
-    const skip = Number(query.get('skip') ?? 0);
-    const limit = Number(query.get('limit') ?? 30) || sorted.length;
-    const fields = query.get('select')?.split(',');
-    const selected = sorted.slice(skip, skip + limit).map((product) => select(product, fields));
-    return { limit: selected.length, products: selected, skip, total: items.length };
-  };
-  const select = <T extends { id: number }>(product: T, fields?: string[]) =>
-    fields
-      ? Object.fromEntries([
-          ['id', product.id],
-          ...fields.filter((field) => field in product).map((field) => [field, product[field as keyof T]]),
-        ])
-      : product;
-  // A list of carts or users, paged and selected as the products are; the key names the list.
-  const listing = <T extends { id: number }>(key: string, items: T[], query: URLSearchParams) => {
-    const skip = Number(query.get('skip') ?? 0);
-    const limit = Number(query.get('limit') ?? 30) || items.length;
-    const fields = query.get('select')?.split(',');
-    const selected = items.slice(skip, skip + limit).map((item) => select(item, fields));
-    return { [key]: selected, limit: selected.length, skip, total: items.length };
   };
 
   const route = (
@@ -110,15 +109,17 @@ export function createServer({
     }
     const resource = needsToken ? path.slice('/auth'.length) : path;
 
-    if (method === 'GET' && resource === '/products') return json(200, page(data.products, query));
+    if (method === 'GET' && resource === '/products') return json(200, listing('products', data.products, query, true));
     if (method === 'GET' && resource === '/products/categories') return json(200, data.categories);
     if (method === 'GET' && resource === '/products/search') {
       const q = (query.get('q') ?? '').toLowerCase();
       return json(
         200,
-        page(
+        listing(
+          'products',
           data.products.filter((product) => `${product.title} ${product.description}`.toLowerCase().includes(q)),
           query,
+          true,
         ),
       );
     }
@@ -126,9 +127,11 @@ export function createServer({
     if (method === 'GET' && category)
       return json(
         200,
-        page(
+        listing(
+          'products',
           data.products.filter((product) => product.category === category[1]),
           query,
+          true,
         ),
       );
     if (method === 'POST' && resource === '/products/add') return json(201, { id: data.products.length + 1, ...body });
@@ -142,7 +145,7 @@ export function createServer({
       return json(200, { ...product, deletedOn: new Date(now()).toISOString(), isDeleted: true });
 
     if (method === 'GET' && resource === '/carts') return json(200, listing('carts', data.carts, query));
-    if (method === 'GET' && resource === '/users') return json(200, listing('users', data.customers, query));
+    if (method === 'GET' && resource === '/users') return json(200, listing('users', data.customers, query, true));
     const cartId = /^\/carts\/(\d+)$/.exec(resource);
     const cart = cartId && data.carts.find((candidate) => candidate.id === Number(cartId[1]));
     if (cartId && !cart) return json(404, { message: `Cart with id '${cartId[1]}' not found` });
