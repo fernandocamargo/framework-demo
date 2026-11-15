@@ -7,13 +7,13 @@ import Commands from './components/commands';
 export default ({ className, label, open, results, searching, send, shortcut, text }) => (
   <>
     <Button
-      aria-keyshortcuts="Meta+K Control+K"
+      aria-describedby="palette-shortcut"
       aria-label={label}
       className={`react-aria-Button ${className}`}
       data-react-aria-top-layer="true"
       onPress={() => send({ type: 'open' })}
     >
-      <kbd>{shortcut}</kbd>
+      <kbd id="palette-shortcut">{shortcut}</kbd>
     </Button>
     {open && (
       <Commands

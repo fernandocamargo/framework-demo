@@ -22,8 +22,11 @@ export default ({
   title,
 }) => (
   <div className={className}>
-    <Button aria-expanded={open} aria-keyshortcuts="t" onPress={() => send({ type: 'start' })}>
+    <Button aria-describedby="tour-shortcut" aria-expanded={open} onPress={() => send({ type: 'start' })}>
       {label}
+      <span hidden id="tour-shortcut">
+        T
+      </span>
     </Button>
     {open &&
       createPortal(

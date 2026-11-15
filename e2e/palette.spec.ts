@@ -40,6 +40,17 @@ test.beforeEach(({ page }) => {
   });
 });
 
+test('the header buttons describe the keys that open them', async ({ page }) => {
+  await open(page);
+  const header = page.getByRole('banner');
+  const paletteButton = header.getByRole('button', { name: 'Command palette' });
+  const paletteKey = await paletteButton.locator('kbd').innerText();
+  expect(paletteKey).toMatch(/^(⌘K|Ctrl K)$/);
+  await expect(paletteButton).toHaveAccessibleDescription(paletteKey);
+  await expect(header.getByRole('button', { name: 'Keyboard shortcuts' })).toHaveAccessibleDescription('?');
+  await expect(header.getByRole('button', { name: 'Take the tour' })).toHaveAccessibleDescription('T');
+});
+
 test('the key opens the palette, which lists what can be done here and searches the products', async ({ page }) => {
   await page.clock.install();
   await open(page);

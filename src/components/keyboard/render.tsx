@@ -7,12 +7,12 @@ import List from './components/list';
 export default ({ className, label, open, send }) => (
   <>
     <Button
-      aria-keyshortcuts="?"
+      aria-describedby="keyboard-shortcut"
       aria-label={label}
       className={`react-aria-Button ${className}`}
       onPress={() => send({ type: 'open' })}
     >
-      <kbd>?</kbd>
+      <kbd id="keyboard-shortcut">?</kbd>
     </Button>
     {open && <List onClose={() => send({ type: 'close' })} />}
   </>
