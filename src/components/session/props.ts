@@ -25,8 +25,6 @@ export default ({ acl, asked, form, i18n, reason, state }) => {
     picture: session?.image ?? '',
     refreshing: state.refreshing,
     role: signedIn && acl.role !== 'guest' ? i18n.role({ role: acl.role }) : null,
-    send: state.send,
-    set: form.set,
     signedIn,
     signingIn: state.signingIn,
     token: state.refreshing ? i18n.token.refreshing : i18n.token.left({ seconds }),

@@ -694,7 +694,8 @@ test('the inspector shows what a press did: the write, its optimistic change, th
   expect(text).toContain('worked out again from the cache: products.search changed');
   expect(text).toContain('products.setStock done');
   expect(text).toContain('products.search, products.get, and products.inventory, by products.setStock');
-  expect(text).toContain('Form.onSubmit');
+  // The sign-in form's submit is its folder's handler, named for what it does.
+  expect(text).toContain('handlers.signIn');
 });
 
 test('the states gallery shows every chart in each of its states; a frame holds its component in one state, with its example', async ({

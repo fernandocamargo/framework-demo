@@ -1,5 +1,5 @@
 // The filter bar's fields, from the filters in the address. Each change goes back to the
-// address (render.tsx), and the catalogue reads again because its read used those fields. The
+// address (handlers.ts), and the catalogue reads again because its read used those fields. The
 // search's text is the form's (form.ts), so what is typed stays in the field until it is searched.
 // It is given the fields it shows, not the filters whole: another page of the same list is not
 // another filter bar.
@@ -29,7 +29,6 @@ export default ({ categories, category, form, i18n, order, q, sort }) => ({
   category: category || 'all',
   i18n,
   q,
-  set: form.set,
   sort: `${sort}:${order}`,
   sorts: SORTS.map(([field, order]) => ({
     id: `${field}:${order}`,
