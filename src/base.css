@@ -214,11 +214,15 @@ select {
     border-color 120ms var(--ease),
     transform 120ms var(--ease);
 
-  &[data-hovered] {
+  /* A paging link is a plain anchor (it keeps the focus when it is disabled): it has no react-aria
+     states, so the pointer's own stand in for them. */
+  &[data-hovered],
+  &:not([data-rac]):hover:not([data-disabled]) {
     background: var(--surface-2);
     text-decoration: none;
   }
-  &[data-pressed] {
+  &[data-pressed],
+  &:not([data-rac]):active:not([data-disabled]) {
     transform: scale(0.98);
   }
   &[data-disabled],

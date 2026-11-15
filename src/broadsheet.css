@@ -68,11 +68,13 @@
     font-weight: 600;
     letter-spacing: 0.09em;
     text-transform: uppercase;
-    &[data-hovered] {
+    &[data-hovered],
+    &:not([data-rac]):hover:not([data-disabled]) {
       background: var(--text);
       color: var(--surface);
     }
-    &[data-pressed] {
+    &[data-pressed],
+    &:not([data-rac]):active:not([data-disabled]) {
       transform: translate(2px, 2px);
     }
   }

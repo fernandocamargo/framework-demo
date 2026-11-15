@@ -2,7 +2,7 @@
 // state and an order's dialog, with what each role sees of the customer. Every step is: act, wait
 // for the framework to say it is idle, then look once.
 
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
 import { checkMicrodata, type Vocabulary } from '../framework/microdata/check';
@@ -103,6 +103,57 @@ test('as an admin, the same order shows its street and the customer in full', as
   expect(await order.locator('[itemprop="streetAddress"]').innerText()).toBe('304 Main Street');
   expect(await order.locator('[itemprop="name"]').first().innerText()).toBe('Amara Alves');
   expect(await problems(page)).toEqual([]);
+});
+
+test('ledger paging keeps the focused link when it reaches either end', async ({ page }) => {
+  await signIn(page, 'Olivia');
+  await open(page, '#/orders');
+  const nav = page.getByRole('navigation', { name: 'Pages' });
+  const previous = nav.getByRole('link', { name: 'Previous' });
+  const next = nav.getByRole('link', { name: 'Next' });
+  const mark = (link: Locator) =>
+    link.evaluate((element) => ((element as HTMLElement & { marked?: boolean }).marked = true));
+  const sameAndFocused = (link: Locator) =>
+    link.evaluate(
+      (element) =>
+        (element as HTMLElement & { marked?: boolean }).marked === true && document.activeElement === element,
+    );
+
+  await act(page, () => next.click());
+  expect(fields(page).get('page')).toBe('2');
+  await previous.focus();
+  await mark(previous);
+  await act(page, () => page.keyboard.press('Enter'));
+  expect(fields(page).get('page')).toBeNull();
+  expect(await nav.innerText()).toContain('Page 1 of 4');
+  expect(await sameAndFocused(previous)).toBe(true);
+  expect(await previous.getAttribute('aria-disabled')).toBe('true');
+  expect(await previous.getAttribute('data-disabled')).toBe('true');
+  expect(await previous.getAttribute('href')).toBeNull();
+  await act(page, () => page.keyboard.press('Enter'));
+  expect(fields(page).get('page')).toBeNull();
+
+  for (const number of ['2', '3']) {
+    await act(page, () => next.click());
+    expect(fields(page).get('page')).toBe(number);
+  }
+  await next.focus();
+  await mark(next);
+  await act(page, () => page.keyboard.press('Enter'));
+  expect(fields(page).get('page')).toBe('4');
+  expect(await nav.innerText()).toContain('Page 4 of 4');
+  expect(await sameAndFocused(next)).toBe(true);
+  expect(await next.getAttribute('aria-disabled')).toBe('true');
+  expect(await next.getAttribute('data-disabled')).toBe('true');
+  expect(await next.getAttribute('href')).toBeNull();
+  await act(page, () => page.keyboard.press('Enter'));
+  expect(fields(page).get('page')).toBe('4');
+
+  for (const skin of ['default', 'broadsheet', 'blueprint']) {
+    await act(page, () => page.goto(`./?world=memory&skin=${skin}#/orders?page=4`));
+    expect(await next.getAttribute('data-disabled')).toBe('true');
+    expect(await next.evaluate((element) => getComputedStyle(element).opacity)).toBe('0.55');
+  }
 });
 
 test('the orders page is named by schema.org, and the same markup wears every skin', async ({ page }) => {

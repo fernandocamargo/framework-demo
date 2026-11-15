@@ -78,6 +78,57 @@ test('the catalogue follows the address: search, category, sort and page', async
   expect(await summary(page)).toBe('10 products in Desks');
 });
 
+test('paging keeps the focused link when it reaches either end', async ({ page }) => {
+  await open(page);
+  const nav = page.getByRole('navigation', { name: 'Pages' });
+  const previous = nav.getByRole('link', { name: 'Previous' });
+  const next = nav.getByRole('link', { name: 'Next' });
+  const pageNumber = () => new URLSearchParams(new URL(page.url()).hash.split('?')[1] ?? '').get('page');
+  const mark = (link: Locator) =>
+    link.evaluate((element) => ((element as HTMLElement & { marked?: boolean }).marked = true));
+  const sameAndFocused = (link: Locator) =>
+    link.evaluate(
+      (element) =>
+        (element as HTMLElement & { marked?: boolean }).marked === true && document.activeElement === element,
+    );
+
+  await act(page, () => next.click());
+  expect(pageNumber()).toBe('2');
+  await previous.focus();
+  await mark(previous);
+  await act(page, () => page.keyboard.press('Enter'));
+  expect(pageNumber()).toBeNull();
+  expect(await nav.innerText()).toContain('Page 1 of 4');
+  expect(await sameAndFocused(previous)).toBe(true);
+  expect(await previous.getAttribute('aria-disabled')).toBe('true');
+  expect(await previous.getAttribute('data-disabled')).toBe('true');
+  expect(await previous.getAttribute('href')).toBeNull();
+  await act(page, () => page.keyboard.press('Enter'));
+  expect(pageNumber()).toBeNull();
+
+  for (const number of ['2', '3']) {
+    await act(page, () => next.click());
+    expect(pageNumber()).toBe(number);
+  }
+  await next.focus();
+  await mark(next);
+  await act(page, () => page.keyboard.press('Enter'));
+  expect(pageNumber()).toBe('4');
+  expect(await nav.innerText()).toContain('Page 4 of 4');
+  expect(await sameAndFocused(next)).toBe(true);
+  expect(await next.getAttribute('aria-disabled')).toBe('true');
+  expect(await next.getAttribute('data-disabled')).toBe('true');
+  expect(await next.getAttribute('href')).toBeNull();
+  await act(page, () => page.keyboard.press('Enter'));
+  expect(pageNumber()).toBe('4');
+
+  for (const skin of ['default', 'broadsheet', 'blueprint']) {
+    await act(page, () => page.goto(`./?world=memory&skin=${skin}#/products?page=4`));
+    expect(await next.getAttribute('data-disabled')).toBe('true');
+    expect(await next.evaluate((element) => getComputedStyle(element).opacity)).toBe('0.55');
+  }
+});
+
 test('a search keeps its field and the focus; the back button takes the text back', async ({ page }) => {
   await open(page);
   const search = page.getByRole('searchbox', { name: 'Search products' });

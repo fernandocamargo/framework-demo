@@ -38,13 +38,28 @@ export default ({ className, currency, empty, emptyText, i18n, orders, paging, s
     )}
     {paging.shown && (
       <nav aria-label={i18n.paging.label}>
-        <Link href={paging.previousHref ?? undefined} isDisabled={!paging.previousHref}>
+        {/* An anchor without a destination keeps focus when paging reaches an end. */}
+        <a
+          aria-disabled={!paging.previousHref || undefined}
+          className="react-aria-Link"
+          data-disabled={!paging.previousHref || undefined}
+          href={paging.previousHref ?? undefined}
+          role="link"
+          tabIndex={0}
+        >
           {i18n.paging.previous}
-        </Link>
+        </a>
         <span>{paging.text}</span>
-        <Link href={paging.nextHref ?? undefined} isDisabled={!paging.nextHref}>
+        <a
+          aria-disabled={!paging.nextHref || undefined}
+          className="react-aria-Link"
+          data-disabled={!paging.nextHref || undefined}
+          href={paging.nextHref ?? undefined}
+          role="link"
+          tabIndex={0}
+        >
           {i18n.paging.next}
-        </Link>
+        </a>
       </nav>
     )}
   </section>
