@@ -1,5 +1,7 @@
 # Render cycles
 
+The [rendering playbook](PLAYBOOK.md) describes the walk from Root to the controls, the causes already found, and how one measured fix is handed off and reviewed. `node perf/walk.mjs perf/out/<label>/cycles.json` expands a saved first-run trace into every step and cause group, with the further steps counted separately; it changes no measurement or gate.
+
 What a visit costs in renders, measured so that a change to the framework or the app shows its price. `npm run perf` builds the app with React's profiling build, unminified (`perf/vite.config.ts`), and drives the flow in `perf/steps.mjs` through it in headless Chromium (`perf/cycles.mjs`), in the memory world. Each step acts, waits for `window.__framework.idle()`, and checks the page once.
 
 Per step it counts:
