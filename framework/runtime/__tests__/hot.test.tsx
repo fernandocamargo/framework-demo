@@ -5,6 +5,7 @@
 import { act, render } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 
+import type { Operation } from '../async';
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { Root } from '../root';
@@ -113,6 +114,103 @@ test('an edit that gives the view a default read mounts it again, with no change
   expect(errors.mock.calls.map((call) => String(call[0]))).toEqual([]);
   errors.mockRestore();
 });
+
+test('adding or removing a form mounts the view again with the new layer', async () => {
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const files = {
+    async: undefined,
+    form: undefined,
+    props: undefined,
+    render: ({ form }: Props) =>
+      createElement('input', { defaultValue: (form as undefined | { initial: { title: string } })?.initial.title }),
+    state: undefined,
+  };
+  const Field = component({ path: 'components/field', skins: {}, view: () => Promise.resolve(files) });
+  const container = await show(createElement(Field));
+  const first = container.querySelector('input')!;
+  first.value = 'typed';
+
+  await act(async () => (Field as unknown as Hot).replace({ ...files, form: { seed: () => ({ title: 'seeded' }) } }));
+  await settle();
+  const seeded = container.querySelector('input')!;
+  expect(seeded).not.toBe(first);
+  expect(seeded.value).toBe('seeded');
+
+  await act(async () => (Field as unknown as Hot).replace(files));
+  await settle();
+  expect(container.querySelector('input')).not.toBe(seeded);
+  expect(container.querySelector('input')!.value).toBe('');
+  expect(errors).not.toHaveBeenCalled();
+  errors.mockRestore();
+});
+
+test.each([false, true])(
+  'adding and removing the last operation remounts and aborts it (default read: %s)',
+  async (read) => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let operation: Operation | undefined;
+    let signal: AbortSignal | undefined;
+    let finish: (answer: string) => void = () => undefined;
+    const files = {
+      async: read ? { default: () => Promise.resolve('answer') } : undefined,
+      form: undefined,
+      props: undefined,
+      render: ({ async }: Props) => {
+        const layer = async as undefined | { default?: string; save?: Operation };
+        operation = layer?.save;
+        return createElement('input', { defaultValue: layer?.default ?? 'no read' });
+      },
+      state: undefined,
+    };
+    const Editor = component({ path: 'components/operation-edit', skins: {}, view: () => Promise.resolve(files) });
+    const container = await show(createElement(Editor));
+    const first = container.querySelector('input')!;
+    const withOperation = {
+      ...files,
+      async: {
+        ...files.async,
+        save: (given: { signal: AbortSignal }) => {
+          signal = given.signal;
+          return new Promise<string>((resolve) => (finish = resolve));
+        },
+      },
+    };
+    await act(async () => (Editor as unknown as Hot).replace(withOperation));
+    await settle();
+    const active = container.querySelector('input')!;
+    expect(active).not.toBe(first);
+    expect(active.value).toBe(read ? 'answer' : 'no read');
+    let pending: Promise<unknown> | undefined;
+    act(() => {
+      pending = operation!();
+    });
+    expect(operation!.pending).toBe(true);
+    expect(signal?.aborted).toBe(false);
+
+    // A render edit with the same layers keeps the field and the operation in flight.
+    active.value = 'typed';
+    await act(async () =>
+      (Editor as unknown as Hot).replace({ ...withOperation, render: (props: Props) => files.render(props) }),
+    );
+    await settle();
+    expect(container.querySelector('input')).toBe(active);
+    expect(active.value).toBe('typed');
+    expect(operation!.pending).toBe(true);
+    expect(signal?.aborted).toBe(false);
+
+    await act(async () => (Editor as unknown as Hot).replace(files));
+    await settle();
+    expect(container.querySelector('input')).not.toBe(active);
+    expect(operation).toBeUndefined();
+    expect(signal?.aborted).toBe(true);
+    await act(async () => {
+      finish('saved');
+      await expect(pending).resolves.toBe('saved');
+    });
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+  },
+);
 
 test("the plugin's module for a folder takes an edit to its view or a skin under the dev server, and not in a build", async () => {
   const { mkdirSync, mkdtempSync, writeFileSync } = await import('node:fs');

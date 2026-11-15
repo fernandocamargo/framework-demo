@@ -151,7 +151,8 @@ ScopeContext.displayName = 'Scope';
 const classes = (path: string, className: unknown) =>
   typeof className === 'string' && className ? `${path} ${className}` : path;
 
-const NO_LAYER = {};
+const NO_LAYER = Object.freeze({});
+const NO_FORM = Object.freeze({ latest: undefined, view: undefined });
 
 /** A render of a component, as React showed it: what it was given, what it returned, and what was decided. */
 type Shown = {
@@ -234,6 +235,8 @@ const useEdits = (edits: Edits) =>
 
 /** For a component that does not read a source: nothing, and no hook. */
 const useNothing = (..._: unknown[]) => undefined;
+const useNoForm = () => NO_FORM;
+const useNoOperations = () => NO_LAYER;
 /** The person signed in, from Root's `user` read: `null` when nobody is, or Root has no such read. */
 const useUserRead = (): unknown => useSuspenseQuery(useFramework().user ?? NO_READ).data;
 /**
@@ -305,10 +308,16 @@ export function component(spec: Spec) {
   let useAnswer: (query: null | Read) => unknown = useNothing;
   // And whether it has a handlers.ts: then the hook the plugin wrote from it.
   let useHandlers: (given: Props, scope: Scope) => Props | undefined = useNothing;
+  let useForm: typeof useFormLayer | typeof useNoForm = useNoForm;
+  let useAsync: typeof useOperations = useNoOperations;
   /** What follows from a view's files, taken when it has loaded. */
   const taken = (module: ViewModule) => {
     useAnswer = typeof module.async?.default === 'function' ? useAnswerOf : useNothing;
     useHandlers = module.handlers?.useHandlers ?? useNothing;
+    useForm = module.form ? useFormLayer : useNoForm;
+    useAsync = Object.keys(module.async ?? NO_LAYER).some((name) => name !== 'default')
+      ? useOperations
+      : useNoOperations;
     for (const child of module.children ?? []) child.preload?.();
     return module;
   };
@@ -321,8 +330,8 @@ export function component(spec: Spec) {
   // sends the view again (the plugin's module for the folder accepts it). Every instance on screen
   // then renders with the new files and keeps what it holds: what was typed in its fields, its
   // chart's state when the new chart has that state, its open dialog. An edit that gives the view a
-  // default read, or a chart, or takes one away, changes the hooks it calls: those instances are
-  // mounted again. Production builds have none of this.
+  // default read, chart, form or first named operation, or takes one away, changes the hooks it
+  // calls: those instances are mounted again. Production builds have none of this.
   const edits: Edits = { listeners: new Set(), version: 0 };
   const useEdited = HOT ? useEdits : useNothing;
   const replace = (module: ViewModule) => {
@@ -541,8 +550,8 @@ export function component(spec: Spec) {
     const pin = use(PinContext);
     // The render follows the values it reads; the chart and the operations read the latest when they run.
     // A seed that reads the props follows them (form.ts).
-    const { latest: running, view: form } = useFormLayer(
-      (module.form ?? NO_LAYER) as FormModule,
+    const { latest: running, view: form } = useForm(
+      module.form ?? NO_LAYER,
       pin?.path === spec.path ? pin.example?.values : undefined,
       props,
     );
@@ -550,7 +559,7 @@ export function component(spec: Spec) {
       () => (module.form ? { ...injected, form: running } : injected),
       [injected, running, module.form],
     );
-    const operations = useOperations(spec.path, module.async, withForm);
+    const operations = useAsync(spec.path, module.async, withForm);
     const hasRead = query !== null;
     const async = useMemo(
       () => module.async && { ...operations, ...(hasRead ? { default: initial } : {}) },
@@ -830,7 +839,12 @@ export function component(spec: Spec) {
     // The key says which hooks the view calls, so an edit that changes them mounts it again.
     return createElement(
       Chosen,
-      HOT ? { ...props, key: `${useAnswer === useAnswerOf ? 'read' : 'none'} ${module.handlers?.shape ?? ''}` } : props,
+      HOT
+        ? {
+            ...props,
+            key: `${useAnswer === useAnswerOf ? 'read' : 'none'} ${module.form ? 'form' : 'none'} ${useAsync === useOperations ? 'operations' : 'none'} ${module.handlers?.shape ?? ''}`,
+          }
+        : props,
     );
   }
   View.displayName = spec.path;

@@ -6,12 +6,16 @@
 import { act, render } from '@testing-library/react';
 import { createElement, type ReactNode, useState } from 'react';
 
+import { useOperations } from '../async';
 import { component, type Spec } from '../component';
 import { createQueryClient } from '../data';
+import { useFormLayer } from '../form';
 import { Root } from '../root';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
+vi.mock('../async', { spy: true });
+vi.mock('../form', { spy: true });
 
 type Props = Record<string, unknown>;
 const entity = { id: 'shop' } as never;
@@ -50,6 +54,34 @@ const kind = (
         state: layers.state,
       }) as never,
   } as Spec);
+
+test.each([
+  { answer: undefined, async: undefined, name: 'no async layer' },
+  { answer: {}, async: {}, name: 'an empty async layer' },
+  { answer: { default: 'answer' }, async: { default: () => Promise.resolve('answer') }, name: 'only a default read' },
+])('a folder with $name runs no absent form or operation hooks', async ({ answer, async }) => {
+  vi.mocked(useFormLayer).mockClear();
+  vi.mocked(useOperations).mockClear();
+  const calls = vi.fn((props: Props) => createElement('p', null, String(props['round'])));
+  const Plain = component({
+    path: 'components/without-layers',
+    skins: {},
+    view: () => Promise.resolve({ async, form: undefined, props: undefined, render: calls, state: undefined }),
+  });
+  const client = createQueryClient();
+  const page = (round: number) => createElement(Root, { client, entity }, createElement(Plain, { round }));
+  const shown = await act(async () => render(page(0)));
+  await settle();
+  expect(shown.container.textContent).toBe('0');
+  await act(async () => shown.rerender(page(1)));
+  await settle();
+  expect(shown.container.textContent).toBe('1');
+  for (const [given] of calls.mock.calls) {
+    expect(given).not.toHaveProperty('form');
+    expect(given['async']).toEqual(answer);
+  }
+  expect([vi.mocked(useFormLayer).mock.calls.length, vi.mocked(useOperations).mock.calls.length]).toEqual([0, 0]);
+});
 
 test('each kind of component gets what it reads, and renders again without a hook coming or going', async () => {
   const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
