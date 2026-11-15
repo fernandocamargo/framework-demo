@@ -90,6 +90,26 @@ export default css`
       background: var(--accent);
     }
   }
+  @media (max-width: 40rem) {
+    table {
+      font-size: 0.8rem;
+      th,
+      td {
+        padding-inline: 0.2rem;
+      }
+      /* Blueprint's labels would become extra columns in a narrow table. */
+      [itemscope]::before,
+      [itemprop]::after {
+        content: none;
+      }
+    }
+    meter {
+      display: none;
+    }
+    [itemprop='offers'] {
+      flex-wrap: wrap;
+    }
+  }
   section > ul {
     display: grid;
     gap: 0.35rem;

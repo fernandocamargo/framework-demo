@@ -89,6 +89,15 @@ export default css`
       text-align: end;
     }
   }
+  @media (max-width: 40rem) {
+    table {
+      font-size: 0.8rem;
+      th,
+      td {
+        padding-inline: 0.2rem;
+      }
+    }
+  }
   /* The number stands for the bar: the meter is not drawn. */
   meter {
     display: none;

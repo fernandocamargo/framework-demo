@@ -50,6 +50,14 @@ test.beforeEach(({ page }) => {
   });
 });
 
+for (const skin of ['default', 'broadsheet', 'blueprint']) {
+  test(`the report fits a 390 px page in the ${skin} skin`, async ({ page }) => {
+    await page.setViewportSize({ height: 900, width: 390 });
+    await act(page, () => page.goto(`./?world=memory&skin=${skin}#/report`));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  });
+}
+
 test('the report is the page the address names, with its headline and figures from the memory world', async ({
   page,
 }) => {
