@@ -1,22 +1,46 @@
 {
-  "chromium": {
-    "visit": {
-      "frameworkAgain": 254,
-      "frameworkUnchanged": 5
+  "darwin": {
+    "chromium": {
+      "visit": {
+        "frameworkAgain": 254,
+        "frameworkUnchanged": 5
+      },
+      "features": {
+        "frameworkAgain": 78,
+        "frameworkUnchanged": 3
+      }
     },
-    "features": {
-      "frameworkAgain": 78,
-      "frameworkUnchanged": 3
+    "webkit": {
+      "visit": {
+        "frameworkAgain": 255,
+        "frameworkUnchanged": 5
+      },
+      "features": {
+        "frameworkAgain": 77,
+        "frameworkUnchanged": 2
+      }
     }
   },
-  "webkit": {
-    "visit": {
-      "frameworkAgain": 255,
-      "frameworkUnchanged": 5
+  "linux": {
+    "chromium": {
+      "visit": {
+        "frameworkAgain": 254,
+        "frameworkUnchanged": 5
+      },
+      "features": {
+        "frameworkAgain": 78,
+        "frameworkUnchanged": 3
+      }
     },
-    "features": {
-      "frameworkAgain": 77,
-      "frameworkUnchanged": 2
+    "webkit": {
+      "visit": {
+        "frameworkAgain": 256,
+        "frameworkUnchanged": 5
+      },
+      "features": {
+        "frameworkAgain": 77,
+        "frameworkUnchanged": 2
+      }
     }
   }
 }

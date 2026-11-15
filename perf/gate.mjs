@@ -50,8 +50,13 @@ if (!process.argv.includes('--no-build')) {
 }
 
 const least = (clean, key) => Math.min(...clean.map((run) => run[key]));
-const baseline = !write && existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : undefined;
-if (!write && !baseline) fail('No perf/baseline.json: `npm run perf:baseline` writes it.');
+// One baseline per platform: fonts and timers differ between them (WebKit on Linux renders a component
+// or two more in the visit than on macOS), and each is compared with its own.
+const PLATFORM = process.platform;
+const baselines = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : {};
+const baseline = baselines[PLATFORM];
+if (!write && !baseline)
+  fail(`No baseline for ${PLATFORM} in perf/baseline.json: \`npm run perf:baseline\` writes it.`);
 const measured = {};
 for (const engine of ENGINES) {
   measured[engine] = {};
@@ -95,7 +100,7 @@ for (const engine of ENGINES) {
 const seconds = Math.round((Date.now() - started) / 1000);
 
 if (write) {
-  const baseline = Object.fromEntries(
+  baselines[PLATFORM] = Object.fromEntries(
     ENGINES.map((engine) => [
       engine,
       Object.fromEntries(
@@ -106,8 +111,10 @@ if (write) {
       ),
     ]),
   );
-  writeFileSync(BASELINE, `${JSON.stringify(baseline, null, 2)}\n`);
-  console.log(`Wrote perf/baseline.json (${seconds} s). The commit that holds it says why it changed.`);
+  writeFileSync(BASELINE, `${JSON.stringify(baselines, null, 2)}\n`);
+  console.log(
+    `Wrote ${PLATFORM}'s figures in perf/baseline.json (${seconds} s). The commit that holds it says why they changed.`,
+  );
   process.exit(0);
 }
 
