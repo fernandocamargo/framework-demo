@@ -198,6 +198,7 @@ export type Destination<Payload> = {
 
 /** Plugs a destination into the interactions. Returns the function that unplugs it. */
 export function connect<Payload>(destination: Destination<Payload>) {
+  const controller = new AbortController();
   const queue: Payload[] = [];
   const held: Payload[] = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -224,14 +225,12 @@ export function connect<Payload>(destination: Destination<Payload>) {
     if (consent.has(destination.purpose)) held.splice(0).forEach(enqueue);
   };
   const onHidden = () => document.visibilityState === 'hidden' && flush();
-  pipeline.addEventListener('interaction', onInteraction);
-  consent.addEventListener('change', onConsent);
-  document.addEventListener('visibilitychange', onHidden);
+  pipeline.addEventListener('interaction', onInteraction, { signal: controller.signal });
+  consent.addEventListener('change', onConsent, { signal: controller.signal });
+  document.addEventListener('visibilitychange', onHidden, { signal: controller.signal });
   return () => {
     flush();
-    pipeline.removeEventListener('interaction', onInteraction);
-    consent.removeEventListener('change', onConsent);
-    document.removeEventListener('visibilitychange', onHidden);
+    controller.abort();
   };
 }
 

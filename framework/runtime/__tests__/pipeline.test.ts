@@ -1,4 +1,13 @@
-import { currentRoute, onFailure, report, setLocation } from '../pipeline';
+import {
+  connect,
+  consent,
+  currentRoute,
+  type Interaction,
+  onFailure,
+  pipeline,
+  report,
+  setLocation,
+} from '../pipeline';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -45,4 +54,118 @@ test('a listener that throws stops neither the other listeners nor the next fail
   quiet.mockRestore();
 
   expect(seen).toEqual(['first', 'second']);
+});
+
+const interaction = (id: number): Interaction => ({
+  at: 0,
+  chain: [],
+  id,
+  kind: 'interaction',
+  name: 'test',
+  route: '#/',
+  site: {
+    column: 0,
+    element: 'button',
+    file: 'test',
+    handler: 'test',
+    id: 'test',
+    line: 0,
+    path: 'test',
+    prop: 'onClick',
+  },
+});
+
+test('connections flush independently on hiding and disconnect, then stop listening', async () => {
+  const first: number[][] = [];
+  const second: number[][] = [];
+
+  const stopFirst = connect({
+    batch: { ms: 1000, size: 3 },
+    map: ({ id }) => id,
+    name: 'first',
+    purpose: 'pipeline-first-test',
+    send: (batch) => first.push(batch),
+  });
+
+  const stopSecond = connect({
+    map: ({ id }) => id,
+    name: 'second',
+    purpose: 'pipeline-second-test',
+    send: (batch) => second.push(batch),
+  });
+
+  consent.grant('pipeline-first-test');
+  consent.grant('pipeline-second-test');
+
+  pipeline.emit(interaction(1));
+  await flush();
+  const hidden = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+  document.dispatchEvent(new Event('visibilitychange'));
+  hidden.mockRestore();
+  expect(first).toEqual([[1]]);
+  expect(second).toEqual([[1]]);
+
+  pipeline.emit(interaction(2));
+  await flush();
+  stopFirst();
+  stopFirst();
+  expect(first).toEqual([[1], [2]]);
+  pipeline.emit(interaction(3));
+  await flush();
+  expect(first).toEqual([[1], [2]]);
+  expect(second).toEqual([[1], [2], [3]]);
+  stopSecond();
+});
+
+test('disconnect drops held events and does not send after later consent', async () => {
+  const sent: number[][] = [];
+
+  const stop = connect({
+    map: ({ id }) => id,
+    name: 'held',
+    purpose: 'pipeline-held-test',
+    send: (batch) => sent.push(batch),
+  });
+
+  pipeline.emit(interaction(4));
+  await flush();
+  stop();
+  consent.grant('pipeline-held-test');
+  pipeline.emit(interaction(5));
+  await flush();
+  expect(sent).toEqual([]);
+});
+
+test('disconnect keeps another connection active during a reentrant send', async () => {
+  const first: number[][] = [];
+  const second: number[][] = [];
+
+  const stopSecond = connect({
+    accept: ({ id }) => id === 7,
+    map: ({ id }) => id,
+    name: 'reentrant-second',
+    purpose: 'pipeline-reentrant-second-test',
+    send: (batch) => second.push(batch),
+  });
+
+  const stopFirst = connect({
+    accept: ({ id }) => id === 6,
+    batch: { ms: 1000, size: 2 },
+    map: ({ id }) => id,
+    name: 'reentrant-first',
+    purpose: 'pipeline-reentrant-first-test',
+    send: (batch) => {
+      first.push(batch);
+      pipeline.dispatchEvent(new CustomEvent('interaction', { detail: interaction(7) }));
+    },
+  });
+
+  consent.grant('pipeline-reentrant-first-test');
+  consent.grant('pipeline-reentrant-second-test');
+  pipeline.emit(interaction(6));
+  await flush();
+  stopFirst();
+  expect(first).toEqual([[6]]);
+  expect(second).toEqual([[7]]);
+  stopSecond();
 });
