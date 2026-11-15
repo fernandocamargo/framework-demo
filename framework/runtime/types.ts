@@ -203,7 +203,9 @@ type FormValues<FormModule> = FormModule extends { seed: (...args: never[]) => i
   ? Values
   : Record<string, unknown>;
 type FormPayload<FormModule> = FormModule extends { payload: (...args: never[]) => infer Payload } ? Payload : unknown;
-type FormData<FormModule> = FormModule extends { seed: (data: infer Data) => unknown } ? Data : unknown;
+type FormData<FormModule> = FormModule extends { seed: (data: infer Data, ...props: never[]) => unknown }
+  ? Data
+  : unknown;
 
 /** The form, as the render and the state layer see it (a stand-in for a form manager). */
 export type FormProps<FormModule> = Shown<FormShape<FormModule>>;
@@ -216,7 +218,7 @@ type FormShape<FormModule> = {
   initial: FormValues<FormModule>;
   /** The request the values make (`form.ts`'s `payload`). */
   payload: () => FormPayload<FormModule>;
-  /** Starts the form over from server data (`form.ts`'s `seed`). */
+  /** Starts the form over from server data (`form.ts`'s `seed`, which also gets the component's props). */
   seed: (data: FormData<FormModule>) => void;
   /** Sets one value. */
   set: <Name extends keyof FormValues<FormModule>>(name: Name, value: FormValues<FormModule>[Name]) => void;

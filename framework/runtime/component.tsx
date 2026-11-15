@@ -350,7 +350,7 @@ export function component(spec: Spec) {
   }
 
   /** Every layer of the view but the state layer, called in the same order on every render. */
-  function useLayers() {
+  function useLayers(props: Props) {
     const { acl: aclRead, data, fields, flags: flagsRead, injection, skin, sources } = useFramework();
     const language = useLanguage();
     // The person signed in, from Root's `user` read: a sign-in or a sign-out makes it stale, and
@@ -529,9 +529,11 @@ export function component(spec: Spec) {
     // A component held in one state in the states gallery starts its form with the example's values.
     const pin = use(PinContext);
     // The render follows the values it reads; the chart and the operations read the latest when they run.
+    // A seed that reads the props follows them (form.ts).
     const { latest: running, view: form } = useFormLayer(
       (module.form ?? NO_LAYER) as FormModule,
       pin?.path === spec.path ? pin.example?.values : undefined,
+      props,
     );
     const withForm = useMemo(
       () => (module.form ? { ...injected, form: running } : injected),
@@ -728,7 +730,7 @@ export function component(spec: Spec) {
   // A folder with a state.ts and one without render through different components, so neither
   // calls a hook behind a condition. The view's module, once loaded, decides which.
   function StatefulView(props: Props) {
-    const layers = useLayers();
+    const layers = useLayers(props);
     const { access, judged, language, module, rendering } = layers;
     // The decision comes before the chart, so its declaration and its guards see this render's.
     // A rule that reads the chart's state is decided after it, in useShow.
@@ -769,7 +771,7 @@ export function component(spec: Spec) {
     return useShow(props, layers, state, early);
   }
   function StatelessView(props: Props) {
-    return useShow(props, useLayers(), undefined);
+    return useShow(props, useLayers(props), undefined);
   }
   StatefulView.displayName = spec.path;
   StatelessView.displayName = spec.path;

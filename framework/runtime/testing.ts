@@ -63,17 +63,22 @@ export function startFlow(module: object, sources: Sources = {}) {
   };
 }
 
-type FormModule<Data, Values, Payload> = { payload?: (values: Values) => Payload; seed: (data: Data) => Values };
+type FormModule<Data, Values, Payload, Props> = {
+  payload?: (values: Values) => Payload;
+  seed: (data: Data, props: Props) => Values;
+};
 
 /**
  * A component's form as its flow sees it, from its `form.ts`, without React: the values, `set`,
- * `seed`, `payload()` and `unsaved`, as the framework keeps them for a component.
+ * `seed`, `payload()` and `unsaved`, as the framework keeps them for a component. `props` are the
+ * component's, for a seed that reads them.
  */
-export function formOf<Data, Values extends Record<string, unknown>, Payload>(
-  module: FormModule<Data, Values, Payload>,
+export function formOf<Data, Values extends Record<string, unknown>, Payload, Props = Record<string, never>>(
+  module: FormModule<Data, Values, Payload, Props>,
   data?: Data,
+  props: Props = {} as Props,
 ) {
-  let initial = module.seed(data as Data);
+  let initial = module.seed(data as Data, props);
   let values = initial;
   return {
     get initial() {
@@ -81,7 +86,7 @@ export function formOf<Data, Values extends Record<string, unknown>, Payload>(
     },
     payload: () => (module.payload ? module.payload(values) : (values as unknown as Payload)),
     seed(next: Data) {
-      initial = values = module.seed(next);
+      initial = values = module.seed(next, props);
     },
     set<Name extends keyof Values>(name: Name, value: Values[Name]) {
       values = { ...values, [name]: value };

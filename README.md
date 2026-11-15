@@ -315,7 +315,7 @@ A component renders again only for what its files read. The plugin reads what ea
 - **The locale.** Only components with an `i18n.ts`, or that read `intl` or `locale`. The page switches in one commit, once every component on screen has its messages.
 - **The person, the backend's snapshot and the flags.** Only the parts each component reads. A folder's `acl.ts` that reads only `acl` and `flags` is decided once per change, and an instance renders again only when its decision changes.
 - **The route.** Each field has a context of its own. The catalogue follows its filters and its page; a dialog opening over it does not render it. A view follows the fields its files read too: the lab's sell-out button follows `edit`, and the lab around it none.
-- **The form.** Only the values a component's files read. The editor's fields hold what is typed, as native fields do, so a key renders the field alone.
+- **The form.** Only the values a component's files read. The editor's fields hold what is typed, as native fields do, so a key renders the field alone. The catalogue's search shows its form's text, which follows the address: a key renders the filter bar, and a search keeps the field and its focus.
 - **The chart.** Only when it shows something else: other states, or another context. A state entered again, or a service starting, renders nothing.
 
 Two rules hold for every render:
@@ -325,9 +325,9 @@ Two rules hold for every render:
 
 [`perf/`](perf/README.md) measures this. `npm run perf` drives a visit of 29 steps, and ten more beyond it, through a profiling build; `VISIT=features` drives a second one over the report, the orders page, the palette and the tour. It counts every render, the ones that changed nothing on the page, and the ones React threw away. Its README holds the numbers after each change. Where they stand:
 
-- framework components render again 252 times in the visit, 5 of them changing nothing. Broadsheet and the five features added 6, all at a switch of language, which reaches the three components they put in the header (the skin's switch, the tour, the palette), each changing the page;
+- framework components render again 254 times in the visit, 5 of them changing nothing. Broadsheet and the five features added 6, all at a switch of language, which reaches the three components they put in the header (the skin's switch, the tour, the palette), each changing the page. The search's form added 2, at the search and at clearing it: the filter bar renders as its text changes, and the field is no longer mounted again;
 - the second visit's 18 steps render framework components again 78 times, 3 of them changing nothing;
-- no step of either visit has a frame over 50 ms or an interaction over 40 ms (`npm run perf:frames`);
+- in nine untraced runs of the visit in Chromium, one frame passed 50 ms, at the first page's load (51 ms), and no interaction passed 40 ms; the second visit's six runs had neither (`npm run perf:frames`);
 - a product's modal opens once, with its skeleton inside it (it opened twice before the third rendering round);
 - the network lab, open and idle, renders nothing (two renders a second before);
 - typing six keys in the editor renders no framework component, and 50 of react-aria's (602 at the baseline).

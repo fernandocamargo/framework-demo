@@ -165,6 +165,57 @@ test('the form renders its component only for the values it read, and for a seed
   expect(result.current.latest.unsaved).toBe(false);
 });
 
+test('a seed that reads the props is seeded again when they change, after the commit', () => {
+  // The catalogue's search: its text is the address's, and follows it back.
+  const module = { seed: (_: undefined, { q }: { page: number; q: string }) => ({ q }) };
+  let renders = 0;
+  const { rerender, result } = renderHook(
+    (props: { page: number; q: string }) => {
+      renders++;
+      return useFormLayer(module, undefined, props);
+    },
+    { initialProps: { page: 1, q: 'lamp' } },
+  );
+  expect(result.current.view.values.q).toBe('lamp');
+  expect(result.current.latest.unsaved).toBe(false);
+
+  // What is typed stays while a prop the seed did not read changes.
+  act(() => result.current.view.set('q', 'desk'));
+  expect(renders).toBe(2);
+  rerender({ page: 2, q: 'lamp' });
+  expect(result.current.view.values.q).toBe('desk');
+  expect(renders).toBe(3);
+
+  // Its own search: the prop becomes what was typed. The form is seeded again, and the component,
+  // which did not read `initial`, does not render for it.
+  rerender({ page: 1, q: 'desk' });
+  expect(renders).toBe(4);
+  expect(result.current.latest.initial).toEqual({ q: 'desk' });
+  expect(result.current.latest.unsaved).toBe(false);
+
+  // The back button: the prop goes back, and the field with it.
+  act(() => result.current.view.set('q', 'des'));
+  rerender({ page: 1, q: 'lamp' });
+  expect(result.current.view.values.q).toBe('lamp');
+  expect(result.current.latest.unsaved).toBe(false);
+
+  // A seed from the state layer gets the props too.
+  const seeded: unknown[] = [];
+  const both = {
+    seed: (data: undefined | { title: string }, { q }: { q: string }) => {
+      seeded.push([data, q]);
+      return { q, title: data?.title ?? '' };
+    },
+  };
+  const { result: editor } = renderHook(() => useFormLayer(both, undefined, { q: 'lamp' }));
+  act(() => editor.current.latest.seed({ title: 'Desk' }));
+  expect(editor.current.latest.values).toEqual({ q: 'lamp', title: 'Desk' });
+  expect(seeded).toEqual([
+    [undefined, 'lamp'],
+    [{ title: 'Desk' }, 'lamp'],
+  ]);
+});
+
 test('a chart created by a change of route reads that route, not the one before it', async () => {
   const read: unknown[] = [];
   const Editor = component({

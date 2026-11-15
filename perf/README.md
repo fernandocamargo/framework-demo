@@ -250,3 +250,22 @@ WebKit after, five runs: 0 misses, 184 or 185 calls (22 or 23 thrown away), 77 (
 - Its static scan, in `framework/runtime`: `rules-of-hooks` 15 before, 1 after (`reading` in `root.tsx`, the route read on demand with `use`); `no-ref-current-in-render` 7 before, 3 after (the render's memo of the last output worked out, the chart's actor created once, the chart's declaration kept while it would read the same). Outside `perf/`'s own output: 85 findings before, 62 after, 49 of them render, placeholder and error files that export a function Fast Refresh does not take for a component, which the framework's own hot replacement now answers.
 
 What changed in the framework, each with a test: services read the entity React committed (`entity.test.tsx`); a component's hooks are chosen once per type (`hooks.test.tsx`); what a render is compared with is what React committed (`discarded.test.tsx`); a render that reads the route itself follows it (`route.test.tsx`); an edit under the dev server keeps the page (`hot.test.tsx`).
+
+## After the search keeps its field
+
+The catalogue's search field was keyed by the address's text, so it followed the back button, and its own search mounted it again and dropped the focus. It shows its form's text now, and the form follows the address (`form.ts`'s `seed` reads the props). Before and after in one sitting, three runs each; counts from the first run.
+
+| Visit                                                | Chromium before | after         | WebKit before | after         |
+| ---------------------------------------------------- | --------------- | ------------- | ------------- | ------------- |
+| misses                                               | 0               | 0             | 0             | 0             |
+| render calls, thrown away                            | 429, 18         | 431, 18       | 430, 18       | 432, 18       |
+| framework mounted; rendered again (changing nothing) | 161; 252 (5)    | 161; 254 (5)  | 161; 253 (5)  | 161; 255 (5)  |
+| other rendered again (changing nothing)              | 4,516 (1,748)   | 4,509 (1,761) | 4,456 (1,708) | 4,466 (1,713) |
+| further steps: framework (changing nothing)          | 34 (4)          | 36 (4)        | 34 (3)        | 36 (3)        |
+| further steps: other (changing nothing)              | 623 (265)       | 619 (266)     | 618 (252)     | 626 (257)     |
+
+- **At each step that searches or clears the search** (two in the visit, two beyond it), in both engines: the filter bar renders once more, as its text changes (the visit fills the text in one event; typed, it is once per key), and changes the page; react-aria mounts 7 fewer components: the search field's, which is no longer mounted again. No other step's framework counts moved in these runs. Each run: Chromium 252, 253, 253 framework re-renders before and 254, 254, 255 after; WebKit 253 in every run before, 255 after.
+- **The seed that follows the props** seeds the form again once the render with the new props is committed, and renders only the components that read a value it changed, or `initial`. A search puts the field's own text in the address, so it renders nothing more, unless the search trimmed spaces from it.
+- **The features visit** is as it was: Chromium 186 calls (23 thrown away), 78 framework re-renders (3 changing nothing); WebKit 184 (22), 77 (2).
+
+**Frames**, Chromium, untraced, two rounds alternating the two builds, three runs each: with the fix, no long frame and no interaction over 40 ms; without it, a frame of 51 ms at the first page's load and an interaction of 48 ms at a sort, each in at least one of the first round's three runs. A third set of three runs with the fix had one frame of 51 ms at the first page's load. The first load passes 50 ms now and then in both builds, and the sort's 48 ms came without the fix. The features visit, six runs of each build: no long frame, no interaction over 40 ms. Traced, the search and its clearing force no style or layout of 0.5 ms or more; in the fourth round's trace they forced 2.4 and 1.4 ms, React removing the field that held the focus.

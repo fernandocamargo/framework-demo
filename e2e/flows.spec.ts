@@ -78,6 +78,56 @@ test('the catalogue follows the address: search, category, sort and page', async
   expect(await summary(page)).toBe('10 products in Desks');
 });
 
+test('a search keeps its field and the focus; the back button takes the text back', async ({ page }) => {
+  await open(page);
+  const search = page.getByRole('searchbox', { name: 'Search products' });
+  const focused = () => search.evaluate((element) => element === document.activeElement);
+  // Marks the field, to tell whether a search mounts another one.
+  await search.evaluate((element) => ((element as HTMLElement & { marked?: boolean }).marked = true));
+  const same = () => search.evaluate((element) => (element as HTMLElement & { marked?: boolean }).marked === true);
+
+  await act(page, async () => {
+    await search.fill('lamp');
+    await page.keyboard.press('Enter');
+  });
+  expect(page.url()).toContain('q=lamp');
+  expect(await summary(page)).toBe('3 products matching “lamp”');
+  expect(await same()).toBe(true);
+  expect(await focused()).toBe(true);
+
+  // Typing goes on in the same field, and a second search keeps it too.
+  await act(page, async () => {
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.type('desk');
+    await page.keyboard.press('Enter');
+  });
+  expect(page.url()).toContain('q=desk');
+  expect(await search.inputValue()).toBe('desk');
+  expect(await same()).toBe(true);
+  expect(await focused()).toBe(true);
+
+  // The address goes back, and the field's text with it.
+  await act(page, () => page.goBack());
+  expect(await summary(page)).toBe('3 products matching “lamp”');
+  expect(await search.inputValue()).toBe('lamp');
+  await act(page, () => page.goBack());
+  expect(await summary(page)).toBe('37 products');
+  expect(await search.inputValue()).toBe('');
+
+  // Clearing it searches for everything, and keeps the field too.
+  await act(page, async () => {
+    await search.fill('lamp');
+    await page.keyboard.press('Enter');
+  });
+  await act(page, () => page.getByRole('button', { name: 'Clear the search' }).click());
+  expect(await summary(page)).toBe('37 products');
+  expect(await search.inputValue()).toBe('');
+  expect(await same()).toBe(true);
+});
+
 test('a product opens with its reviews, each from its own read', async ({ page }) => {
   await open(page);
   await act(page, () => page.getByRole('link', { exact: true, name: 'Audio Interface' }).click());
