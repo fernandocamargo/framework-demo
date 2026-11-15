@@ -6,6 +6,8 @@ import { css } from 'framework';
 export default css`
   & {
     display: grid;
+    /* One column, never wider than the page: the header's row of pages scrolls inside it. */
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr;
     min-block-size: 100dvh;
   }
