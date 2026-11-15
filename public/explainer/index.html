@@ -46,6 +46,7 @@
   h3 { font-size: 1.2rem; font-weight: 600; }
   p { margin: 0; max-width: 65ch; }
   code, pre, .mono { font-family: var(--mono); font-size: 0.86rem; }
+  kbd { font: 500 0.9em var(--mono); color: var(--ink); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 0.35em; white-space: nowrap; }
   .eyebrow { font: 500 0.78rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
   .lede { font-size: 1.15rem; color: var(--muted); }
   section { display: grid; gap: 28px; }
@@ -230,13 +231,13 @@
     <div class="head">
       <span class="eyebrow">The code</span>
       <h2 id="code">The folder, file by file</h2>
-      <p class="lede">The editor, the catalogue and a delete link of the <a href="https://fernandocamargo.github.io/framework-demo/">demo</a>, with their service and clients: 712 lines, as they are <a href="https://github.com/fernandocamargo/framework-demo/tree/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src">on GitHub</a>. The editor’s flow is a statechart that reads like its requirements, and its test drives that flow with no React and no network.</p>
+      <p class="lede">The editor, the catalogue and a delete link of the <a href="https://fernandocamargo.github.io/framework-demo/">demo</a>, with their service and clients: 911 lines, as they are <a href="https://github.com/fernandocamargo/framework-demo/tree/a313dbc/src">on GitHub</a>. The editor’s flow is a statechart that reads like its requirements, and its test drives that flow with no React and no network.</p>
     </div>
     <div class="browser">
       <ul class="files" role="tablist" aria-label="Files" aria-orientation="vertical">
         <li class="folder" role="presentation">components/<wbr>product/<wbr>editor/</li><li role="presentation"><button type="button" role="tab" id="file-tab-0" aria-controls="file-0" aria-selected="true" tabindex="0" data-file="0"><span class="name">state.ts</span><span class="role">flow</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-1" aria-controls="file-1" aria-selected="false" tabindex="-1" data-file="1"><span class="name">form.ts</span><span class="role">fields</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-2" aria-controls="file-2" aria-selected="false" tabindex="-1" data-file="2"><span class="name">props.ts</span><span class="role">shapes</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-3" aria-controls="file-3" aria-selected="false" tabindex="-1" data-file="3"><span class="name">i18n.ts</span><span class="role">words</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-4" aria-controls="file-4" aria-selected="false" tabindex="-1" data-file="4"><span class="name">shortcuts.ts</span><span class="role">keys</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-5" aria-controls="file-5" aria-selected="false" tabindex="-1" data-file="5"><span class="name">state.test.ts</span><span class="role">proves</span></button></li><li class="folder" role="presentation">components/<wbr>catalogue/</li><li role="presentation"><button type="button" role="tab" id="file-tab-6" aria-controls="file-6" aria-selected="false" tabindex="-1" data-file="6"><span class="name">async.ts</span><span class="role">loads</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-7" aria-controls="file-7" aria-selected="false" tabindex="-1" data-file="7"><span class="name">props.ts</span><span class="role">shapes</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-8" aria-controls="file-8" aria-selected="false" tabindex="-1" data-file="8"><span class="name">render.tsx</span><span class="role">draws</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-9" aria-controls="file-9" aria-selected="false" tabindex="-1" data-file="9"><span class="name">placeholder.tsx</span><span class="role">waits</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-10" aria-controls="file-10" aria-selected="false" tabindex="-1" data-file="10"><span class="name">error.tsx</span><span class="role">fails</span></button></li><li class="folder" role="presentation">components/<wbr>product/<wbr>remove-link/</li><li role="presentation"><button type="button" role="tab" id="file-tab-11" aria-controls="file-11" aria-selected="false" tabindex="-1" data-file="11"><span class="name">acl.ts</span><span class="role">allows</span></button></li><li class="folder" role="presentation">services/<wbr>products/</li><li role="presentation"><button type="button" role="tab" id="file-tab-12" aria-controls="file-12" aria-selected="false" tabindex="-1" data-file="12"><span class="name">meta.ts</span><span class="role">cache</span></button></li><li role="presentation"><button type="button" role="tab" id="file-tab-13" aria-controls="file-13" aria-selected="false" tabindex="-1" data-file="13"><span class="name">index.ts</span><span class="role">endpoints</span></button></li><li class="folder" role="presentation">clients/<wbr>flags/</li><li role="presentation"><button type="button" role="tab" id="file-tab-14" aria-controls="file-14" aria-selected="false" tabindex="-1" data-file="14"><span class="name">definitions.ts</span><span class="role">flags</span></button></li><li class="folder" role="presentation">clients/<wbr>dummyjson/</li><li role="presentation"><button type="button" role="tab" id="file-tab-15" aria-controls="file-15" aria-selected="false" tabindex="-1" data-file="15"><span class="name">index.ts</span><span class="role">transport</span></button></li>
       </ul>
-      <div class="panels"><div class="source" role="tabpanel" id="file-0" aria-labelledby="file-tab-0"><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/state.ts">components/<wbr>product/<wbr>editor/<wbr>state.ts</a><span>143 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s flow, for a product the address names (`edit`) or a new one (`create`).</span>
+      <div class="panels"><div class="source" role="tabpanel" id="file-0" aria-labelledby="file-tab-0"><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/product/editor/state.ts">components/<wbr>product/<wbr>editor/<wbr>state.ts</a><span>167 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s flow, for a product the address names (`edit`) or a new one (`create`).</span>
 <span class="t-comment">//</span>
 <span class="t-comment">// The rules it holds:</span>
 <span class="t-comment">// - a save with problems in the form goes nowhere, and shows them;</span>
@@ -244,71 +245,84 @@
 <span class="t-comment">// - a save refused because somebody else saved meanwhile is a conflict, not a failure: the</span>
 <span class="t-comment">//   person keeps their changes and chooses whose version stays;</span>
 <span class="t-comment">// - a failed save keeps the changes, to try again.</span>
-<span class="t-keyword">import</span> { problems } <span class="t-keyword">from</span> <span class="t-string">&#x27;./form&#x27;</span>
 
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> description = <span class="t-string">&#x27;Edit a product, or write a new one, and save it.&#x27;</span>
+<span class="t-keyword">import</span> { problems } <span class="t-keyword">from</span> <span class="t-string">&#x27;./form&#x27;</span>;
+
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> description = <span class="t-string">&#x27;Edit a product, or write a new one, and save it.&#x27;</span>;
 
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> context = ({ route }) =&gt; ({
-  creating: route.create,
-  <span class="t-comment">/** The version the person started from. A save says so, and is refused if the product has moved on. */</span>
-  version: 1,
-  title: <span class="t-string">&#x27;&#x27;</span>,
   <span class="t-comment">/** Whether a save was tried: problems show from then on. */</span>
   checked: <span class="t-keyword">false</span>,
-  error: <span class="t-keyword">null</span> <span class="t-keyword">as</span> string | <span class="t-keyword">null</span>,
-})
+  creating: route.create,
+  error: <span class="t-keyword">null</span> <span class="t-keyword">as</span> <span class="t-keyword">null</span> | string,
+  title: <span class="t-string">&#x27;&#x27;</span>,
+  <span class="t-comment">/** The version the person started from. A save says so, and is refused if the product has moved on. */</span>
+  version: 1,
+});
 
 <span class="t-comment">// ---- Checks ----------------------------------------------------------------------------------</span>
 
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> creating = ({ context }) =&gt; context.creating
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> unsaved = ({ form }) =&gt; form.unsaved
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> invalid = ({ form }) =&gt; problems(form.values).length &gt; 0
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> isConflict = ({ event }) =&gt; event.error instanceof Error &amp;&amp; event.error.name === <span class="t-string">&#x27;ConflictError&#x27;</span>
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> creating = ({ context }) =&gt; context.creating;
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> unsaved = ({ form }) =&gt; form.unsaved;
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> invalid = ({ form }) =&gt; problems(form.values).length &gt; 0;
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> isConflict = ({ event }) =&gt; event.error instanceof Error &amp;&amp; event.error.name === <span class="t-string">&#x27;ConflictError&#x27;</span>;
 
 <span class="t-comment">// ---- Changes ---------------------------------------------------------------------------------</span>
 
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> seedForm = ({ form, event }) =&gt; {
-  form.seed(event.output)
-  <span class="t-keyword">return</span> { version: event.output.version <span class="t-keyword">as</span> number, title: event.output.title <span class="t-keyword">as</span> string, checked: <span class="t-keyword">false</span>, error: <span class="t-keyword">null</span> }
-}
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> showProblems = () =&gt; ({ checked: <span class="t-keyword">true</span> })
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> rememberError = ({ event }) =&gt; ({ error: event.error instanceof Error ? event.error.message : String(event.error) })
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> forgetError = () =&gt; ({ error: <span class="t-keyword">null</span> })
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> close = ({ navigation }) =&gt; navigation.go({ edit: <span class="t-keyword">null</span>, create: <span class="t-keyword">false</span> })
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> seedForm = ({ event, form }) =&gt; {
+  form.seed(event.output);
+  <span class="t-keyword">return</span> { checked: <span class="t-keyword">false</span>, error: <span class="t-keyword">null</span>, title: event.output.title <span class="t-keyword">as</span> string, version: event.output.version <span class="t-keyword">as</span> number };
+};
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> showProblems = () =&gt; ({ checked: <span class="t-keyword">true</span> });
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> rememberError = ({ event }) =&gt; ({
+  error: event.error instanceof Error ? event.error.message : String(event.error),
+});
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> forgetError = () =&gt; ({ error: <span class="t-keyword">null</span> });
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> close = ({ navigation }) =&gt; navigation.go({ create: <span class="t-keyword">false</span>, edit: <span class="t-keyword">null</span> });
 
 <span class="t-comment">// ---- What the services are given ---------------------------------------------------------------</span>
 
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> productToRead = ({ route }) =&gt; route.edit ?? 0
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> changesToSave = ({ form, context, route }) =&gt; ({ id: route.edit ?? 0, changes: form.payload(), version: context.version })
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> productToRead = ({ route }) =&gt; route.edit ?? 0;
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> changesToSave = ({ context, form, route }) =&gt; ({
+  changes: form.payload(),
+  id: route.edit ?? 0,
+  version: context.version,
+});
 <span class="t-comment">/** The same changes, whatever the product&#x27;s version: the person chose to keep theirs. */</span>
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> changesToForce = ({ form, route }) =&gt; ({ id: route.edit ?? 0, changes: form.payload() })
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> productToCreate = ({ form }) =&gt; form.payload()
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> changesToForce = ({ form, route }) =&gt; ({ changes: form.payload(), id: route.edit ?? 0 });
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> productToCreate = ({ form }) =&gt; form.payload();
 
 <span class="t-comment">// The chart is declared from what the person may do: a read-only editor has no `save` at all. When</span>
 <span class="t-comment">// that changes (a sign-in, a session that ends), the framework declares it again and the flow keeps</span>
 <span class="t-comment">// its place.</span>
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ services, acl }) =&gt; ({
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ acl, services }) =&gt; ({
   starting: {
     always: [{ guard: creating, target: <span class="t-string">&#x27;editing&#x27;</span> }, { target: <span class="t-string">&#x27;loading&#x27;</span> }],
   },
   loading: {
     description: <span class="t-string">&#x27;Reading the product. Its values seed the form once.&#x27;</span>,
     invoke: {
-      src: services.products.get,
       input: productToRead,
-      onDone: { target: <span class="t-string">&#x27;editing&#x27;</span>, actions: seedForm },
-      onError: { target: <span class="t-string">&#x27;unavailable&#x27;</span>, actions: rememberError },
+      onDone: { actions: seedForm, target: <span class="t-string">&#x27;editing&#x27;</span> },
+      onError: { actions: rememberError, target: <span class="t-string">&#x27;unavailable&#x27;</span> },
+      src: services.products.get,
     },
     on: { close: { actions: close } },
   },
   unavailable: {
     description: <span class="t-string">&#x27;The product could not be read.&#x27;</span>,
-    on: { retry: <span class="t-string">&#x27;loading&#x27;</span>, close: { actions: close } },
+    on: { close: { actions: close }, retry: <span class="t-string">&#x27;loading&#x27;</span> },
   },
   editing: {
     description: <span class="t-string">&#x27;The person changes the fields.&#x27;</span>,
     on: {
-      ...(acl.allowed &amp;&amp; { save: [{ guard: invalid, actions: showProblems }, { guard: creating, target: <span class="t-string">&#x27;creating&#x27;</span> }, { target: <span class="t-string">&#x27;saving&#x27;</span> }] }),
+      ...(acl.allowed &amp;&amp; {
+        save: [
+          { actions: showProblems, guard: invalid },
+          { guard: creating, target: <span class="t-string">&#x27;creating&#x27;</span> },
+          { target: <span class="t-string">&#x27;saving&#x27;</span> },
+        ],
+      }),
       close: [{ guard: unsaved, target: <span class="t-string">&#x27;confirmingDiscard&#x27;</span> }, { actions: close }],
     },
   },
@@ -320,505 +334,667 @@
     description: <span class="t-string">&#x27;The changes are sent, for the version the person started from.&#x27;</span>,
     entry: forgetError,
     invoke: {
-      src: services.products.save,
       input: changesToSave,
       onDone: <span class="t-string">&#x27;saved&#x27;</span>,
-      onError: [{ guard: isConflict, target: <span class="t-string">&#x27;conflict&#x27;</span> }, { target: <span class="t-string">&#x27;failed&#x27;</span>, actions: rememberError }],
+      onError: [
+        { guard: isConflict, target: <span class="t-string">&#x27;conflict&#x27;</span> },
+        { actions: rememberError, target: <span class="t-string">&#x27;failed&#x27;</span> },
+      ],
+      src: services.products.save,
     },
   },
   creating: {
     description: <span class="t-string">&#x27;The new product is sent.&#x27;</span>,
     entry: forgetError,
     invoke: {
-      src: services.products.create,
       input: productToCreate,
       onDone: <span class="t-string">&#x27;saved&#x27;</span>,
-      onError: { target: <span class="t-string">&#x27;failed&#x27;</span>, actions: rememberError },
+      onError: { actions: rememberError, target: <span class="t-string">&#x27;failed&#x27;</span> },
+      src: services.products.create,
     },
   },
   conflict: {
-    description: <span class="t-string">&#x27;Somebody else saved this product meanwhile. The person keeps their changes or takes the newer version.&#x27;</span>,
-    on: { keepMine: <span class="t-string">&#x27;overwriting&#x27;</span>, takeTheirs: <span class="t-string">&#x27;loading&#x27;</span>, close: { actions: close } },
+    description:
+      <span class="t-string">&#x27;Somebody else saved this product meanwhile. The person keeps their changes or takes the newer version.&#x27;</span>,
+    on: { close: { actions: close }, keepMine: <span class="t-string">&#x27;overwriting&#x27;</span>, takeTheirs: <span class="t-string">&#x27;loading&#x27;</span> },
   },
   overwriting: {
     description: <span class="t-string">&quot;The person&#x27;s changes are saved over the newer version.&quot;</span>,
     invoke: {
-      src: services.products.save,
       input: changesToForce,
       onDone: <span class="t-string">&#x27;saved&#x27;</span>,
-      onError: { target: <span class="t-string">&#x27;failed&#x27;</span>, actions: rememberError },
+      onError: { actions: rememberError, target: <span class="t-string">&#x27;failed&#x27;</span> },
+      src: services.products.save,
     },
   },
   failed: {
     description: <span class="t-string">&#x27;The save failed. The changes are still in the form.&#x27;</span>,
     on: {
-      retry: [{ guard: creating, target: <span class="t-string">&#x27;creating&#x27;</span> }, { target: <span class="t-string">&#x27;saving&#x27;</span> }],
-      edit: <span class="t-string">&#x27;editing&#x27;</span>,
       close: [{ guard: unsaved, target: <span class="t-string">&#x27;confirmingDiscard&#x27;</span> }, { actions: close }],
+      edit: <span class="t-string">&#x27;editing&#x27;</span>,
+      retry: [{ guard: creating, target: <span class="t-string">&#x27;creating&#x27;</span> }, { target: <span class="t-string">&#x27;saving&#x27;</span> }],
     },
   },
   saved: {
     description: <span class="t-string">&#x27;Saved. The lists that showed the product have read again; the editor closes.&#x27;</span>,
     entry: close,
   },
-})
+});
 
 <span class="t-comment">// ---- What the states gallery shows each state with --------------------------------------------</span>
 
-<span class="t-keyword">const</span> lamp = { title: <span class="t-string">&#x27;Arc Floor Lamp&#x27;</span>, description: <span class="t-string">&#x27;A tall lamp that arcs over a desk.&#x27;</span>, category: <span class="t-string">&#x27;lighting&#x27;</span>, brand: <span class="t-string">&#x27;Fieldwork&#x27;</span>, price: 273.99, stock: 58 }
+<span class="t-keyword">const</span> lamp = {
+  brand: <span class="t-string">&#x27;Fieldwork&#x27;</span>,
+  category: <span class="t-string">&#x27;lighting&#x27;</span>,
+  description: <span class="t-string">&#x27;A tall lamp that arcs over a desk.&#x27;</span>,
+  price: 273.99,
+  stock: 58,
+  title: <span class="t-string">&#x27;Arc Floor Lamp&#x27;</span>,
+};
 
 <span class="t-comment">/** What a state needs on screen beyond what the chart starts with: the product read, the form&#x27;s values. */</span>
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> examples = {
-  unavailable: { context: { error: <span class="t-string">&quot;Product with id &#x27;99&#x27; not found&quot;</span> } },
-  editing: { context: { title: lamp.title }, values: lamp },
   confirmingDiscard: { context: { title: lamp.title }, values: { ...lamp, price: 249.99 } },
-  saving: { context: { title: lamp.title }, values: lamp },
-  creating: { context: { creating: <span class="t-keyword">true</span> }, values: { ...lamp, title: <span class="t-string">&#x27;Reading Lamp&#x27;</span> } },
   conflict: { context: { title: lamp.title }, values: { ...lamp, price: 249.99 } },
+  creating: { context: { creating: <span class="t-keyword">true</span> }, values: { ...lamp, title: <span class="t-string">&#x27;Reading Lamp&#x27;</span> } },
+  editing: { context: { title: lamp.title }, values: lamp },
+  failed: { context: { error: <span class="t-string">&#x27;The server answered 500.&#x27;</span>, title: lamp.title }, values: lamp },
   overwriting: { context: { title: lamp.title }, values: { ...lamp, price: 249.99 } },
-  failed: { context: { title: lamp.title, error: <span class="t-string">&#x27;The server answered 500.&#x27;</span> }, values: lamp },
   saved: { context: { title: lamp.title }, values: lamp },
-}</code></pre></div><div class="source" role="tabpanel" id="file-1" aria-labelledby="file-tab-1" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/form.ts">components/<wbr>product/<wbr>editor/<wbr>form.ts</a><span>33 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s fields: how a product becomes their values, how the values become the changes</span>
+  saving: { context: { title: lamp.title }, values: lamp },
+  unavailable: { context: { error: <span class="t-string">&quot;Product with id &#x27;99&#x27; not found&quot;</span> } },
+};</code></pre></div><div class="source" role="tabpanel" id="file-1" aria-labelledby="file-tab-1" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/product/editor/form.ts">components/<wbr>product/<wbr>editor/<wbr>form.ts</a><span>34 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s fields: how a product becomes their values, how the values become the changes</span>
 <span class="t-comment">// to save, and what is wrong with them. Pure functions; the framework keeps the values.</span>
-<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Changes, Detailed } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/services/products/types&#x27;</span>
+
+<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Changes, Detailed } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/services/products/types&#x27;</span>;
 
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> seed = (product: Detailed | <span class="t-keyword">undefined</span>) =&gt; ({
-  title: product?.title ?? <span class="t-string">&#x27;&#x27;</span>,
-  description: product?.description ?? <span class="t-string">&#x27;&#x27;</span>,
-  category: product?.category ?? <span class="t-string">&#x27;&#x27;</span>,
   brand: product?.brand ?? <span class="t-string">&#x27;&#x27;</span>,
+  category: product?.category ?? <span class="t-string">&#x27;&#x27;</span>,
+  description: product?.description ?? <span class="t-string">&#x27;&#x27;</span>,
   price: product?.price ?? Number.NaN,
   stock: product?.stock ?? 0,
-})
+  title: product?.title ?? <span class="t-string">&#x27;&#x27;</span>,
+});
 
-<span class="t-keyword">export</span> <span class="t-keyword">type</span> Values = ReturnType&lt;<span class="t-keyword">typeof</span> seed&gt;
+<span class="t-keyword">export</span> <span class="t-keyword">type</span> Values = ReturnType&lt;<span class="t-keyword">typeof</span> seed&gt;;
 
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> payload = (values: Values): Changes =&gt; ({
-  title: values.title.trim(),
-  description: values.description.trim(),
-  category: values.category,
   brand: values.brand.trim(),
+  category: values.category,
+  description: values.description.trim(),
   price: Math.round(values.price * 100) / 100,
   stock: Math.trunc(values.stock),
-})
+  title: values.title.trim(),
+});
 
 <span class="t-comment">/** The fields whose values stop a save. Empty when nothing does. Each is worded by i18n.ts&#x27;s `problems`. */</span>
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> problems = (values: Values) =&gt; {
-  <span class="t-keyword">const</span> found: (<span class="t-string">&#x27;title&#x27;</span> | <span class="t-string">&#x27;category&#x27;</span> | <span class="t-string">&#x27;price&#x27;</span> | <span class="t-string">&#x27;stock&#x27;</span>)[] = []
-  <span class="t-keyword">if</span> (!values.title.trim()) found.push(<span class="t-string">&#x27;title&#x27;</span>)
-  <span class="t-keyword">if</span> (!values.category) found.push(<span class="t-string">&#x27;category&#x27;</span>)
-  <span class="t-keyword">if</span> (!(values.price &gt; 0)) found.push(<span class="t-string">&#x27;price&#x27;</span>)
-  <span class="t-keyword">if</span> (!(values.stock &gt;= 0)) found.push(<span class="t-string">&#x27;stock&#x27;</span>)
-  <span class="t-keyword">return</span> found
-}</code></pre></div><div class="source" role="tabpanel" id="file-2" aria-labelledby="file-tab-2" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/props.ts">components/<wbr>product/<wbr>editor/<wbr>props.ts</a><span>32 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the editor&#x27;s render shows in each state of the flow, in the locale on screen. The fields</span>
+  <span class="t-keyword">const</span> found: (<span class="t-string">&#x27;category&#x27;</span> | <span class="t-string">&#x27;price&#x27;</span> | <span class="t-string">&#x27;stock&#x27;</span> | <span class="t-string">&#x27;title&#x27;</span>)[] = [];
+  <span class="t-keyword">if</span> (!values.title.trim()) found.push(<span class="t-string">&#x27;title&#x27;</span>);
+  <span class="t-keyword">if</span> (!values.category) found.push(<span class="t-string">&#x27;category&#x27;</span>);
+  <span class="t-keyword">if</span> (!(values.price &gt; 0)) found.push(<span class="t-string">&#x27;price&#x27;</span>);
+  <span class="t-keyword">if</span> (!(values.stock &gt;= 0)) found.push(<span class="t-string">&#x27;stock&#x27;</span>);
+  <span class="t-keyword">return</span> found;
+};</code></pre></div><div class="source" role="tabpanel" id="file-2" aria-labelledby="file-tab-2" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/product/editor/props.ts">components/<wbr>product/<wbr>editor/<wbr>props.ts</a><span>48 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the editor&#x27;s render shows in each state of the flow, in the locale on screen. The fields</span>
 <span class="t-comment">// start from the seeded values and hold what is typed, so a key renders its field alone; the</span>
 <span class="t-comment">// values are read only to say what is wrong with them, once a save was tried.</span>
-<span class="t-keyword">import</span> { CURRENCY } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/format&#x27;</span>
-<span class="t-keyword">import</span> { problems } <span class="t-keyword">from</span> <span class="t-string">&#x27;./form&#x27;</span>
 
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ state, form, i18n, acl, <span class="t-keyword">async</span>: { <span class="t-keyword">default</span>: categories } }) =&gt; {
-  <span class="t-keyword">const</span> { context } = state
-  <span class="t-keyword">const</span> busy = state.saving || state.creating || state.overwriting
+<span class="t-keyword">import</span> { CURRENCY } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/format&#x27;</span>;
+
+<span class="t-keyword">import</span> { problems } <span class="t-keyword">from</span> <span class="t-string">&#x27;./form&#x27;</span>;
+
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ acl, <span class="t-keyword">async</span>: { <span class="t-keyword">default</span>: categories }, form, i18n, state }) =&gt; {
+  <span class="t-keyword">const</span> { context } = state;
+  <span class="t-keyword">const</span> busy = state.saving || state.creating || state.overwriting;
   <span class="t-keyword">return</span> {
-    i18n,
-    send: state.send,
-    initial: form.initial,
-    set: form.set,
+    busy,
     categories,
-    currency: { style: <span class="t-string">&#x27;currency&#x27;</span>, currency: CURRENCY } <span class="t-keyword">as</span> <span class="t-keyword">const</span>,
-    heading: context.creating ? i18n.heading.create : context.title ? i18n.heading.edit({ title: context.title }) : i18n.heading.untitled,
-    saveText: context.creating ? i18n.save.create : i18n.save.edit,
-    problems: context.checked ? Object.fromEntries(problems(form.values).map((field) =&gt; [field, i18n.problems[field]])) : {},
-    loading: state.loading || state.starting,
-    unavailable: state.unavailable,
+    confirmingDiscard: state.confirmingDiscard,
+    conflict: state.conflict,
+    currency: { currency: CURRENCY, style: <span class="t-string">&#x27;currency&#x27;</span> } <span class="t-keyword">as</span> <span class="t-keyword">const</span>,
+    error: context.error ?? <span class="t-string">&#x27;&#x27;</span>,
+    failed: state.failed,
     <span class="t-comment">// The form stays on screen, and locked, while a save runs or a question is open over it.</span>
     formShown: !(state.loading || state.starting || state.unavailable),
+    heading: context.creating
+      ? i18n.heading.create
+      : context.title
+        ? i18n.heading.edit({ title: context.title })
+        : i18n.heading.untitled,
+    i18n,
+    initial: form.initial,
+    loading: state.loading || state.starting,
     locked: busy || state.conflict || state.confirmingDiscard || !acl.allowed,
+    problems: context.checked
+      ? Object.fromEntries(problems(form.values).map((field) =&gt; [field, i18n.problems[field]]))
+      : {},
     readOnly: !acl.allowed,
-    busy,
-    conflict: state.conflict,
-    failed: state.failed,
-    confirmingDiscard: state.confirmingDiscard,
-    error: context.error ?? <span class="t-string">&#x27;&#x27;</span>,
-  }
-}</code></pre></div><div class="source" role="tabpanel" id="file-3" aria-labelledby="file-tab-3" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/i18n.ts">components/<wbr>product/<wbr>editor/<wbr>i18n.ts</a><span>25 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s words, in English. Translations: i18n/&lt;locale&gt;.json.</span>
+    <span class="t-comment">// What saving does, as schema.org names it.</span>
+    saves: context.creating ? <span class="t-string">&#x27;https://schema.org/CreateAction&#x27;</span> : <span class="t-string">&#x27;https://schema.org/UpdateAction&#x27;</span>,
+    saveText: context.creating ? i18n.save.create : i18n.save.edit,
+    send: state.send,
+    set: form.set,
+    unavailable: state.unavailable,
+  };
+};
+
+<span class="t-comment">/** The address each story Storybook shows of this folder needs (framework/storybook). */</span>
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> examples = {
+  <span class="t-string">&#x27;A new product&#x27;</span>: { route: { create: <span class="t-keyword">true</span> } },
+  <span class="t-string">&#x27;Editing a product&#x27;</span>: { route: { edit: 22 } },
+};</code></pre></div><div class="source" role="tabpanel" id="file-3" aria-labelledby="file-tab-3" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/product/editor/i18n.ts">components/<wbr>product/<wbr>editor/<wbr>i18n.ts</a><span>38 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s words, in English. Translations: i18n/&lt;locale&gt;.json.</span>
 <span class="t-keyword">export</span> <span class="t-keyword">default</span> {
-  heading: { create: <span class="t-string">&#x27;New product&#x27;</span>, edit: <span class="t-string">&#x27;Edit {title}&#x27;</span>, untitled: <span class="t-string">&#x27;Edit product&#x27;</span> },
+  cancel: <span class="t-string">&#x27;Cancel&#x27;</span>,
   close: <span class="t-string">&#x27;Close&#x27;</span>,
-  readOnly: <span class="t-string">&#x27;You can see this product. Changing it needs a permission you do not have.&#x27;</span>,
+  conflict: {
+    message: <span class="t-string">&#x27;Somebody else changed this product while you were editing it. Your changes are still here.&#x27;</span>,
+    mine: <span class="t-string">&#x27;Save mine anyway&#x27;</span>,
+    theirs: <span class="t-string">&#x27;Discard mine and reload&#x27;</span>,
+  },
+  discard: {
+    discard: <span class="t-string">&#x27;Discard&#x27;</span>,
+    keep: <span class="t-string">&#x27;Keep editing&#x27;</span>,
+    text: <span class="t-string">&#x27;What you changed in this product has not been saved.&#x27;</span>,
+    title: <span class="t-string">&#x27;Discard your changes?&#x27;</span>,
+  },
+  failed: { back: <span class="t-string">&#x27;Back to the form&#x27;</span>, message: <span class="t-string">&#x27;It was not saved: {message}&#x27;</span>, retry: <span class="t-string">&#x27;Try again&#x27;</span> },
+  fields: {
+    brand: <span class="t-string">&#x27;Brand&#x27;</span>,
+    category: <span class="t-string">&#x27;Category&#x27;</span>,
+    choose: <span class="t-string">&#x27;Choose one&#x27;</span>,
+    description: <span class="t-string">&#x27;Description&#x27;</span>,
+    price: <span class="t-string">&#x27;Price&#x27;</span>,
+    stock: <span class="t-string">&#x27;Stock&#x27;</span>,
+    title: <span class="t-string">&#x27;Title&#x27;</span>,
+  },
+  heading: { create: <span class="t-string">&#x27;New product&#x27;</span>, edit: <span class="t-string">&#x27;Edit {title}&#x27;</span>, untitled: <span class="t-string">&#x27;Edit product&#x27;</span> },
+  keys: { save: <span class="t-string">&#x27;Save the product&#x27;</span> },
   loading: <span class="t-string">&#x27;Reading the product&#x27;</span>,
-  unavailable: { message: <span class="t-string">&#x27;The product could not be read: {message}&#x27;</span>, retry: <span class="t-string">&#x27;Try again&#x27;</span> },
-  fields: { title: <span class="t-string">&#x27;Title&#x27;</span>, description: <span class="t-string">&#x27;Description&#x27;</span>, category: <span class="t-string">&#x27;Category&#x27;</span>, brand: <span class="t-string">&#x27;Brand&#x27;</span>, price: <span class="t-string">&#x27;Price&#x27;</span>, stock: <span class="t-string">&#x27;Stock&#x27;</span>, choose: <span class="t-string">&#x27;Choose one&#x27;</span> },
   problems: {
-    title: <span class="t-string">&#x27;A product needs a title.&#x27;</span>,
     category: <span class="t-string">&#x27;Choose a category.&#x27;</span>,
     price: <span class="t-string">&#x27;The price must be more than zero.&#x27;</span>,
     stock: <span class="t-string">&#x27;The stock cannot be negative.&#x27;</span>,
+    title: <span class="t-string">&#x27;A product needs a title.&#x27;</span>,
   },
-  conflict: {
-    message: <span class="t-string">&#x27;Somebody else changed this product while you were editing it. Your changes are still here.&#x27;</span>,
-    theirs: <span class="t-string">&#x27;Discard mine and reload&#x27;</span>,
-    mine: <span class="t-string">&#x27;Save mine anyway&#x27;</span>,
-  },
-  failed: { message: <span class="t-string">&#x27;It was not saved: {message}&#x27;</span>, back: <span class="t-string">&#x27;Back to the form&#x27;</span>, retry: <span class="t-string">&#x27;Try again&#x27;</span> },
-  cancel: <span class="t-string">&#x27;Cancel&#x27;</span>,
+  readOnly: <span class="t-string">&#x27;You can see this product. Changing it needs a permission you do not have.&#x27;</span>,
   save: { create: <span class="t-string">&#x27;Create product&#x27;</span>, edit: <span class="t-string">&#x27;Save changes&#x27;</span> },
-  discard: { title: <span class="t-string">&#x27;Discard your changes?&#x27;</span>, text: <span class="t-string">&#x27;What you changed in this product has not been saved.&#x27;</span>, keep: <span class="t-string">&#x27;Keep editing&#x27;</span>, discard: <span class="t-string">&#x27;Discard&#x27;</span> },
-  keys: { save: <span class="t-string">&#x27;Save the product&#x27;</span> },
-}</code></pre></div><div class="source" role="tabpanel" id="file-4" aria-labelledby="file-tab-4" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/shortcuts.ts">components/<wbr>product/<wbr>editor/<wbr>shortcuts.ts</a><span>5 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s key. The chart decides when it works: a read-only editor&#x27;s chart has no `save`,</span>
+  unavailable: { message: <span class="t-string">&#x27;The product could not be read: {message}&#x27;</span>, retry: <span class="t-string">&#x27;Try again&#x27;</span> },
+};</code></pre></div><div class="source" role="tabpanel" id="file-4" aria-labelledby="file-tab-4" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/product/editor/shortcuts.ts">components/<wbr>product/<wbr>editor/<wbr>shortcuts.ts</a><span>5 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s key. The chart decides when it works: a read-only editor&#x27;s chart has no `save`,</span>
 <span class="t-comment">// and a running save takes none, so the key does nothing then, and the list of keys says so.</span>
 <span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ i18n }) =&gt; ({
   <span class="t-string">&#x27;mod+s&#x27;</span>: { label: i18n.keys.save, send: <span class="t-string">&#x27;save&#x27;</span> },
-})</code></pre></div><div class="source" role="tabpanel" id="file-5" aria-labelledby="file-tab-5" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/editor/state.test.ts">components/<wbr>product/<wbr>editor/<wbr>state.test.ts</a><span>115 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s rules, tested where they are written: the checks as plain functions, and the</span>
+});</code></pre></div><div class="source" role="tabpanel" id="file-5" aria-labelledby="file-tab-5" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/product/editor/state.test.ts">components/<wbr>product/<wbr>editor/<wbr>state.test.ts</a><span>150 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The editor&#x27;s rules, tested where they are written: the checks as plain functions, and the</span>
 <span class="t-comment">// flow itself with the services a test gives it. No React, no network.</span>
-<span class="t-keyword">import</span> { formOf, startFlow } <span class="t-keyword">from</span> <span class="t-string">&#x27;framework/testing&#x27;</span>
-<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Detailed } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/services/products/types&#x27;</span>
-<span class="t-keyword">import</span> * <span class="t-keyword">as</span> form <span class="t-keyword">from</span> <span class="t-string">&#x27;./form&#x27;</span>
-<span class="t-keyword">import</span> * <span class="t-keyword">as</span> editor <span class="t-keyword">from</span> <span class="t-string">&#x27;./state&#x27;</span>
 
-<span class="t-keyword">const</span> product: Detailed = { id: 4, title: <span class="t-string">&#x27;Audio Interface&#x27;</span>, description: <span class="t-string">&#x27;Two inputs.&#x27;</span>, category: <span class="t-string">&#x27;audio&#x27;</span>, brand: <span class="t-string">&#x27;Tandem&#x27;</span>, price: 167.99, stock: 64, rating: 4.2, thumbnail: <span class="t-string">&#x27;&#x27;</span>, images: [], version: 3 }
-<span class="t-keyword">const</span> conflict = Object.assign(<span class="t-keyword">new</span> Error(<span class="t-string">&#x27;Somebody else changed this product.&#x27;</span>), { name: <span class="t-string">&#x27;ConflictError&#x27;</span> })
+<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Detailed } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/services/products/types&#x27;</span>;
+<span class="t-keyword">import</span> { formOf, startFlow } <span class="t-keyword">from</span> <span class="t-string">&#x27;framework/testing&#x27;</span>;
 
-function editing(overrides: { save?: (input: unknown) =&gt; Promise&lt;unknown&gt;; create?: (input: unknown) =&gt; Promise&lt;unknown&gt;; creating?: boolean } = {}) {
-  <span class="t-keyword">const</span> fields = formOf(form)
-  <span class="t-keyword">const</span> go = vi.fn()
-  <span class="t-keyword">const</span> save = vi.fn(overrides.save ?? (<span class="t-keyword">async</span> () =&gt; ({ id: 4, version: 4 })))
-  <span class="t-keyword">const</span> create = vi.fn(overrides.create ?? (<span class="t-keyword">async</span> () =&gt; ({ id: 10_001 })))
+<span class="t-keyword">import</span> * <span class="t-keyword">as</span> form <span class="t-keyword">from</span> <span class="t-string">&#x27;./form&#x27;</span>;
+<span class="t-keyword">import</span> * <span class="t-keyword">as</span> editor <span class="t-keyword">from</span> <span class="t-string">&#x27;./state&#x27;</span>;
+
+<span class="t-keyword">const</span> product: Detailed = {
+  brand: <span class="t-string">&#x27;Tandem&#x27;</span>,
+  category: <span class="t-string">&#x27;audio&#x27;</span>,
+  description: <span class="t-string">&#x27;Two inputs.&#x27;</span>,
+  id: 4,
+  images: [],
+  price: 167.99,
+  rating: 4.2,
+  stock: 64,
+  thumbnail: <span class="t-string">&#x27;&#x27;</span>,
+  title: <span class="t-string">&#x27;Audio Interface&#x27;</span>,
+  version: 3,
+};
+<span class="t-keyword">const</span> conflict = Object.assign(<span class="t-keyword">new</span> Error(<span class="t-string">&#x27;Somebody else changed this product.&#x27;</span>), { name: <span class="t-string">&#x27;ConflictError&#x27;</span> });
+
+function editing(
+  overrides: {
+    create?: (input: unknown) =&gt; Promise&lt;unknown&gt;;
+    creating?: boolean;
+    save?: (input: unknown) =&gt; Promise&lt;unknown&gt;;
+  } = {},
+) {
+  <span class="t-keyword">const</span> fields = formOf(form);
+  <span class="t-keyword">const</span> go = vi.fn();
+  <span class="t-keyword">const</span> save = vi.fn(overrides.save ?? (<span class="t-keyword">async</span> () =&gt; ({ id: 4, version: 4 })));
+  <span class="t-keyword">const</span> create = vi.fn(overrides.create ?? (<span class="t-keyword">async</span> () =&gt; ({ id: 10_001 })));
   <span class="t-keyword">const</span> flow = startFlow(editor, {
-    services: { products: { get: <span class="t-keyword">async</span> () =&gt; product, save, create } },
     form: fields,
-    route: { edit: overrides.creating ? <span class="t-keyword">null</span> : 4, create: Boolean(overrides.creating) },
     navigation: { go },
-  })
-  <span class="t-keyword">return</span> { flow, fields, go, save, create }
+    route: { create: Boolean(overrides.creating), edit: overrides.creating ? <span class="t-keyword">null</span> : 4 },
+    services: { products: { create, get: <span class="t-keyword">async</span> () =&gt; product, save } },
+  });
+  <span class="t-keyword">return</span> { create, fields, flow, go, save };
 }
 
 test(<span class="t-string">&#x27;the checks are plain functions of what they are given&#x27;</span>, () =&gt; {
-  expect(editor.unsaved({ form: { unsaved: <span class="t-keyword">true</span> } } <span class="t-keyword">as</span> never)).toBe(<span class="t-keyword">true</span>)
-  expect(editor.isConflict({ event: { error: conflict } } <span class="t-keyword">as</span> never)).toBe(<span class="t-keyword">true</span>)
-  expect(editor.isConflict({ event: { error: <span class="t-keyword">new</span> Error(<span class="t-string">&#x27;offline&#x27;</span>) } } <span class="t-keyword">as</span> never)).toBe(<span class="t-keyword">false</span>)
-  expect(form.problems({ ...form.seed(product), title: <span class="t-string">&#x27; &#x27;</span>, price: 0 })).toEqual([<span class="t-string">&#x27;title&#x27;</span>, <span class="t-string">&#x27;price&#x27;</span>])
-})
+  expect(editor.unsaved({ form: { unsaved: <span class="t-keyword">true</span> } } <span class="t-keyword">as</span> never)).toBe(<span class="t-keyword">true</span>);
+  expect(editor.isConflict({ event: { error: conflict } } <span class="t-keyword">as</span> never)).toBe(<span class="t-keyword">true</span>);
+  expect(editor.isConflict({ event: { error: <span class="t-keyword">new</span> Error(<span class="t-string">&#x27;offline&#x27;</span>) } } <span class="t-keyword">as</span> never)).toBe(<span class="t-keyword">false</span>);
+  expect(form.problems({ ...form.seed(product), price: 0, title: <span class="t-string">&#x27; &#x27;</span> })).toEqual([<span class="t-string">&#x27;title&#x27;</span>, <span class="t-string">&#x27;price&#x27;</span>]);
+});
 
 test(<span class="t-string">&#x27;the product seeds the form once, and a save sends the changes for the version read&#x27;</span>, <span class="t-keyword">async</span> () =&gt; {
-  <span class="t-keyword">const</span> { flow, fields, save, go } = editing()
-  <span class="t-keyword">await</span> flow.settled()
-  expect(flow.states).toEqual([<span class="t-string">&#x27;editing&#x27;</span>])
-  expect(fields.values.title).toBe(<span class="t-string">&#x27;Audio Interface&#x27;</span>)
+  <span class="t-keyword">const</span> { fields, flow, go, save } = editing();
+  <span class="t-keyword">await</span> flow.settled();
+  expect(flow.states).toEqual([<span class="t-string">&#x27;editing&#x27;</span>]);
+  expect(fields.values.title).toBe(<span class="t-string">&#x27;Audio Interface&#x27;</span>);
 
-  fields.set(<span class="t-string">&#x27;price&#x27;</span>, 149)
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;save&#x27;</span> })
-  <span class="t-keyword">await</span> flow.settled()
-  expect(save).toHaveBeenCalledWith({ id: 4, changes: { ...form.payload(form.seed(product)), price: 149 }, version: 3 })
-  expect(flow.states).toEqual([<span class="t-string">&#x27;saved&#x27;</span>])
-  expect(go).toHaveBeenCalledWith({ edit: <span class="t-keyword">null</span>, create: <span class="t-keyword">false</span> })
-})
+  fields.set(<span class="t-string">&#x27;price&#x27;</span>, 149);
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;save&#x27;</span> });
+  <span class="t-keyword">await</span> flow.settled();
+  expect(save).toHaveBeenCalledWith({
+    changes: { ...form.payload(form.seed(product)), price: 149 },
+    id: 4,
+    version: 3,
+  });
+  expect(flow.states).toEqual([<span class="t-string">&#x27;saved&#x27;</span>]);
+  expect(go).toHaveBeenCalledWith({ create: <span class="t-keyword">false</span>, edit: <span class="t-keyword">null</span> });
+});
 
 test(<span class="t-string">&#x27;a save with problems in the form goes nowhere, and shows them&#x27;</span>, <span class="t-keyword">async</span> () =&gt; {
-  <span class="t-keyword">const</span> { flow, fields, save } = editing()
-  <span class="t-keyword">await</span> flow.settled()
-  fields.set(<span class="t-string">&#x27;title&#x27;</span>, <span class="t-string">&#x27;&#x27;</span>)
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;save&#x27;</span> })
-  expect(flow.states).toEqual([<span class="t-string">&#x27;editing&#x27;</span>])
-  expect(flow.context[<span class="t-string">&#x27;checked&#x27;</span>]).toBe(<span class="t-keyword">true</span>)
-  expect(save).not.toHaveBeenCalled()
-})
+  <span class="t-keyword">const</span> { fields, flow, save } = editing();
+  <span class="t-keyword">await</span> flow.settled();
+  fields.set(<span class="t-string">&#x27;title&#x27;</span>, <span class="t-string">&#x27;&#x27;</span>);
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;save&#x27;</span> });
+  expect(flow.states).toEqual([<span class="t-string">&#x27;editing&#x27;</span>]);
+  expect(flow.context[<span class="t-string">&#x27;checked&#x27;</span>]).toBe(<span class="t-keyword">true</span>);
+  expect(save).not.toHaveBeenCalled();
+});
 
 test(<span class="t-string">&#x27;closing with unsaved changes asks first&#x27;</span>, <span class="t-keyword">async</span> () =&gt; {
-  <span class="t-keyword">const</span> { flow, fields, go } = editing()
-  <span class="t-keyword">await</span> flow.settled()
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;close&#x27;</span> })
-  expect(go).toHaveBeenCalledTimes(1)
+  <span class="t-keyword">const</span> { fields, flow, go } = editing();
+  <span class="t-keyword">await</span> flow.settled();
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;close&#x27;</span> });
+  expect(go).toHaveBeenCalledTimes(1);
 
-  go.mockClear()
-  fields.set(<span class="t-string">&#x27;stock&#x27;</span>, 0)
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;close&#x27;</span> })
-  expect(flow.states).toEqual([<span class="t-string">&#x27;confirmingDiscard&#x27;</span>])
-  expect(go).not.toHaveBeenCalled()
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;keepEditing&#x27;</span> })
-  expect(flow.states).toEqual([<span class="t-string">&#x27;editing&#x27;</span>])
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;close&#x27;</span> })
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;discard&#x27;</span> })
-  expect(go).toHaveBeenCalledWith({ edit: <span class="t-keyword">null</span>, create: <span class="t-keyword">false</span> })
-})
+  go.mockClear();
+  fields.set(<span class="t-string">&#x27;stock&#x27;</span>, 0);
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;close&#x27;</span> });
+  expect(flow.states).toEqual([<span class="t-string">&#x27;confirmingDiscard&#x27;</span>]);
+  expect(go).not.toHaveBeenCalled();
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;keepEditing&#x27;</span> });
+  expect(flow.states).toEqual([<span class="t-string">&#x27;editing&#x27;</span>]);
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;close&#x27;</span> });
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;discard&#x27;</span> });
+  expect(go).toHaveBeenCalledWith({ create: <span class="t-keyword">false</span>, edit: <span class="t-keyword">null</span> });
+});
 
 test(<span class="t-string">&#x27;a save refused as a conflict keeps the changes; keeping mine saves over the newer version&#x27;</span>, <span class="t-keyword">async</span> () =&gt; {
-  <span class="t-keyword">const</span> { flow, fields, save } = editing({ save: vi.fn().mockRejectedValueOnce(conflict).mockResolvedValue({ id: 4, version: 5 }) })
-  <span class="t-keyword">await</span> flow.settled()
-  fields.set(<span class="t-string">&#x27;title&#x27;</span>, <span class="t-string">&#x27;Mine&#x27;</span>)
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;save&#x27;</span> })
-  <span class="t-keyword">await</span> flow.settled()
-  expect(flow.states).toEqual([<span class="t-string">&#x27;conflict&#x27;</span>])
-  expect(fields.values.title).toBe(<span class="t-string">&#x27;Mine&#x27;</span>)
+  <span class="t-keyword">const</span> { fields, flow, save } = editing({
+    save: vi.fn().mockRejectedValueOnce(conflict).mockResolvedValue({ id: 4, version: 5 }),
+  });
+  <span class="t-keyword">await</span> flow.settled();
+  fields.set(<span class="t-string">&#x27;title&#x27;</span>, <span class="t-string">&#x27;Mine&#x27;</span>);
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;save&#x27;</span> });
+  <span class="t-keyword">await</span> flow.settled();
+  expect(flow.states).toEqual([<span class="t-string">&#x27;conflict&#x27;</span>]);
+  expect(fields.values.title).toBe(<span class="t-string">&#x27;Mine&#x27;</span>);
 
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;keepMine&#x27;</span> })
-  <span class="t-keyword">await</span> flow.settled()
-  expect(save).toHaveBeenLastCalledWith({ id: 4, changes: expect.objectContaining({ title: <span class="t-string">&#x27;Mine&#x27;</span> }) })
-  expect(flow.states).toEqual([<span class="t-string">&#x27;saved&#x27;</span>])
-})
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;keepMine&#x27;</span> });
+  <span class="t-keyword">await</span> flow.settled();
+  expect(save).toHaveBeenLastCalledWith({ changes: expect.objectContaining({ title: <span class="t-string">&#x27;Mine&#x27;</span> }), id: 4 });
+  expect(flow.states).toEqual([<span class="t-string">&#x27;saved&#x27;</span>]);
+});
 
 test(<span class="t-string">&#x27;a failed save keeps the changes and can be tried again&#x27;</span>, <span class="t-keyword">async</span> () =&gt; {
-  <span class="t-keyword">const</span> { flow, fields, save } = editing({ save: vi.fn().mockRejectedValueOnce(<span class="t-keyword">new</span> Error(<span class="t-string">&#x27;The server answered 500.&#x27;</span>)).mockResolvedValue({ id: 4, version: 4 }) })
-  <span class="t-keyword">await</span> flow.settled()
-  fields.set(<span class="t-string">&#x27;title&#x27;</span>, <span class="t-string">&#x27;Second try&#x27;</span>)
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;save&#x27;</span> })
-  <span class="t-keyword">await</span> flow.settled()
-  expect(flow.states).toEqual([<span class="t-string">&#x27;failed&#x27;</span>])
-  expect(flow.context[<span class="t-string">&#x27;error&#x27;</span>]).toBe(<span class="t-string">&#x27;The server answered 500.&#x27;</span>)
-  expect(fields.values.title).toBe(<span class="t-string">&#x27;Second try&#x27;</span>)
+  <span class="t-keyword">const</span> { fields, flow, save } = editing({
+    save: vi.fn().mockRejectedValueOnce(<span class="t-keyword">new</span> Error(<span class="t-string">&#x27;The server answered 500.&#x27;</span>)).mockResolvedValue({ id: 4, version: 4 }),
+  });
+  <span class="t-keyword">await</span> flow.settled();
+  fields.set(<span class="t-string">&#x27;title&#x27;</span>, <span class="t-string">&#x27;Second try&#x27;</span>);
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;save&#x27;</span> });
+  <span class="t-keyword">await</span> flow.settled();
+  expect(flow.states).toEqual([<span class="t-string">&#x27;failed&#x27;</span>]);
+  expect(flow.context[<span class="t-string">&#x27;error&#x27;</span>]).toBe(<span class="t-string">&#x27;The server answered 500.&#x27;</span>);
+  expect(fields.values.title).toBe(<span class="t-string">&#x27;Second try&#x27;</span>);
 
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;retry&#x27;</span> })
-  <span class="t-keyword">await</span> flow.settled()
-  expect(save).toHaveBeenCalledTimes(2)
-  expect(flow.states).toEqual([<span class="t-string">&#x27;saved&#x27;</span>])
-})
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;retry&#x27;</span> });
+  <span class="t-keyword">await</span> flow.settled();
+  expect(save).toHaveBeenCalledTimes(2);
+  expect(flow.states).toEqual([<span class="t-string">&#x27;saved&#x27;</span>]);
+});
 
 test(<span class="t-string">&#x27;a new product starts from an empty form and is created, not saved&#x27;</span>, <span class="t-keyword">async</span> () =&gt; {
-  <span class="t-keyword">const</span> { flow, fields, create, save } = editing({ creating: <span class="t-keyword">true</span> })
-  expect(flow.states).toEqual([<span class="t-string">&#x27;editing&#x27;</span>])
-  fields.set(<span class="t-string">&#x27;title&#x27;</span>, <span class="t-string">&#x27;Cork Coaster&#x27;</span>)
-  fields.set(<span class="t-string">&#x27;category&#x27;</span>, <span class="t-string">&#x27;desks&#x27;</span>)
-  fields.set(<span class="t-string">&#x27;price&#x27;</span>, 7.5)
-  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;save&#x27;</span> })
-  <span class="t-keyword">await</span> flow.settled()
-  expect(create).toHaveBeenCalledWith({ title: <span class="t-string">&#x27;Cork Coaster&#x27;</span>, description: <span class="t-string">&#x27;&#x27;</span>, category: <span class="t-string">&#x27;desks&#x27;</span>, brand: <span class="t-string">&#x27;&#x27;</span>, price: 7.5, stock: 0 })
-  expect(save).not.toHaveBeenCalled()
-})</code></pre></div><div class="source" role="tabpanel" id="file-6" aria-labelledby="file-tab-6" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/catalogue/async.ts">components/<wbr>catalogue/<wbr>async.ts</a><span>9 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The catalogue waits for its page of products before it shows. The framework records what</span>
+  <span class="t-keyword">const</span> { create, fields, flow, save } = editing({ creating: <span class="t-keyword">true</span> });
+  expect(flow.states).toEqual([<span class="t-string">&#x27;editing&#x27;</span>]);
+  fields.set(<span class="t-string">&#x27;title&#x27;</span>, <span class="t-string">&#x27;Cork Coaster&#x27;</span>);
+  fields.set(<span class="t-string">&#x27;category&#x27;</span>, <span class="t-string">&#x27;desks&#x27;</span>);
+  fields.set(<span class="t-string">&#x27;price&#x27;</span>, 7.5);
+  flow.send({ <span class="t-keyword">type</span>: <span class="t-string">&#x27;save&#x27;</span> });
+  <span class="t-keyword">await</span> flow.settled();
+  expect(create).toHaveBeenCalledWith({
+    brand: <span class="t-string">&#x27;&#x27;</span>,
+    category: <span class="t-string">&#x27;desks&#x27;</span>,
+    description: <span class="t-string">&#x27;&#x27;</span>,
+    price: 7.5,
+    stock: 0,
+    title: <span class="t-string">&#x27;Cork Coaster&#x27;</span>,
+  });
+  expect(save).not.toHaveBeenCalled();
+});</code></pre></div><div class="source" role="tabpanel" id="file-6" aria-labelledby="file-tab-6" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/catalogue/async.ts">components/<wbr>catalogue/<wbr>async.ts</a><span>9 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The catalogue waits for its page of products before it shows. The framework records what</span>
 <span class="t-comment">// this read: the two services and these five route fields. So another filter, sort or page in</span>
 <span class="t-comment">// the address is another read; a dialog opening is not; and a write that makes</span>
 <span class="t-comment">// `products.search` stale (services/products/meta.ts) reads the page on screen again.</span>
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> <span class="t-keyword">async</span> ({ services, route }) =&gt; {
-  <span class="t-keyword">const</span> filters = { q: route.q, category: route.category, sort: route.sort, order: route.order, page: route.page }
-  <span class="t-keyword">const</span> [page, categories] = <span class="t-keyword">await</span> Promise.all([services.products.search(filters), services.products.categories()])
-  <span class="t-keyword">return</span> { filters, page, categories }
-}</code></pre></div><div class="source" role="tabpanel" id="file-7" aria-labelledby="file-tab-7" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/catalogue/props.ts">components/<wbr>catalogue/<wbr>props.ts</a><span>27 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the catalogue&#x27;s render shows, worked out from what its read answered, in the page&#x27;s words.</span>
-<span class="t-keyword">import</span> { filtered, href, HOME } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/address&#x27;</span>
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> <span class="t-keyword">async</span> ({ route, services }) =&gt; {
+  <span class="t-keyword">const</span> filters = { category: route.category, order: route.order, page: route.page, q: route.q, sort: route.sort };
+  <span class="t-keyword">const</span> [page, categories] = <span class="t-keyword">await</span> Promise.all([services.products.search(filters), services.products.categories()]);
+  <span class="t-keyword">return</span> { categories, filters, page };
+};</code></pre></div><div class="source" role="tabpanel" id="file-7" aria-labelledby="file-tab-7" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/catalogue/props.ts">components/<wbr>catalogue/<wbr>props.ts</a><span>39 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the catalogue&#x27;s render shows, worked out from what its read answered, in the page&#x27;s words.</span>
 
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ i18n, acl, <span class="t-keyword">async</span>: { <span class="t-keyword">default</span>: answer } }) =&gt; {
-  <span class="t-keyword">const</span> { filters, page, categories } = answer
-  <span class="t-keyword">const</span> category = categories.find(({ slug }) =&gt; slug === filters.category)?.name ?? <span class="t-string">&#x27;&#x27;</span>
-  <span class="t-keyword">const</span> narrowed = Boolean(filters.q || filters.category)
+<span class="t-keyword">import</span> <span class="t-keyword">type</span> { ReactNode } <span class="t-keyword">from</span> <span class="t-string">&#x27;react&#x27;</span>;
+
+<span class="t-keyword">import</span> { filtered, HOME, href } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/address&#x27;</span>;
+
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ acl, <span class="t-keyword">async</span>: { <span class="t-keyword">default</span>: answer }, i18n }) =&gt; {
+  <span class="t-keyword">const</span> { categories, filters, page } = answer;
+  <span class="t-keyword">const</span> category = categories.find(({ slug }) =&gt; slug === filters.category)?.name ?? <span class="t-string">&#x27;&#x27;</span>;
+  <span class="t-keyword">const</span> narrowed = Boolean(filters.q || filters.category);
   <span class="t-keyword">return</span> {
-    i18n,
-    filters,
-    categories,
-    items: page.items,
+    bulkHref: href(filters, { bulk: <span class="t-keyword">true</span> }),
     canChange: acl.allowed,
-    summary: i18n.summary({ count: page.total, filter: filters.q &amp;&amp; category ? <span class="t-string">&#x27;both&#x27;</span> : filters.q ? <span class="t-string">&#x27;q&#x27;</span> : category ? <span class="t-string">&#x27;category&#x27;</span> : <span class="t-string">&#x27;none&#x27;</span>, q: filters.q, category }),
-    empty: page.items.length === 0,
-    emptyText: narrowed ? i18n.empty.narrowed : i18n.empty.none,
+    categories,
     clearHref: narrowed ? href(HOME) : <span class="t-keyword">null</span>,
     createHref: href(filters, { create: <span class="t-keyword">true</span> }),
-    bulkHref: href(filters, { bulk: <span class="t-keyword">true</span> }),
+    empty: page.items.length === 0,
+    emptyText: narrowed ? i18n.empty.narrowed : i18n.empty.none,
+    filters,
+    i18n,
+    items: page.items,
     paging: {
+      nextHref: page.page &lt; page.pages ? filtered(filters, { page: page.page + 1 }) : <span class="t-keyword">null</span>,
+      previousHref: page.page &gt; 1 ? filtered(filters, { page: page.page - 1 }) : <span class="t-keyword">null</span>,
       shown: page.pages &gt; 1,
       text: i18n.paging.page({ page: page.page, pages: page.pages }),
-      previousHref: page.page &gt; 1 ? filtered(filters, { page: page.page - 1 }) : <span class="t-keyword">null</span>,
-      nextHref: page.page &lt; page.pages ? filtered(filters, { page: page.page + 1 }) : <span class="t-keyword">null</span>,
     },
-  }
-}</code></pre></div><div class="source" role="tabpanel" id="file-8" aria-labelledby="file-tab-8" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/catalogue/render.tsx">components/<wbr>catalogue/<wbr>render.tsx</a><span>58 lines</span></header><pre tabindex="0"><code><span class="t-keyword">import</span> { Link } <span class="t-keyword">from</span> <span class="t-string">&#x27;react-aria-components&#x27;</span>
-<span class="t-keyword">import</span> Filters <span class="t-keyword">from</span> <span class="t-string">&#x27;./components/filters&#x27;</span>
-<span class="t-keyword">import</span> ProductRow <span class="t-keyword">from</span> <span class="t-string">&#x27;./components/product-row&#x27;</span>
+    <span class="t-comment">/** How many products, with what marks the count: `summary(count)`. */</span>
+    summary: (count: (chunks: ReactNode[]) =&gt; ReactNode) =&gt;
+      i18n.summary({
+        category,
+        count: page.total,
+        filter: filters.q &amp;&amp; category ? <span class="t-string">&#x27;both&#x27;</span> : filters.q ? <span class="t-string">&#x27;q&#x27;</span> : category ? <span class="t-string">&#x27;category&#x27;</span> : <span class="t-string">&#x27;none&#x27;</span>,
+        q: filters.q,
+        total: count,
+      }),
+    total: page.total,
+  };
+};</code></pre></div><div class="source" role="tabpanel" id="file-8" aria-labelledby="file-tab-8" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/catalogue/render.tsx">components/<wbr>catalogue/<wbr>render.tsx</a><span>89 lines</span></header><pre tabindex="0"><code><span class="t-keyword">import</span> { Link } <span class="t-keyword">from</span> <span class="t-string">&#x27;react-aria-components&#x27;</span>;
 
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ className, i18n, filters, categories, items, canChange, summary, empty, emptyText, clearHref, createHref, bulkHref, paging }) =&gt; (
-  &lt;section className={className} aria-labelledby=<span class="t-string">&quot;catalogue-title&quot;</span>&gt;
-    &lt;div className=<span class="t-string">&quot;top&quot;</span>&gt;
-      &lt;div&gt;
-        &lt;h2 id=<span class="t-string">&quot;catalogue-title&quot;</span>&gt;{i18n.title}&lt;/h2&gt;
-        &lt;p className=<span class="t-string">&quot;summary&quot;</span> role=<span class="t-string">&quot;status&quot;</span>&gt;
-          {summary}
+<span class="t-keyword">import</span> Filters <span class="t-keyword">from</span> <span class="t-string">&#x27;./components/filters&#x27;</span>;
+<span class="t-keyword">import</span> ProductRow <span class="t-keyword">from</span> <span class="t-string">&#x27;./components/product-row&#x27;</span>;
+
+<span class="t-comment">// The catalogue, as schema.org names one: a list of offers, each row one of its elements, with</span>
+<span class="t-comment">// what may be done to it as its potential actions.</span>
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({
+  bulkHref,
+  canChange,
+  categories,
+  className,
+  clearHref,
+  createHref,
+  empty,
+  emptyText,
+  filters,
+  i18n,
+  items,
+  paging,
+  summary,
+  total,
+}) =&gt; (
+  &lt;section aria-labelledby=<span class="t-string">&quot;catalogue-title&quot;</span> className={className} itemScope itemType=<span class="t-string">&quot;https://schema.org/OfferCatalog&quot;</span>&gt;
+    &lt;header&gt;
+      &lt;hgroup&gt;
+        &lt;h2 id=<span class="t-string">&quot;catalogue-title&quot;</span> itemProp=<span class="t-string">&quot;name&quot;</span>&gt;
+          {i18n.title}
+        &lt;/h2&gt;
+        &lt;p role=<span class="t-string">&quot;status&quot;</span>&gt;
+          {summary((chunks) =&gt; (
+            &lt;data itemProp=<span class="t-string">&quot;numberOfItems&quot;</span> value={total}&gt;
+              {chunks}
+            &lt;/data&gt;
+          ))}
         &lt;/p&gt;
-      &lt;/div&gt;
+      &lt;/hgroup&gt;
       {canChange &amp;&amp; (
-        &lt;div className=<span class="t-string">&quot;actions&quot;</span>&gt;
-          &lt;<span class="t-tag">Link</span> href={bulkHref} data-variant=<span class="t-string">&quot;secondary&quot;</span>&gt;
-            &lt;span className=<span class="t-string">&quot;icon&quot;</span> data-icon=<span class="t-string">&quot;tag&quot;</span> /&gt;
-            {i18n.actions.bulk}
-          &lt;/<span class="t-tag">Link</span>&gt;
-          &lt;<span class="t-tag">Link</span> href={createHref} data-variant=<span class="t-string">&quot;primary&quot;</span>&gt;
-            &lt;span className=<span class="t-string">&quot;icon&quot;</span> data-icon=<span class="t-string">&quot;plus&quot;</span> /&gt;
-            {i18n.actions.create}
-          &lt;/<span class="t-tag">Link</span>&gt;
-        &lt;/div&gt;
+        &lt;menu&gt;
+          &lt;li&gt;
+            &lt;<span class="t-tag">Link</span> href={bulkHref}&gt;
+              &lt;span itemProp=<span class="t-string">&quot;potentialAction&quot;</span> itemScope itemType=<span class="t-string">&quot;https://schema.org/ReplaceAction&quot;</span>&gt;
+                &lt;span itemProp=<span class="t-string">&quot;name&quot;</span>&gt;{i18n.actions.bulk}&lt;/span&gt;
+              &lt;/span&gt;
+            &lt;/<span class="t-tag">Link</span>&gt;
+          &lt;/li&gt;
+          &lt;li&gt;
+            &lt;<span class="t-tag">Link</span> href={createHref}&gt;
+              &lt;span itemProp=<span class="t-string">&quot;potentialAction&quot;</span> itemScope itemType=<span class="t-string">&quot;https://schema.org/CreateAction&quot;</span>&gt;
+                &lt;span itemProp=<span class="t-string">&quot;name&quot;</span>&gt;{i18n.actions.create}&lt;/span&gt;
+              &lt;/span&gt;
+            &lt;/<span class="t-tag">Link</span>&gt;
+          &lt;/li&gt;
+        &lt;/menu&gt;
       )}
-    &lt;/div&gt;
-    {!canChange &amp;&amp; (
-      &lt;p className=<span class="t-string">&quot;notice&quot;</span> data-tone=<span class="t-string">&quot;info&quot;</span> role=<span class="t-string">&quot;note&quot;</span>&gt;
-        &lt;span className=<span class="t-string">&quot;icon&quot;</span> data-icon=<span class="t-string">&quot;user&quot;</span> /&gt;
-        {i18n.readOnly}
-      &lt;/p&gt;
-    )}
-    &lt;<span class="t-tag">Filters</span> filters={filters} categories={categories} /&gt;
+    &lt;/header&gt;
+    {!canChange &amp;&amp; &lt;p role=<span class="t-string">&quot;note&quot;</span>&gt;{i18n.readOnly}&lt;/p&gt;}
+    &lt;<span class="t-tag">Filters</span>
+      categories={categories}
+      category={filters.category}
+      order={filters.order}
+      q={filters.q}
+      sort={filters.sort}
+    /&gt;
     {empty ? (
-      &lt;div className=<span class="t-string">&quot;empty&quot;</span>&gt;
-        &lt;p&gt;{emptyText}&lt;/p&gt;
+      &lt;p&gt;
+        {emptyText}
         {clearHref &amp;&amp; &lt;<span class="t-tag">Link</span> href={clearHref}&gt;{i18n.empty.clear}&lt;/<span class="t-tag">Link</span>&gt;}
-      &lt;/div&gt;
+      &lt;/p&gt;
     ) : (
-      &lt;ul className=<span class="t-string">&quot;rows&quot;</span> aria-label={i18n.list}&gt;
+      &lt;ul aria-label={i18n.list}&gt;
         {items.map((product) =&gt; (
-          &lt;<span class="t-tag">ProductRow</span> key={product.id} product={product} filters={filters} /&gt;
+          &lt;<span class="t-tag">ProductRow</span> filters={filters} key={product.id} product={product} /&gt;
         ))}
       &lt;/ul&gt;
     )}
     {paging.shown &amp;&amp; (
-      &lt;nav className=<span class="t-string">&quot;paging&quot;</span> aria-label={i18n.paging.label}&gt;
-        &lt;<span class="t-tag">Link</span> href={paging.previousHref ?? <span class="t-keyword">undefined</span>} isDisabled={!paging.previousHref} data-variant=<span class="t-string">&quot;secondary&quot;</span>&gt;
+      &lt;nav aria-label={i18n.paging.label}&gt;
+        &lt;<span class="t-tag">Link</span> href={paging.previousHref ?? <span class="t-keyword">undefined</span>} isDisabled={!paging.previousHref}&gt;
           {i18n.paging.previous}
         &lt;/<span class="t-tag">Link</span>&gt;
         &lt;span&gt;{paging.text}&lt;/span&gt;
-        &lt;<span class="t-tag">Link</span> href={paging.nextHref ?? <span class="t-keyword">undefined</span>} isDisabled={!paging.nextHref} data-variant=<span class="t-string">&quot;secondary&quot;</span>&gt;
+        &lt;<span class="t-tag">Link</span> href={paging.nextHref ?? <span class="t-keyword">undefined</span>} isDisabled={!paging.nextHref}&gt;
           {i18n.paging.next}
         &lt;/<span class="t-tag">Link</span>&gt;
       &lt;/nav&gt;
     )}
   &lt;/section&gt;
-)</code></pre></div><div class="source" role="tabpanel" id="file-9" aria-labelledby="file-tab-9" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/catalogue/placeholder.tsx">components/<wbr>catalogue/<wbr>placeholder.tsx</a><span>15 lines</span></header><pre tabindex="0"><code><span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ className, i18n }) =&gt; (
-  &lt;section className={className} aria-busy=<span class="t-string">&quot;true&quot;</span>&gt;
-    &lt;div className=<span class="t-string">&quot;top&quot;</span>&gt;
-      &lt;div&gt;
+);</code></pre></div><div class="source" role="tabpanel" id="file-9" aria-labelledby="file-tab-9" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/catalogue/placeholder.tsx">components/<wbr>catalogue/<wbr>placeholder.tsx</a><span>15 lines</span></header><pre tabindex="0"><code><span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ className, i18n }) =&gt; (
+  &lt;section aria-busy=<span class="t-string">&quot;true&quot;</span> className={className}&gt;
+    &lt;header&gt;
+      &lt;hgroup&gt;
         &lt;h2&gt;{i18n.title}&lt;/h2&gt;
-        &lt;p className=<span class="t-string">&quot;summary&quot;</span>&gt;{i18n.loading}&lt;/p&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-    &lt;ul className=<span class="t-string">&quot;rows&quot;</span> aria-hidden=<span class="t-string">&quot;true&quot;</span>&gt;
+        &lt;p&gt;{i18n.loading}&lt;/p&gt;
+      &lt;/hgroup&gt;
+    &lt;/header&gt;
+    &lt;ul aria-hidden=<span class="t-string">&quot;true&quot;</span>&gt;
       {[0, 1, 2, 3, 4, 5].map((row) =&gt; (
-        &lt;li key={row} className=<span class="t-string">&quot;skeleton&quot;</span> style={{ blockSize: <span class="t-string">&#x27;4.6rem&#x27;</span> }} /&gt;
+        &lt;li key={row} /&gt;
       ))}
     &lt;/ul&gt;
   &lt;/section&gt;
-)</code></pre></div><div class="source" role="tabpanel" id="file-10" aria-labelledby="file-tab-10" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/catalogue/error.tsx">components/<wbr>catalogue/<wbr>error.tsx</a><span>18 lines</span></header><pre tabindex="0"><code><span class="t-keyword">import</span> { Button } <span class="t-keyword">from</span> <span class="t-string">&#x27;react-aria-components&#x27;</span>
+);</code></pre></div><div class="source" role="tabpanel" id="file-10" aria-labelledby="file-tab-10" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/catalogue/error.tsx">components/<wbr>catalogue/<wbr>error.tsx</a><span>19 lines</span></header><pre tabindex="0"><code><span class="t-keyword">import</span> { Button } <span class="t-keyword">from</span> <span class="t-string">&#x27;react-aria-components&#x27;</span>;
 
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ className, i18n, error, resetErrorBoundary }) =&gt; (
+<span class="t-comment">// Reading the catalogue, a search as schema.org names it, failed; it can be tried again.</span>
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ className, error, i18n, resetErrorBoundary }) =&gt; (
   &lt;section className={className}&gt;
-    &lt;div className=<span class="t-string">&quot;top&quot;</span>&gt;
+    &lt;header&gt;
       &lt;h2&gt;{i18n.title}&lt;/h2&gt;
-    &lt;/div&gt;
-    &lt;div className=<span class="t-string">&quot;notice&quot;</span> data-tone=<span class="t-string">&quot;danger&quot;</span> role=<span class="t-string">&quot;alert&quot;</span>&gt;
-      &lt;span className=<span class="t-string">&quot;icon&quot;</span> data-icon=<span class="t-string">&quot;alert&quot;</span> /&gt;
-      &lt;div&gt;
-        &lt;p&gt;{i18n.failed.message({ message: error.message })}&lt;/p&gt;
-        &lt;div className=<span class="t-string">&quot;actions&quot;</span>&gt;
+    &lt;/header&gt;
+    &lt;div itemScope itemType=<span class="t-string">&quot;https://schema.org/SearchAction&quot;</span> role=<span class="t-string">&quot;alert&quot;</span>&gt;
+      &lt;link href=<span class="t-string">&quot;https://schema.org/FailedActionStatus&quot;</span> itemProp=<span class="t-string">&quot;actionStatus&quot;</span> /&gt;
+      &lt;p itemProp=<span class="t-string">&quot;error&quot;</span>&gt;{i18n.failed.message({ message: error.message })}&lt;/p&gt;
+      &lt;menu&gt;
+        &lt;li&gt;
           &lt;<span class="t-tag">Button</span> onPress={resetErrorBoundary}&gt;{i18n.failed.retry}&lt;/<span class="t-tag">Button</span>&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
+        &lt;/li&gt;
+      &lt;/menu&gt;
     &lt;/div&gt;
   &lt;/section&gt;
-)</code></pre></div><div class="source" role="tabpanel" id="file-11" aria-labelledby="file-tab-11" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/components/product/remove-link/acl.ts">components/<wbr>product/<wbr>remove-link/<wbr>acl.ts</a><span>4 lines</span></header><pre tabindex="0"><code><span class="t-comment">// One link, deep inside a row or a dialog, narrower than what the page allows: it needs the</span>
+);</code></pre></div><div class="source" role="tabpanel" id="file-11" aria-labelledby="file-tab-11" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/components/product/remove-link/acl.ts">components/<wbr>product/<wbr>remove-link/<wbr>acl.ts</a><span>5 lines</span></header><pre tabindex="0"><code><span class="t-comment">// One link, deep inside a row or a dialog, narrower than what the page allows: it needs the</span>
 <span class="t-comment">// grant to delete products, and deletions not paused (the `deletions` flag, a kill switch). A guest</span>
 <span class="t-comment">// may still try, and is asked to sign in.</span>
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ acl, flags }) =&gt; flags.deletions &amp;&amp; acl.allowed &amp;&amp; (acl.role === <span class="t-string">&#x27;guest&#x27;</span> || acl.grants.products.includes(<span class="t-string">&#x27;delete&#x27;</span>))</code></pre></div><div class="source" role="tabpanel" id="file-12" aria-labelledby="file-tab-12" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/services/products/meta.ts">services/<wbr>products/<wbr>meta.ts</a><span>51 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the data layer needs to know about the catalogue&#x27;s operations: which ones read, how</span>
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ acl, flags }) =&gt;
+  flags.deletions &amp;&amp; acl.allowed &amp;&amp; (acl.role === <span class="t-string">&#x27;guest&#x27;</span> || acl.grants.products.includes(<span class="t-string">&#x27;delete&#x27;</span>));</code></pre></div><div class="source" role="tabpanel" id="file-12" aria-labelledby="file-tab-12" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/services/products/meta.ts">services/<wbr>products/<wbr>meta.ts</a><span>63 lines</span></header><pre tabindex="0"><code><span class="t-comment">// What the data layer needs to know about the catalogue&#x27;s operations: which ones read, how</span>
 <span class="t-comment">// long an answer that rarely changes stays good, what each write makes stale, and how some</span>
 <span class="t-comment">// writes change what is shown before the server answers. By reference: rename an operation and</span>
 <span class="t-comment">// this file follows, or fails to compile.</span>
 <span class="t-comment">// A component that read one of these reads again when a write makes it stale. No component</span>
 <span class="t-comment">// says so, and no component calls an invalidation.</span>
-<span class="t-keyword">import</span> { update } <span class="t-keyword">from</span> <span class="t-string">&#x27;framework&#x27;</span>
-<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Listed, Page } <span class="t-keyword">from</span> <span class="t-string">&#x27;./types&#x27;</span>
+
+<span class="t-keyword">import</span> { update } <span class="t-keyword">from</span> <span class="t-string">&#x27;framework&#x27;</span>;
+
+<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Listed, Page } <span class="t-keyword">from</span> <span class="t-string">&#x27;./types&#x27;</span>;
 
 <span class="t-comment">/** A product as the overlay will keep it: changed here, one version on. What the server will answer, so nothing renders twice. */</span>
-<span class="t-keyword">const</span> edited = &lt;<span class="t-tag">T</span> extends Listed&gt;(product: T, changes: Partial&lt;<span class="t-tag">Listed</span>&gt;): T =&gt; ({ ...product, ...changes, version: product.version + 1, local: product.local ?? <span class="t-string">&#x27;edited&#x27;</span> })
+<span class="t-keyword">const</span> edited = &lt;<span class="t-tag">T</span> extends Listed&gt;(product: T, changes: Partial&lt;<span class="t-tag">Listed</span>&gt;): T =&gt; ({
+  ...product,
+  ...changes,
+  local: product.local ?? <span class="t-string">&#x27;edited&#x27;</span>,
+  version: product.version + 1,
+});
 
 <span class="t-comment">/** A list with one product changed, or the same list. */</span>
 <span class="t-keyword">const</span> changed = (page: Page, id: number, changes: Partial&lt;<span class="t-tag">Listed</span>&gt;): Page =&gt;
-  page.items.some((item) =&gt; item.id === id) ? { ...page, items: page.items.map((item) =&gt; (item.id === id ? edited(item, changes) : item)) } : page
+  page.items.some((item) =&gt; item.id === id)
+    ? { ...page, items: page.items.map((item) =&gt; (item.id === id ? edited(item, changes) : item)) }
+    : page;
 
 <span class="t-comment">// The reads lay the local overlay over DummyJSON&#x27;s answers; in another tab, they follow the</span>
 <span class="t-comment">// overlay the tabs share, once its change can be read there.</span>
 <span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ clients: { local }, services: { products } }) =&gt; ({
-  search: { reads: <span class="t-keyword">true</span>, follows: (stale) =&gt; local.changed(stale) },
-  get: { reads: <span class="t-keyword">true</span>, follows: (stale) =&gt; local.changed(stale) },
-  reviews: { reads: <span class="t-keyword">true</span>, freshFor: 60_000 },
-  categories: { reads: <span class="t-keyword">true</span>, freshFor: 5 * 60_000 },
-  <span class="t-comment">// A save shows at once in the list and in the product&#x27;s dialog; a conflict or a failure takes it out.</span>
-  save: {
-    invalidates: [products.search, products.get],
+  categories: { freshFor: 5 * 60_000, reads: <span class="t-keyword">true</span> },
+  create: { invalidates: [products.search, products.inventory] },
+  get: { follows: (stale) =&gt; local.changed(stale), reads: <span class="t-keyword">true</span> },
+  inventory: { follows: (stale) =&gt; local.changed(stale), reads: <span class="t-keyword">true</span> },
+  <span class="t-comment">// A deletion leaves the list at once.</span>
+  remove: {
+    invalidates: [products.search, products.get, products.inventory],
     optimistic: [
-      update(products.search, (page, { id, changes }) =&gt; changed(page, id, changes)),
-      update(products.get, (product, { id, changes }) =&gt; (product.id === id ? edited(product, changes) : product)),
+      update(products.search, (page, id) =&gt;
+        page.items.some((item) =&gt; item.id === id)
+          ? { ...page, items: page.items.filter((item) =&gt; item.id !== id), total: page.total - 1 }
+          : page,
+      ),
     ],
   },
+  reset: { invalidates: [products.search, products.get, products.inventory] },
+  reviews: { freshFor: 60_000, reads: <span class="t-keyword">true</span> },
+  <span class="t-comment">// A save shows at once in the list and in the product&#x27;s dialog; a conflict or a failure takes it out.</span>
+  save: {
+    invalidates: [products.search, products.get, products.inventory],
+    optimistic: [
+      update(products.search, (page, { changes, id }) =&gt; changed(page, id, changes)),
+      update(products.get, (product, { changes, id }) =&gt; (product.id === id ? edited(product, changes) : product)),
+    ],
+  },
+  search: { follows: (stale) =&gt; local.changed(stale), reads: <span class="t-keyword">true</span> },
+  sellOut: { invalidates: [products.search, products.get, products.inventory] },
   setStock: {
-    invalidates: [products.search, products.get],
+    invalidates: [products.search, products.get, products.inventory],
     optimistic: [
       update(products.search, (page, { id, stock }) =&gt; changed(page, id, { stock })),
       update(products.get, (product, { id, stock }) =&gt; (product.id === id ? edited(product, { stock }) : product)),
     ],
   },
-  create: { invalidates: [products.search] },
-  <span class="t-comment">// A deletion leaves the list at once.</span>
-  remove: {
-    invalidates: [products.search, products.get],
-    optimistic: [
-      update(products.search, (page, id) =&gt;
-        page.items.some((item) =&gt; item.id === id) ? { ...page, items: page.items.filter((item) =&gt; item.id !== id), total: page.total - 1 } : page,
-      ),
-    ],
-  },
-  sellOut: { invalidates: [products.search, products.get] },
-  reset: { invalidates: [products.search, products.get] },
-})</code></pre></div><div class="source" role="tabpanel" id="file-13" aria-labelledby="file-tab-13" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/services/products/index.ts">services/<wbr>products/<wbr>index.ts</a><span>114 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The catalogue&#x27;s operations. Reads ask DummyJSON and lay the local overlay over the answer.</span>
+});</code></pre></div><div class="source" role="tabpanel" id="file-13" aria-labelledby="file-tab-13" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/services/products/index.ts">services/<wbr>products/<wbr>index.ts</a><span>151 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The catalogue&#x27;s operations. Reads ask DummyJSON and lay the local overlay over the answer.</span>
 <span class="t-comment">// Writes go to DummyJSON first, signed in, so the network and the session are exercised for</span>
 <span class="t-comment">// real; DummyJSON echoes them and keeps nothing, so the overlay keeps them (clients/local).</span>
 <span class="t-comment">// The services&#x27; meta.ts says which of these read and what each write makes stale.</span>
-<span class="t-keyword">import</span> { isLocal } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/clients/local&#x27;</span>
-<span class="t-keyword">import</span> { laid, layPage, PAGE_SIZE } <span class="t-keyword">from</span> <span class="t-string">&#x27;./overlay&#x27;</span>
-<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Category, Changes, Detailed, Listed, Local, Page, Product, Query, Review } <span class="t-keyword">from</span> <span class="t-string">&#x27;./types&#x27;</span>
 
-<span class="t-keyword">const</span> LISTED = <span class="t-string">&#x27;title,description,category,brand,price,stock,rating,thumbnail&#x27;</span>
+<span class="t-keyword">import</span> { isLocal } <span class="t-keyword">from</span> <span class="t-string">&#x27;@/clients/local&#x27;</span>;
 
-<span class="t-keyword">type</span> Listing = { products: Omit&lt;<span class="t-tag">Listed</span>, keyof Local&gt;[]; total: number }
+<span class="t-keyword">import</span> { laid, layPage, PAGE_SIZE } <span class="t-keyword">from</span> <span class="t-string">&#x27;./overlay&#x27;</span>;
+<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Category, Changes, Detailed, Listed, Local, Page, Product, Query, Review } <span class="t-keyword">from</span> <span class="t-string">&#x27;./types&#x27;</span>;
+
+<span class="t-keyword">const</span> LISTED = <span class="t-string">&#x27;title,description,category,brand,price,stock,rating,thumbnail&#x27;</span>;
+
+<span class="t-keyword">type</span> Listing = { products: Omit&lt;<span class="t-tag">Listed</span>, keyof Local&gt;[]; total: number };
 
 <span class="t-keyword">class</span> NotFoundError extends Error {
-  <span class="t-keyword">override</span> name = <span class="t-string">&#x27;NotFoundError&#x27;</span>
+  <span class="t-keyword">override</span> name = <span class="t-string">&#x27;NotFoundError&#x27;</span>;
 }
 
 <span class="t-comment">/** A page of products, filtered and sorted as the query says. */</span>
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> search =
   ({ clients: { api, local } }) =&gt;
   <span class="t-keyword">async</span> (query: Query): Promise&lt;<span class="t-tag">Page</span>&gt; =&gt; {
-    <span class="t-keyword">const</span> skip = (query.page - 1) * PAGE_SIZE
-    <span class="t-keyword">const</span> sorting = { sortBy: query.sort, order: query.order, select: LISTED }
+    <span class="t-keyword">const</span> skip = (query.page - 1) * PAGE_SIZE;
+    <span class="t-keyword">const</span> sorting = { order: query.order, select: LISTED, sortBy: query.sort };
     <span class="t-comment">// DummyJSON filters by a category or by text, not both: within a category, the text is</span>
     <span class="t-comment">// matched here, over the whole category.</span>
     <span class="t-keyword">const</span> remote = query.category
-      ? api.get&lt;<span class="t-tag">Listing</span>&gt;(<span class="t-string">`/products/category/${encodeURIComponent(query.category)}`</span>, { query: { ...sorting, limit: 0 } }).then(({ products }) =&gt; {
-          <span class="t-keyword">const</span> found = products.filter((product) =&gt; !query.q || <span class="t-string">`${product.title} ${product.description}`</span>.toLowerCase().includes(query.q.toLowerCase()))
-          <span class="t-keyword">return</span> { items: found.slice(skip, skip + PAGE_SIZE), total: found.length }
-        })
+      ? api
+          .get&lt;<span class="t-tag">Listing</span>&gt;(<span class="t-string">`/products/category/${encodeURIComponent(query.category)}`</span>, { query: { ...sorting, limit: 0 } })
+          .then(({ products }) =&gt; {
+            <span class="t-keyword">const</span> found = products.filter(
+              (product) =&gt;
+                !query.q || <span class="t-string">`${product.title} ${product.description}`</span>.toLowerCase().includes(query.q.toLowerCase()),
+            );
+            <span class="t-keyword">return</span> { items: found.slice(skip, skip + PAGE_SIZE), total: found.length };
+          })
       : api
-          .get&lt;<span class="t-tag">Listing</span>&gt;(query.q ? <span class="t-string">&#x27;/products/search&#x27;</span> : <span class="t-string">&#x27;/products&#x27;</span>, { query: { ...sorting, q: query.q, limit: PAGE_SIZE, skip } })
-          .then(({ products, total }) =&gt; ({ items: products, total }))
-    <span class="t-keyword">const</span> [answer, overlay] = <span class="t-keyword">await</span> Promise.all([remote, local.read()])
-    <span class="t-keyword">return</span> layPage(answer, overlay, query, PAGE_SIZE)
-  }
+          .get&lt;<span class="t-tag">Listing</span>&gt;(query.q ? <span class="t-string">&#x27;/products/search&#x27;</span> : <span class="t-string">&#x27;/products&#x27;</span>, {
+            query: { ...sorting, limit: PAGE_SIZE, q: query.q, skip },
+          })
+          .then(({ products, total }) =&gt; ({ items: products, total }));
+    <span class="t-keyword">const</span> [answer, overlay] = <span class="t-keyword">await</span> Promise.all([remote, local.read()]);
+    <span class="t-keyword">return</span> layPage(answer, overlay, query, PAGE_SIZE);
+  };
 
 <span class="t-comment">/** One product, with its pictures. */</span>
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> get =
   ({ clients: { api, local } }) =&gt;
   <span class="t-keyword">async</span> (id: number): Promise&lt;<span class="t-tag">Detailed</span>&gt; =&gt; {
-    <span class="t-keyword">const</span> overlay = <span class="t-keyword">await</span> local.read()
-    <span class="t-keyword">if</span> (overlay.removed.includes(id)) <span class="t-keyword">throw</span> <span class="t-keyword">new</span> NotFoundError(<span class="t-string">&#x27;This product was deleted.&#x27;</span>)
+    <span class="t-keyword">const</span> overlay = <span class="t-keyword">await</span> local.read();
+    <span class="t-keyword">if</span> (overlay.removed.includes(id)) <span class="t-keyword">throw</span> <span class="t-keyword">new</span> NotFoundError(<span class="t-string">&#x27;This product was deleted.&#x27;</span>);
     <span class="t-keyword">if</span> (isLocal(id)) {
-      <span class="t-keyword">const</span> created = overlay.created.find((product) =&gt; product.id === id)
-      <span class="t-keyword">if</span> (!created) <span class="t-keyword">throw</span> <span class="t-keyword">new</span> NotFoundError(<span class="t-string">&#x27;This product no longer exists.&#x27;</span>)
-      <span class="t-keyword">const</span> { reviews: _, ...product } = created
-      <span class="t-keyword">return</span> laid(product, overlay, <span class="t-keyword">true</span>)
+      <span class="t-keyword">const</span> created = overlay.created.find((product) =&gt; product.id === id);
+      <span class="t-keyword">if</span> (!created) <span class="t-keyword">throw</span> <span class="t-keyword">new</span> NotFoundError(<span class="t-string">&#x27;This product no longer exists.&#x27;</span>);
+      <span class="t-keyword">const</span> { reviews: _, ...product } = created;
+      <span class="t-keyword">return</span> laid(product, overlay, <span class="t-keyword">true</span>);
     }
-    <span class="t-keyword">return</span> laid(<span class="t-keyword">await</span> api.get&lt;<span class="t-tag">Omit</span>&lt;<span class="t-tag">Product</span>, <span class="t-string">&#x27;reviews&#x27;</span>&gt;&gt;(<span class="t-string">`/products/${id}`</span>, { query: { select: <span class="t-string">`${LISTED},images`</span> } }), overlay)
-  }
+    <span class="t-keyword">return</span> laid(
+      <span class="t-keyword">await</span> api.get&lt;<span class="t-tag">Omit</span>&lt;<span class="t-tag">Product</span>, <span class="t-string">&#x27;reviews&#x27;</span>&gt;&gt;(<span class="t-string">`/products/${id}`</span>, { query: { select: <span class="t-string">`${LISTED},images`</span> } }),
+      overlay,
+    );
+  };
 
 <span class="t-comment">/** A product&#x27;s reviews. A product created here has none. */</span>
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> reviews =
   ({ clients: { api } }) =&gt;
   <span class="t-keyword">async</span> (id: number): Promise&lt;<span class="t-tag">Review</span>[]&gt; =&gt;
-    isLocal(id) ? [] : (<span class="t-keyword">await</span> api.get&lt;{ reviews: Review[] }&gt;(<span class="t-string">`/products/${id}`</span>, { query: { select: <span class="t-string">&#x27;reviews&#x27;</span> } })).reviews
+    isLocal(id)
+      ? []
+      : (<span class="t-keyword">await</span> api.get&lt;{ reviews: Review[] }&gt;(<span class="t-string">`/products/${id}`</span>, { query: { select: <span class="t-string">&#x27;reviews&#x27;</span> } })).reviews;
+
+<span class="t-comment">/** Every product, for the report: the whole list the API keeps, with this browser&#x27;s overlay laid over it. */</span>
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> inventory =
+  ({ clients: { api, local } }) =&gt;
+  <span class="t-keyword">async</span> (): Promise&lt;<span class="t-tag">Listed</span>[]&gt; =&gt; {
+    <span class="t-keyword">const</span> [{ products }, overlay] = <span class="t-keyword">await</span> Promise.all([
+      api.get&lt;<span class="t-tag">Listing</span>&gt;(<span class="t-string">&#x27;/products&#x27;</span>, { query: { limit: 0, select: LISTED } }),
+      local.read(),
+    ]);
+    <span class="t-keyword">const</span> removed = <span class="t-keyword">new</span> Set(overlay.removed);
+    <span class="t-keyword">return</span> [
+      ...overlay.created.map(({ images: _, reviews: __, ...product }) =&gt; laid(product, overlay, <span class="t-keyword">true</span>)),
+      ...products.filter((product) =&gt; !removed.has(product.id)).map((product) =&gt; laid(product, overlay)),
+    ];
+  };
 
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> categories =
   ({ clients: { api } }) =&gt;
   () =&gt;
-    api.get&lt;<span class="t-tag">Category</span>[]&gt;(<span class="t-string">&#x27;/products/categories&#x27;</span>)
+    api.get&lt;<span class="t-tag">Category</span>[]&gt;(<span class="t-string">&#x27;/products/categories&#x27;</span>);
 
 /**
  * Saves a person&#x27;s changes to the version of the product they started <span class="t-keyword">from</span>. Rejects with a
@@ -826,19 +1002,27 @@ test(<span class="t-string">&#x27;a new product starts from an empty form and is
  */
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> save =
   ({ clients: { api, local } }) =&gt;
-  <span class="t-keyword">async</span> ({ id, changes, version }: { id: number; changes: Partial&lt;<span class="t-tag">Changes</span>&gt;; version?: number }): Promise&lt;{ id: number; version: number }&gt; =&gt; {
+  <span class="t-keyword">async</span> ({
+    changes,
+    id,
+    version,
+  }: {
+    changes: Partial&lt;<span class="t-tag">Changes</span>&gt;;
+    id: number;
+    version?: number;
+  }): Promise&lt;{ id: number; version: number }&gt; =&gt; {
     <span class="t-comment">// A product created here exists only here: the API is still asked who is signed in.</span>
-    <span class="t-keyword">if</span> (isLocal(id)) <span class="t-keyword">await</span> api.get(<span class="t-string">&#x27;/auth/me&#x27;</span>, { auth: <span class="t-keyword">true</span> })
-    <span class="t-keyword">else</span> <span class="t-keyword">await</span> api.put(<span class="t-string">`/auth/products/${id}`</span>, changes, { auth: <span class="t-keyword">true</span> })
-    <span class="t-keyword">return</span> { id, version: <span class="t-keyword">await</span> local.edit(id, changes, version) }
-  }
+    <span class="t-keyword">if</span> (isLocal(id)) <span class="t-keyword">await</span> api.get(<span class="t-string">&#x27;/auth/me&#x27;</span>, { auth: <span class="t-keyword">true</span> });
+    <span class="t-keyword">else</span> <span class="t-keyword">await</span> api.put(<span class="t-string">`/auth/products/${id}`</span>, changes, { auth: <span class="t-keyword">true</span> });
+    <span class="t-keyword">return</span> { id, version: <span class="t-keyword">await</span> local.edit(id, changes, version) };
+  };
 
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> create =
   ({ clients: { api, local } }) =&gt;
   <span class="t-keyword">async</span> (changes: Changes): Promise&lt;<span class="t-tag">Product</span>&gt; =&gt; {
-    <span class="t-keyword">await</span> api.post(<span class="t-string">&#x27;/auth/products/add&#x27;</span>, changes, { auth: <span class="t-keyword">true</span> })
-    <span class="t-keyword">return</span> local.create({ ...changes, rating: 0, thumbnail: <span class="t-string">&#x27;&#x27;</span>, images: [], reviews: [] })
-  }
+    <span class="t-keyword">await</span> api.post(<span class="t-string">&#x27;/auth/products/add&#x27;</span>, changes, { auth: <span class="t-keyword">true</span> });
+    <span class="t-keyword">return</span> local.create({ ...changes, images: [], rating: 0, reviews: [], thumbnail: <span class="t-string">&#x27;&#x27;</span> });
+  };
 
 /**
  * Sets a product&#x27;s stock, whatever its version: a count taken in the stockroom, not an edit of
@@ -847,92 +1031,108 @@ test(<span class="t-string">&#x27;a new product starts from an empty form and is
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> setStock =
   ({ clients: { api, local } }) =&gt;
   <span class="t-keyword">async</span> ({ id, stock }: { id: number; stock: number }): Promise&lt;{ id: number; version: number }&gt; =&gt; {
-    <span class="t-keyword">if</span> (isLocal(id)) <span class="t-keyword">await</span> api.get(<span class="t-string">&#x27;/auth/me&#x27;</span>, { auth: <span class="t-keyword">true</span> })
-    <span class="t-keyword">else</span> <span class="t-keyword">await</span> api.put(<span class="t-string">`/auth/products/${id}`</span>, { stock }, { auth: <span class="t-keyword">true</span> })
-    <span class="t-keyword">return</span> { id, version: <span class="t-keyword">await</span> local.edit(id, { stock }) }
-  }
+    <span class="t-keyword">if</span> (isLocal(id)) <span class="t-keyword">await</span> api.get(<span class="t-string">&#x27;/auth/me&#x27;</span>, { auth: <span class="t-keyword">true</span> });
+    <span class="t-keyword">else</span> <span class="t-keyword">await</span> api.put(<span class="t-string">`/auth/products/${id}`</span>, { stock }, { auth: <span class="t-keyword">true</span> });
+    <span class="t-keyword">return</span> { id, version: <span class="t-keyword">await</span> local.edit(id, { stock }) };
+  };
 
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> remove =
   ({ clients: { api, local } }) =&gt;
   <span class="t-keyword">async</span> (id: number): Promise&lt;void&gt; =&gt; {
-    <span class="t-keyword">if</span> (isLocal(id)) <span class="t-keyword">await</span> api.get(<span class="t-string">&#x27;/auth/me&#x27;</span>, { auth: <span class="t-keyword">true</span> })
-    <span class="t-keyword">else</span> <span class="t-keyword">await</span> api.delete(<span class="t-string">`/auth/products/${id}`</span>, { auth: <span class="t-keyword">true</span> })
-    <span class="t-keyword">await</span> local.remove(id)
-  }
+    <span class="t-keyword">if</span> (isLocal(id)) <span class="t-keyword">await</span> api.get(<span class="t-string">&#x27;/auth/me&#x27;</span>, { auth: <span class="t-keyword">true</span> });
+    <span class="t-keyword">else</span> <span class="t-keyword">await</span> api.delete(<span class="t-string">`/auth/products/${id}`</span>, { auth: <span class="t-keyword">true</span> });
+    <span class="t-keyword">await</span> local.remove(id);
+  };
 
 <span class="t-comment">/** Somebody else&#x27;s save, for the network lab: the product&#x27;s last unit is sold, and its version moves on. */</span>
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> sellOut =
   ({ clients: { local } }) =&gt;
   <span class="t-keyword">async</span> (id: number): Promise&lt;void&gt; =&gt; {
-    <span class="t-keyword">await</span> local.edit(id, { stock: 0 })
-  }
+    <span class="t-keyword">await</span> local.edit(id, { stock: 0 });
+  };
 
 <span class="t-comment">/** Forgets every local change. */</span>
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> reset =
   ({ clients: { local } }) =&gt;
   () =&gt;
-    local.reset()</code></pre></div><div class="source" role="tabpanel" id="file-14" aria-labelledby="file-tab-14" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/clients/flags/definitions.ts">clients/<wbr>flags/<wbr>definitions.ts</a><span>55 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The app&#x27;s feature flags, as the GrowthBook project will hold them. Until its client key arrives,</span>
+    local.reset();</code></pre></div><div class="source" role="tabpanel" id="file-14" aria-labelledby="file-tab-14" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/clients/flags/definitions.ts">clients/<wbr>flags/<wbr>definitions.ts</a><span>69 lines</span></header><pre tabindex="0"><code><span class="t-comment">// The app&#x27;s feature flags, as the GrowthBook project will hold them. Until its client key arrives,</span>
 <span class="t-comment">// OpenFeature&#x27;s in-memory provider serves these same flags (index.ts), so nothing else changes</span>
 <span class="t-comment">// when it does: the provider is the one line that changes.</span>
 <span class="t-comment">//</span>
 <span class="t-comment">// Each flag has its values, the value the app falls back on when the provider cannot answer, and</span>
 <span class="t-comment">// the ways it can be served: who gets which value. One way is served at a time; the network lab</span>
 <span class="t-comment">// chooses another, as GrowthBook&#x27;s dashboard would.</span>
-<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Acl, Flags } <span class="t-keyword">from</span> <span class="t-string">&#x27;framework&#x27;</span>
+
+<span class="t-keyword">import</span> <span class="t-keyword">type</span> { Acl, Flags } <span class="t-keyword">from</span> <span class="t-string">&#x27;framework&#x27;</span>;
 
 <span class="t-comment">/** Who is asking, as the provider targets them: by id, and by the role the backend gives them. */</span>
-<span class="t-keyword">export</span> <span class="t-keyword">type</span> Targeting = { targetingKey: string; role: Acl[<span class="t-string">&#x27;role&#x27;</span>] }
+<span class="t-keyword">export</span> <span class="t-keyword">type</span> Targeting = { role: Acl[<span class="t-string">&#x27;role&#x27;</span>]; targetingKey: string };
 
 <span class="t-keyword">type</span> Definition&lt;<span class="t-tag">Value</span>&gt; = {
+  fallback: Value;
   <span class="t-comment">/** The flag&#x27;s key at the provider. */</span>
-  key: string
-  variants: Record&lt;string, Value&gt;
-  fallback: Value
-  <span class="t-comment">/** Each way the flag can be served: the variant each person gets. */</span>
-  ways: Record&lt;string, (who: Targeting) =&gt; string&gt;
+  key: string;
   <span class="t-comment">/** The way served until the lab chooses another. */</span>
-  served: string
-}
+  served: string;
+  variants: Record&lt;string, Value&gt;;
+  <span class="t-comment">/** Each way the flag can be served: the variant each person gets. */</span>
+  ways: Record&lt;string, (who: Targeting) =&gt; string&gt;;
+};
 
 <span class="t-keyword">export</span> <span class="t-keyword">const</span> definitions = {
-  <span class="t-comment">// Counting stock from the catalogue&#x27;s rows, with − and +: rolled out to admins first.</span>
-  stockCount: {
-    key: <span class="t-string">&#x27;stock-count&#x27;</span>,
-    variants: { on: <span class="t-keyword">true</span>, off: <span class="t-keyword">false</span> },
-    fallback: <span class="t-keyword">false</span>,
-    ways: { admins: ({ role }) =&gt; (role === <span class="t-string">&#x27;admin&#x27;</span> ? <span class="t-string">&#x27;on&#x27;</span> : <span class="t-string">&#x27;off&#x27;</span>), everyone: () =&gt; <span class="t-string">&#x27;on&#x27;</span>, nobody: () =&gt; <span class="t-string">&#x27;off&#x27;</span> },
-    served: <span class="t-string">&#x27;admins&#x27;</span>,
-  },
   <span class="t-comment">// Whether products may be deleted. Off pauses every deletion: a kill switch.</span>
   deletions: {
     key: <span class="t-string">&#x27;deletions&#x27;</span>,
-    variants: { on: <span class="t-keyword">true</span>, off: <span class="t-keyword">false</span> },
+    variants: { off: <span class="t-keyword">false</span>, on: <span class="t-keyword">true</span> },
     fallback: <span class="t-keyword">true</span>,
-    ways: { on: () =&gt; <span class="t-string">&#x27;on&#x27;</span>, off: () =&gt; <span class="t-string">&#x27;off&#x27;</span> },
+    ways: { off: () =&gt; <span class="t-string">&#x27;off&#x27;</span>, on: () =&gt; <span class="t-string">&#x27;on&#x27;</span> },
     served: <span class="t-string">&#x27;on&#x27;</span>,
   },
   <span class="t-comment">// Above which percentage a bulk price change asks a second time: sooner for moderators.</span>
   largeChangeAt: {
-    key: <span class="t-string">&#x27;large-change-at&#x27;</span>,
-    variants: { soon: 10, usual: 50 },
     fallback: 50,
-    ways: { moderators: ({ role }) =&gt; (role === <span class="t-string">&#x27;moderator&#x27;</span> ? <span class="t-string">&#x27;soon&#x27;</span> : <span class="t-string">&#x27;usual&#x27;</span>), usual: () =&gt; <span class="t-string">&#x27;usual&#x27;</span>, soon: () =&gt; <span class="t-string">&#x27;soon&#x27;</span> },
+    key: <span class="t-string">&#x27;large-change-at&#x27;</span>,
     served: <span class="t-string">&#x27;moderators&#x27;</span>,
+    variants: { soon: 10, usual: 50 },
+    ways: {
+      moderators: ({ role }) =&gt; (role === <span class="t-string">&#x27;moderator&#x27;</span> ? <span class="t-string">&#x27;soon&#x27;</span> : <span class="t-string">&#x27;usual&#x27;</span>),
+      soon: () =&gt; <span class="t-string">&#x27;soon&#x27;</span>,
+      usual: () =&gt; <span class="t-string">&#x27;usual&#x27;</span>,
+    },
   },
-} satisfies { [Name in keyof Flags]: Definition&lt;<span class="t-tag">Flags</span>[Name]&gt; }
+  <span class="t-comment">// A live map of the orders&#x27; states beside the grid of tiles. Served off until the lab turns it on, so the</span>
+  <span class="t-comment">// flows never reach the network for a basemap; GrowthBook has no such flag, so its world gets the fallback.</span>
+  liveMap: {
+    key: <span class="t-string">&#x27;live-map&#x27;</span>,
+    variants: { off: <span class="t-keyword">false</span>, on: <span class="t-keyword">true</span> },
+    fallback: <span class="t-keyword">true</span>,
+    ways: { off: () =&gt; <span class="t-string">&#x27;off&#x27;</span>, on: () =&gt; <span class="t-string">&#x27;on&#x27;</span> },
+    served: <span class="t-string">&#x27;off&#x27;</span>,
+  },
+  <span class="t-comment">// Counting stock from the catalogue&#x27;s rows, with − and +: rolled out to admins first.</span>
+  stockCount: {
+    key: <span class="t-string">&#x27;stock-count&#x27;</span>,
+    variants: { off: <span class="t-keyword">false</span>, on: <span class="t-keyword">true</span> },
+    fallback: <span class="t-keyword">false</span>,
+    ways: { admins: ({ role }) =&gt; (role === <span class="t-string">&#x27;admin&#x27;</span> ? <span class="t-string">&#x27;on&#x27;</span> : <span class="t-string">&#x27;off&#x27;</span>), everyone: () =&gt; <span class="t-string">&#x27;on&#x27;</span>, nobody: () =&gt; <span class="t-string">&#x27;off&#x27;</span> },
+    served: <span class="t-string">&#x27;admins&#x27;</span>,
+  },
+} satisfies { [Name in keyof Flags]: Definition&lt;<span class="t-tag">Flags</span>[Name]&gt; };
 
-<span class="t-keyword">export</span> <span class="t-keyword">type</span> Name = keyof <span class="t-keyword">typeof</span> definitions
+<span class="t-keyword">export</span> <span class="t-keyword">type</span> Name = keyof <span class="t-keyword">typeof</span> definitions;
 <span class="t-comment">/** The way each flag is served. */</span>
-<span class="t-keyword">export</span> <span class="t-keyword">type</span> Served = { [Name in keyof <span class="t-keyword">typeof</span> definitions]: keyof (<span class="t-keyword">typeof</span> definitions)[Name][<span class="t-string">&#x27;ways&#x27;</span>] &amp; string }
+<span class="t-keyword">export</span> <span class="t-keyword">type</span> Served = { [Name in keyof <span class="t-keyword">typeof</span> definitions]: keyof (<span class="t-keyword">typeof</span> definitions)[Name][<span class="t-string">&#x27;ways&#x27;</span>] &amp; string };
 
-<span class="t-keyword">export</span> <span class="t-keyword">const</span> names = Object.keys(definitions) <span class="t-keyword">as</span> Name[]</code></pre></div><div class="source" role="tabpanel" id="file-15" aria-labelledby="file-tab-15" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/76ceecc746c69b2c7876f6a29dddac57d5dae6f4/src/clients/dummyjson/index.ts">clients/<wbr>dummyjson/<wbr>index.ts</a><span>8 lines</span></header><pre tabindex="0"><code><span class="t-comment">// DummyJSON, over the network. The session is the browser&#x27;s, as a backend&#x27;s cookie would be:</span>
+<span class="t-keyword">export</span> <span class="t-keyword">const</span> names = Object.keys(definitions) <span class="t-keyword">as</span> Name[];</code></pre></div><div class="source" role="tabpanel" id="file-15" aria-labelledby="file-tab-15" hidden><header><a href="https://github.com/fernandocamargo/framework-demo/blob/a313dbc/src/clients/dummyjson/index.ts">clients/<wbr>dummyjson/<wbr>index.ts</a><span>10 lines</span></header><pre tabindex="0"><code><span class="t-comment">// DummyJSON, over the network. The session is the browser&#x27;s, as a backend&#x27;s cookie would be:</span>
 <span class="t-comment">// every tab of the app shares it, and one tab&#x27;s sign-out ends it in the others.</span>
-<span class="t-keyword">import</span> { withPermissions } <span class="t-keyword">from</span> <span class="t-string">&#x27;../permissions&#x27;</span>
-<span class="t-keyword">import</span> { shared } <span class="t-keyword">from</span> <span class="t-string">&#x27;../storage&#x27;</span>
-<span class="t-keyword">import</span> { createHttp } <span class="t-keyword">from</span> <span class="t-string">&#x27;./http&#x27;</span>
+
+<span class="t-keyword">import</span> { withPermissions } <span class="t-keyword">from</span> <span class="t-string">&#x27;../permissions&#x27;</span>;
+<span class="t-keyword">import</span> { shared } <span class="t-keyword">from</span> <span class="t-string">&#x27;../storage&#x27;</span>;
+<span class="t-keyword">import</span> { createHttp } <span class="t-keyword">from</span> <span class="t-string">&#x27;./http&#x27;</span>;
 
 <span class="t-comment">// DummyJSON has no permissions endpoint: a layer over the wire answers it as a backend would.</span>
-<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ env }) =&gt; createHttp({ baseUrl: env.apiUrl, wire: withPermissions((url, init) =&gt; fetch(url, init)), storage: shared() })</code></pre></div></div>
+<span class="t-keyword">export</span> <span class="t-keyword">default</span> ({ env }) =&gt;
+  createHttp({ baseUrl: env.apiUrl, storage: shared(), wire: withPermissions((url, init) =&gt; fetch(url, init)) });</code></pre></div></div>
     </div>
   </section>
 <!-- code:end -->
@@ -1079,7 +1279,7 @@ A product with this title already exists</pre>
     <div class="head">
       <span class="eyebrow">Running today, in the demo</span>
       <h2 id="layers">More layers, the same shape</h2>
-      <p class="lede">Words, permissions, keys and flags are files beside the others, each saying one thing. A component renders again only for what its files read.</p>
+      <p class="lede">Words, permissions, keys, flags and skins are files beside the others, each saying one thing. A component renders again only for what its files read.</p>
     </div>
     <div class="rails">
       <div class="rail">
@@ -1098,7 +1298,7 @@ i18n.paging.page({ page, pages })</pre>
       </div>
       <div class="rail">
         <h3>Keys: <code>shortcuts.ts</code></h3>
-        <p>The keys a component answers while it is on screen. A key sends the chart’s event, so it does nothing when the chart takes none. <code>?</code> lists them.</p>
+        <p>The keys a component answers while it is on screen. A key sends the chart’s event, so it does nothing when the chart takes none. <code>?</code> lists them, and a palette (<kbd>⌘K</kbd>) runs them.</p>
         <pre>export default ({ i18n }) =&gt; ({
   'mod+s': { label: i18n.keys.save, send: 'save' },
 })</pre>
@@ -1128,6 +1328,51 @@ i18n.paging.page({ page, pages })</pre>
       <div class="rail">
         <h3>Renders that follow reads</h3>
         <p>The locale, the person, the snapshot, the flags, the fields of the route, the form’s values: a component follows the ones its files read, and no other. Six keys typed in the editor render no framework component.</p>
+      </div>
+      <div class="rail">
+        <h3>Skins: <code>style/skins/</code></h3>
+        <p>The markup names what each piece is, with HTML, ARIA and schema.org’s microdata, never a class for its look. A skin styles those names, so three skins wear one markup: a back office, a newspaper, and a blueprint that labels every piece with its type.</p>
+        <pre>&amp; [itemscope]::before {
+  content: attr(itemtype);
+}</pre>
+      </div>
+      <div class="rail">
+        <h3>Stories nobody writes</h3>
+        <p>Storybook shows every folder from its files alone: what each file is given, the chart’s states with their descriptions, the folder’s examples, its source.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="features">
+    <div class="head">
+      <span class="eyebrow">Building on it</span>
+      <h2 id="features">What a feature costs</h2>
+      <p class="lede">Five features came after the layers, to find out; the last came in two steps. None of them changed how the framework wires a folder.</p>
+    </div>
+    <div class="rails">
+      <div class="rail">
+        <h3>A blueprint skin</h3>
+        <p>The page drawn as itself, on blue paper: every item tagged with its schema.org type, every property with its name. <strong>Cost:</strong> sheets. The markup already said it all.</p>
+      </div>
+      <div class="rail">
+        <h3>A stock report</h3>
+        <p>A headline written from the numbers, a dashboard in one skin and a newspaper’s front page in another, live across tabs. <strong>Cost:</strong> a folder, one word in the list of pages, one read in the service.</p>
+      </div>
+      <div class="rail">
+        <h3>A guided tour</h3>
+        <p>One statechart that sorts the list, slows the network, signs a person in, serves a flag and switches the language, then puts it all back. <strong>Cost:</strong> a folder. It calls the services the rest of the app calls.</p>
+      </div>
+      <div class="rail">
+        <h3>A command palette</h3>
+        <p><kbd>⌘K</kbd> lists what can be done right now, over any dialog. <strong>Cost:</strong> a folder, and one function in the framework so that a declared key can be run. Its commands are the keys the folders already declare.</p>
+      </div>
+      <div class="rail">
+        <h3>Orders on a map</h3>
+        <p>The states as tiles in markup, the ledger of one, an order’s dialog: each is an address, shown only to those who may see it. <strong>Cost:</strong> a service, three folders, two fields in the address.</p>
+      </div>
+      <div class="rail">
+        <h3>The map, live</h3>
+        <p>Behind a flag, a map that reads the page’s own schema.org items, as a search engine would. <strong>Cost:</strong> a flag, a library loaded the first time it shows, and one function outside the folders.</p>
       </div>
     </div>
   </section>
@@ -1210,6 +1455,11 @@ i18n.paging.page({ page, pages })</pre>
           <li>A count shows at once, and goes back when the server refuses it</li>
           <li>Two tabs share a sign-in, a count and a sign-out</li>
           <li>A flag served another way renders only what reads it</li>
+          <li>The same markup wears three skins</li>
+          <li>Every page names its pieces as schema.org does</li>
+          <li>An address opens the same view for anyone who may see it, and nothing for anyone who may not</li>
+          <li>A palette runs the keys the folders declare, only while they do something</li>
+          <li>A tour drives the whole app, then puts it back as it was</li>
         </ul>
       </div>
       <div class="card">
@@ -1219,6 +1469,7 @@ i18n.paging.page({ page, pages })</pre>
           <li>The form manager.</li>
           <li>Offline use.</li>
           <li>Where the session and other stored data live.</li>
+          <li>Where widgets that draw imperatively belong.</li>
         </ol>
       </div>
     </div>
