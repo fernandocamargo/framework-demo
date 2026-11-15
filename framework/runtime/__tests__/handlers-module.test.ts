@@ -1,4 +1,11 @@
 // @vitest-environment node
+
+import { ESLint } from 'eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
+import { globSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import tseslint from 'typescript-eslint';
+
 // @ts-expect-error The plugin is plain JavaScript, with no declarations.
 import { handlersModule, transformRender } from '../../plugin/index.mjs';
 
@@ -153,3 +160,55 @@ test('in a folder with a handlers.ts, an attribute given handlers.<name> is not 
   expect(transform(true)).toContain('onHover={__track(select, __site_0)} onPress={handlers.startTour} />');
   expect(transform(false)).toContain('onPress={__track(handlers.startTour, __site_1)}');
 });
+
+test('generated handler hooks obey the hooks rules for fixtures and every app folder', async () => {
+  const eslint = new ESLint({
+    overrideConfig: [
+      {
+        files: ['**/*.ts'],
+        languageOptions: { parser: tseslint.parser, sourceType: 'module' },
+        plugins: { 'react-hooks': { rules: reactHooks.rules } },
+        rules: {
+          'react-hooks/exhaustive-deps': 'error',
+          'react-hooks/rules-of-hooks': 'error',
+        },
+      },
+    ],
+    overrideConfigFile: true,
+  });
+  const fixtures = [
+    'export const renamed = ({ state: chart }) => () => chart.send({ type: "go" });',
+    'export const optional = ({ state }) => () => state?.send({ type: "go" });',
+    'export const rest = ({ state, ...others }) => () => others;',
+    'export const passOn = (given) => () => given.state.send({ type: "go" });',
+    "export { elsewhere } from './elsewhere';",
+  ];
+  const sources = [
+    ...fixtures.map((source) => [source, 'src/components/sample/handlers.ts'] as const),
+    ...globSync('src/components/**/handlers.ts').map((relative) => [readFileSync(relative, 'utf8'), relative] as const),
+  ];
+  for (const [source, relative] of sources) {
+    const file = resolve(relative);
+    const code = handlersModule(source, file, {
+      path: relative.slice(4, -'/handlers.ts'.length),
+      relative: relative.slice(4),
+      runtime: '"framework"',
+    });
+    const [result] = await eslint.lintText(code, { filePath: file });
+    expect(result?.messages, relative).toEqual([]);
+  }
+
+  const code = generated('export const goTo = ({ state }) => () => state.send({ type: "go" });');
+  const [clean] = await eslint.lintText(code, { filePath: resolve('src/components/sample/handlers.ts') });
+  expect(clean?.messages).toEqual([]);
+  const bad = code.replace('[scope, state_send]', '[scope]');
+  expect(bad).not.toBe(code);
+  const [result] = await eslint.lintText(bad, { filePath: resolve('src/components/sample/handlers.ts') });
+  expect(result?.messages).toEqual([
+    expect.objectContaining({
+      message: expect.stringContaining("missing dependency: 'state_send'"),
+      ruleId: 'react-hooks/exhaustive-deps',
+      severity: 2,
+    }),
+  ]);
+}, 30_000);

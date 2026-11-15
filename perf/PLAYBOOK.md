@@ -128,7 +128,7 @@ Numbers in historical entries belong to the stated round, not today's baseline. 
 - **Confirm:** inspect generated modules: a `handlers.<name>` attribute is direct; other handler attributes still go through `track`. Follow every caller, keyed row, telemetry site and failure path.
 - **Cause:** legacy wrappers stage closures and publish them after commit. Their lifetime and call order duplicate React's callback ownership.
 - **Fix:** use the already-approved generated hook: one callback per export, reconstructed arguments and real member dependencies. No ref or latest-value holder. Migrate one folder/site family at a time. A dynamic collection command or passthrough policy that needs a new handler shape goes to the owner first.
-- **Guard / applied:** `handlers.test.tsx`, `handlers-module.test.ts`, convention tests; add generated-hooks lint with the installed rules and a deliberately bad dependency that must fail (R-01). Generated wiring exists; R-06's row, flags and palette sites remain. Delete registry machinery only after every caller is migrated, including placeholder/error handling; keep telemetry exactly once.
+- **Guard / applied:** `handlers.test.tsx`, `handlers-module.test.ts`, convention tests; the generated hooks of five fixtures and every app `handlers.ts` are linted with the installed hooks rules, and a module missing one dependency must be reported (R-01, done). Generated wiring exists; R-06's row, flags and palette sites remain. Delete registry machinery only after every caller is migrated, including placeholder/error handling; keep telemetry exactly once.
 
 ### 7. A non-event JSX function changes identity
 
