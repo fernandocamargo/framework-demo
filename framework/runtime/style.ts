@@ -65,3 +65,9 @@ export function loadSkin(path: string, skin: string, load: () => Promise<SkinMod
   }
   return promise;
 }
+
+/** Under the dev server: a skin's sheet takes the CSS its file holds now. One not loaded yet loads it as it is. */
+export function replaceSkin(path: string, skin: string, rules: string) {
+  const sheet = sheets.get(`${path}|${skin}`);
+  if (sheet) sheet.textContent = `${selector(path)} {\n${rules}\n}`;
+}

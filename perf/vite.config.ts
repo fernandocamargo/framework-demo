@@ -16,7 +16,7 @@ const EDITS: [anchor: string, before: string][] = [
   // marks the call behind the element it shows: a render React threw away whose output a later
   // render returns again was not wasted, and one whose output nothing shows was.
   [
-    'tried.current = next = { allowed, element, inputs, keys, props, rendered, scope, shaped }',
+    'tried.current = next = { allowed, element, inputs, keys, module, props, rendered, scope, shaped }',
     ';(globalThis.__callOf ??= new WeakMap()).set(element as object, __call)\n    ',
   ],
   [

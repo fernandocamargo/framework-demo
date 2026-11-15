@@ -526,6 +526,15 @@ export default function framework(userOptions) {
 
     enforce: 'pre',
 
+    // The view's module holds what the plugin read of the folder's files (the folders its render
+    // imports, where each key is declared), so an edit to one of them writes it again.
+    hotUpdate({ file }) {
+      const dir = path.dirname(file);
+      if (!isInside(file) || !CODE.test(file) || !isComponentFolder(options, dir)) return;
+      const view = this.environment.moduleGraph.getModuleById(`\0${VIEW}${dir}`);
+      if (view) this.environment.moduleGraph.invalidateModule(view);
+    },
+
     load(id) {
       if (id === `\0${CLIENTS}`) {
         const clients = listClients(options.root);
@@ -569,12 +578,27 @@ export default function framework(userOptions) {
           const state = findLayer(dir, 'state');
           return state ? [{ dir, state }] : [];
         });
-        return `export default [${charted
-          .map(
-            ({ dir, state }) =>
-              `{ path: ${JSON.stringify(componentPath(options.root, dir))}, component: () => import(${JSON.stringify(COMPONENT + dir)}), state: () => import(${JSON.stringify(state)}) }`,
-          )
-          .join(', ')}];`;
+        return [
+          `const charts = [${charted
+            .map(
+              ({ dir, state }) =>
+                `{ path: ${JSON.stringify(componentPath(options.root, dir))}, component: () => import(${JSON.stringify(COMPONENT + dir)}), state: () => import(${JSON.stringify(state)}) }`,
+            )
+            .join(', ')}];`,
+          'export default charts;',
+          // Under the dev server, an edited chart is taken here, so the edit stops at its folder
+          // (which takes its view) and the page is not reloaded; the gallery reads it when next shown.
+          ...(isBuild
+            ? []
+            : [
+                'if (import.meta.hot) {',
+                ...charted.map(
+                  ({ state }, index) =>
+                    `  import.meta.hot.accept(${JSON.stringify(state)}, (chart) => chart && (charts[${index}].state = () => Promise.resolve(chart)));`,
+                ),
+                '}',
+              ]),
+        ].join('\n');
       }
 
       if (id.startsWith(COMPONENT)) {
@@ -594,7 +618,7 @@ export default function framework(userOptions) {
           ...(placeholder ? [`import placeholder from ${JSON.stringify(placeholder)};`] : []),
           ...(error ? [`import error from ${JSON.stringify(error)};`] : []),
           ...(i18n ? [`import * as i18n from ${JSON.stringify(i18n)};`] : []),
-          'export default component({',
+          'const folder = component({',
           `  path: ${JSON.stringify(componentPath(options.root, dir))},`,
           `  view: () => import(${JSON.stringify(VIEW + dir)}),`,
           `  skins: { ${skins.map((skin) => `${JSON.stringify(skin.name)}: () => import(${JSON.stringify(skin.file)})`).join(', ')} },`,
@@ -618,6 +642,23 @@ export default function framework(userOptions) {
             view: [...new Set(['props', 'render', 'shortcuts'].flatMap((layer) => reads.byLayer[layer] ?? []))],
           })},`,
           '});',
+          'export default folder;',
+          // Under the dev server, the folder takes an edit to its view's files, or to a skin, where
+          // it is: the runtime shows it in every instance on screen, which keeps its state. Authors
+          // write `export default (props) => …`, which React's Fast Refresh does not take for a
+          // component (and a render is not one: it is called as a function), so without this an
+          // edit went up to the page and reloaded it.
+          ...(isBuild
+            ? []
+            : [
+                'if (import.meta.hot) {',
+                `  import.meta.hot.accept(${JSON.stringify(VIEW + dir)}, (view) => view && folder.replace?.(view));`,
+                ...skins.map(
+                  (skin) =>
+                    `  import.meta.hot.accept(${JSON.stringify(skin.file)}, (sheet) => sheet && folder.restyle?.(${JSON.stringify(skin.name)}, sheet));`,
+                ),
+                '}',
+              ]),
         ].join('\n');
       }
 

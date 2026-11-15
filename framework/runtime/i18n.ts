@@ -111,6 +111,11 @@ export function showing(spec: MessagesSpec): () => void {
  */
 export const loadShown = (locale: string) => Promise.all([...shown.keys()].map((spec) => loadMessages(spec, locale)));
 
+/** Under the dev server: a folder's messages are built again, from its `i18n.ts` as it is now. */
+export function forgetMessages(path: string) {
+  for (const key of loaded.keys()) if (key.startsWith(`${path}\0`)) loaded.delete(key);
+}
+
 /**
  * A folder's messages in a locale, built once: `pt-BR` reads `i18n/pt-BR.json`, or `i18n/pt.json`
  * when there is no file for the region; the source locale, or one with no file, shows the source.

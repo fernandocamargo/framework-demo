@@ -36,6 +36,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useSyncExternalStore,
 } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 
@@ -44,7 +45,7 @@ import { type AsyncModule, execute, useOperations } from './async';
 import { recording, recordingRoute, shareByIdentity } from './data';
 import { shareElements } from './elements';
 import { type FormModule, useFormLayer } from './form';
-import { activeLocale, intlFor, loadMessages, LocaleContext, showing, SOURCE_LOCALE } from './i18n';
+import { activeLocale, forgetMessages, intlFor, loadMessages, LocaleContext, showing, SOURCE_LOCALE } from './i18n';
 import type { Allowed, Flags, Route } from './index';
 import { type StateModule, useStateLayer } from './machine';
 import { PinContext } from './pin';
@@ -52,7 +53,7 @@ import { report, type Scope, toError } from './pipeline';
 import { sameParts, tracking, untracked } from './reads';
 import { fieldContext, followRoute, renderingRoute, RouteContext, type RouteView, useFramework } from './root';
 import { type Entry, type ShortcutSites, shortcutsOf, useKeyboard, useShortcuts } from './shortcuts';
-import { activeSkin, loadSkin, type SkinModule } from './style';
+import { activeSkin, loadSkin, replaceSkin, type SkinModule } from './style';
 import { tracked } from './thenable';
 import { chainOf, commitHandlers, withScope } from './track';
 
@@ -151,6 +152,8 @@ type Shown = {
   inputs: unknown[];
   /** The keys its shortcuts.ts declared, for a folder with one. */
   keys: Entry[] | undefined;
+  /** The view's files it was rendered with. */
+  module: unknown;
   props: Props;
   rendered: ReactNode;
   scope: Scope;
@@ -206,6 +209,21 @@ const NO_READ = {
 // between two hooks, made once: every render of a component then calls the same hooks in the same
 // order, with no hook behind a condition, and a lint can check it.
 
+/** Whether a dev server is serving the page: it sends a folder's files again as they are edited. */
+const HOT = Boolean((import.meta as { hot?: unknown }).hot);
+
+/** A folder's files as the dev server last sent them: who listens for the next ones, and how many came. */
+type Edits = { listeners: Set<() => void>; version: number };
+/** Renders the component again when its folder's files are sent again. */
+const useEdits = (edits: Edits) =>
+  useSyncExternalStore(
+    (listener) => {
+      edits.listeners.add(listener);
+      return () => edits.listeners.delete(listener);
+    },
+    () => edits.version,
+  );
+
 /** For a component that does not read a source: nothing, and no hook. */
 const useNothing = (..._: unknown[]) => undefined;
 /** The person signed in, from Root's `user` read: `null` when nobody is, or Root has no such read. */
@@ -232,6 +250,9 @@ const useFollowedReads = (
 ): Followed | undefined => useSuspenseQueries({ combine, queries });
 
 export function component(spec: Spec) {
+  // Under the dev server, a folder's module runs again when its `i18n.ts`, its placeholder or its
+  // error file is edited: its messages are then built from the file as it is now.
+  if (HOT && spec.i18n) forgetMessages(spec.path);
   const inView = new Set(spec.reads?.view ?? []);
   const inAcl = new Set(spec.reads?.acl ?? []);
   const inAsync = new Set(spec.reads?.async ?? []);
@@ -274,20 +295,32 @@ export function component(spec: Spec) {
   // And one chosen when the view has loaded: whether it has a default read. A view with none has
   // no query: a stand-in would cost every such component a subscription.
   let useAnswer: (query: null | Read) => unknown = useNothing;
+  /** What follows from a view's files, taken when it has loaded. */
+  const taken = (module: ViewModule) => {
+    useAnswer = typeof module.async?.default === 'function' ? useAnswerOf : useNothing;
+    for (const child of module.children ?? []) child.preload?.();
+    return module;
+  };
   let view: Promise<ViewModule> | undefined;
   // Once the view has loaded, the components it shows start loading theirs, so a child does not
   // wait to render before its own view starts, and React does not render its parent again when
   // that view arrives.
-  const loadView = () =>
-    (view ??= tracked(
-      hold(
-        spec.view().then((module) => {
-          if (typeof module.async?.default === 'function') useAnswer = useAnswerOf;
-          for (const child of module.children ?? []) child.preload?.();
-          return module;
-        }),
-      ),
-    ));
+  const loadView = () => (view ??= tracked(hold(spec.view().then(taken))));
+  // Under the dev server, an edit to one of the view's files (the render, props.ts, the chart…)
+  // sends the view again (the plugin's module for the folder accepts it). Every instance on screen
+  // then renders with the new files and keeps what it holds: what was typed in its fields, its
+  // chart's state when the new chart has that state, its open dialog. An edit that gives the view a
+  // default read, or a chart, or takes one away, changes the hooks it calls: those instances are
+  // mounted again. Production builds have none of this.
+  const edits: Edits = { listeners: new Set(), version: 0 };
+  const useEdited = HOT ? useEdits : useNothing;
+  const replace = (module: ViewModule) => {
+    view = Object.assign(Promise.resolve(taken(module)), { status: 'fulfilled' as const, value: module });
+    edits.version += 1;
+    for (const listener of edits.listeners) listener();
+  };
+  /** The same for a skin: its sheet takes the CSS as the file has it now. */
+  const restyle = (skin: string, module: SkinModule) => replaceSkin(spec.path, skin, module.default);
   /** Starts loading the view, the page's skin and the messages, ahead of the first render. */
   const preload = () => {
     void loadView();
@@ -615,9 +648,11 @@ export function component(spec: Spec) {
       if (next?.keys) registered.current = next.keys;
     });
     useShortcuts(spec.path, scope, registered);
-    const before = last.current;
-    const inputs = [module, scope, async, state, form, language, access, decided];
-    const again = [before, tried.current].find(
+    // Other files (an edit under the dev server) are another render: nothing before compares with it.
+    const from = (known: null | Shown) => (known?.module === module ? known : null);
+    const before = from(last.current);
+    const inputs = [scope, async, state, form, language, access, decided];
+    const again = [before, from(tried.current)].find(
       (known) => known && sameEach(known.inputs, inputs) && sameProps(known.props, props),
     );
     if (again) {
@@ -644,7 +679,7 @@ export function component(spec: Spec) {
       return before.element;
     }
     // Or what the last render worked out was given, when React has not committed that one (yet).
-    const retried = tried.current;
+    const retried = from(tried.current);
     if (retried && retried !== before && allowed === retried.allowed) {
       const same = untracked(() => shareByIdentity(retried.shaped, shaped));
       if (same === retried.shaped) {
@@ -669,7 +704,7 @@ export function component(spec: Spec) {
       { value: scope },
       module.acl ? createElement(AclContext, { value: allowed }, rendered) : rendered,
     );
-    tried.current = next = { allowed, element, inputs, keys, props, rendered, scope, shaped };
+    tried.current = next = { allowed, element, inputs, keys, module, props, rendered, scope, shaped };
     return element;
   }
 
@@ -747,7 +782,11 @@ export function component(spec: Spec) {
   StatelessView.displayName = spec.path;
 
   function View(props: Props) {
-    return createElement(use(loadView()).state ? StatefulView : StatelessView, props);
+    useEdited(edits);
+    const module = use(loadView());
+    const Chosen = module.state ? StatefulView : StatelessView;
+    // The key says which hooks the view calls, so an edit that changes them mounts it again.
+    return createElement(Chosen, HOT ? { ...props, key: useAnswer === useAnswerOf ? 'read' : 'none' } : props);
   }
   View.displayName = spec.path;
 
@@ -797,5 +836,5 @@ export function component(spec: Spec) {
   // A render is a pure function of what props.ts works out from the props and the layers, so a
   // parent's re-render that passes the same props (shallowly) changes nothing here. The layers'
   // own changes (state, operations, data, the framework's context) still re-render it.
-  return Object.assign(memo(Component), { preload });
+  return Object.assign(memo(Component), { preload, ...(HOT ? { replace, restyle } : {}) });
 }
