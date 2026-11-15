@@ -212,3 +212,41 @@ Broadsheet, Blueprint, the pages in the address, the stock report, the orders pa
 - **The header holds three more framework components**: the skin's switch, the tour's button and the palette. They mount with the page (3 more at "open the catalogue" and at "back to the catalogue"), and each renders again at a switch of language, changing the page (3 more at each switch). Nothing else in the framework's counts moved.
 - **Their react-aria buttons and links**: 32 more mounted with the page, and 45 to 60 more re-renders at each switch of language. The other steps' differences are within what runs of one build vary by.
 - **The states gallery's step counted 6 charts.** The tour and the palette brought two more, so the step missed in every run of both engines until it counted the folders with a chart, as the end-to-end flow does. Measured again with that check: no misses, the same counts, and WebKit's thrown-away renders at 33, which vary with how many of react-aria's commits fall in React's 300 ms wait.
+
+## After the fourth round
+
+react-doctor's two scans read against these counts, the pages the visit did not open measured, and the framework's hooks and refs made checkable. Before and after in one sitting; Chromium and WebKit, five runs after, three before.
+
+| Visit                                                | Chromium before | after         | WebKit before | after         |
+| ---------------------------------------------------- | --------------- | ------------- | ------------- | ------------- |
+| misses                                               | 0               | 0             | 0             | 0             |
+| render calls, thrown away                            | 433, 22         | 432, 21       | 430, 18       | 429, 18       |
+| framework mounted; rendered again (changing nothing) | 161; 252 (5)    | 161; 252 (5)  | 161; 253 (5)  | 161; 252 (5)  |
+| other rendered again (changing nothing)              | 4,598 (1,812)   | 4,703 (1,913) | 4,465 (1,712) | 4,471 (1,712) |
+| further steps: framework (changing nothing)          | 34 (4)          | 34 (4)        | 34 (3)        | 34 (3)        |
+
+The visit renders as it did: the round changed what can be verified, not what it costs. `cycles.mjs` now prints every run's totals. In Chromium's five runs after, each made 432 render calls with 21 thrown away, and 252 framework re-renders with 5 changing nothing; react-aria's count moved between 4,589 and 4,708 with which of its commits fall in a wait. WebKit's runs made 429 or 430 calls and 252 or 253 re-renders.
+
+**The features visit** (`VISIT=features`): 18 steps over the report, the orders page as a guest and as an admin, a state, an order, the live map on and off, the palette and the tour. Its own totals, Chromium, three runs before the two fixes and five after:
+
+|                                                      | before      | after       |
+| ---------------------------------------------------- | ----------- | ----------- |
+| misses                                               | 0           | 0           |
+| render calls, thrown away                            | 188, 23     | 186, 23     |
+| framework mounted; rendered again (changing nothing) | 87; 82 (7)  | 87; 78 (3)  |
+| other rendered again (changing nothing)              | 1,425 (533) | 1,390 (501) |
+
+WebKit after, five runs: 0 misses, 184 or 185 calls (22 or 23 thrown away), 77 (2), 1,372 to 1,386 (497 to 499). The live map draws in both headless engines; its basemap is answered by the driver with an empty style.
+
+- **The ledger rendered at every change of address.** Its rows' links were written from the whole route (`format({ ...route, cart })`), and spreading the route follows all of it. They are written from the ledger's own state and page now: an order opening or closing over it renders it no more.
+- **The palette's `aria-busy` never reached the page**: react-aria's `Menu` passes none on. It is on the `search` element now, so the two renders the search's start costs change the page.
+- The three left are the visit's: the session's chart settling as the page opens, and the app and the session at a sign-in.
+
+**Frames** (`npm run perf:frames`, `perf/frames.mjs`): the browser's own long animation frames and interaction times per step, nothing injected. Three runs of each visit: no long frame, and no interaction over 40 ms. `TRACE=1` lists the style and layout a script forced, by the code that asked: 171 ms over the visit while traced, in 477 events, none from the app or the framework. react-aria places a select's popover, focuses a dialog, locks the scroll, checks for an enter animation, and reads a computed style in its modal's render (12 ms in the eight renders of the bulk change applying). React removes the element that holds the focus, and the browser settles style and layout to move it (2 to 3 ms: the Previous link going back to page 1, the search field after a search, a dialog closing).
+
+**react-doctor** (`npm run doctor`, `npm run doctor runtime`; `perf/doctor.mjs`), version 0.9.23, telemetry off:
+
+- Its runtime scan reports 11 or 12 long frames in the visit, the longest 137 to 147 ms, at a search and at going back a page. They are its own. Its trace records `disabled-by-default-devtools.timeline.invalidationTracking`, which keeps a stack for every element a change invalidates. `frames.mjs` traced without that category: no task over 50 ms. With it (`CATEGORIES=…`): 138 ms at the search and 129 ms going back a page, in `removeChild`. The scan's interaction times stand: 64 ms at most, before and after.
+- Its static scan, in `framework/runtime`: `rules-of-hooks` 15 before, 1 after (`reading` in `root.tsx`, the route read on demand with `use`); `no-ref-current-in-render` 7 before, 3 after (the render's memo of the last output worked out, the chart's actor created once, the chart's declaration kept while it would read the same). Outside `perf/`'s own output: 85 findings before, 62 after, 49 of them render, placeholder and error files that export a function Fast Refresh does not take for a component, which the framework's own hot replacement now answers.
+
+What changed in the framework, each with a test: services read the entity React committed (`entity.test.tsx`); a component's hooks are chosen once per type (`hooks.test.tsx`); what a render is compared with is what React committed (`discarded.test.tsx`); a render that reads the route itself follows it (`route.test.tsx`); an edit under the dev server keeps the page (`hot.test.tsx`).
