@@ -99,7 +99,7 @@ export default ({ i18n, keyboard, onClose, onType, results, searching, text, use
     }))
     .filter((section) => section.items.length > 0);
 
-  return { empty: shown.length === 0, i18n, onClose, onType, searching, sections: shown, text };
+  return { empty: shown.length === 0, i18n, onType, searching, sections: shown, text };
 };
 
 /** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */

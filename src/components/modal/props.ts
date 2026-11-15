@@ -12,7 +12,7 @@ export type Props = {
   onClose: () => void;
 };
 
-export default ({ children, onClose }) => ({ children, onClose });
+export default ({ children }) => ({ children });
 
 /** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
 export const examples = {

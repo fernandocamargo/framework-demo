@@ -15,8 +15,8 @@ import {
 // the field. Each command is an action, as schema.org names one, potential while it can run; each
 // product found is a product, by its name. While the products are searched, the search says it is
 // busy: on the element itself, since react-aria's Menu passes no `aria-busy` on to the page.
-export default ({ className, empty, i18n, onClose, onType, searching, sections, text }) => (
-  <ModalOverlay data-react-aria-top-layer="true" isDismissable isOpen onOpenChange={(open) => !open && onClose()}>
+export default ({ className, empty, handlers, i18n, onType, searching, sections, text }) => (
+  <ModalOverlay data-react-aria-top-layer="true" isDismissable isOpen onOpenChange={handlers.dismiss}>
     <Modal className={`react-aria-Modal ${className}`}>
       <Dialog aria-label={i18n.title}>
         <search aria-busy={searching || undefined} itemScope itemType="https://schema.org/SearchAction">

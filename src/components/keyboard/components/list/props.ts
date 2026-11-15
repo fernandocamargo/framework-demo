@@ -2,10 +2,9 @@
 // keeps of each shortcuts.ts: translated, and whether it does something now.
 export type Props = { onClose: () => void };
 
-export default ({ i18n, keyboard, onClose }) => ({
+export default ({ i18n, keyboard }) => ({
   groups: keyboard.groups.map(({ path, shortcuts }) => ({ file: `${path}/shortcuts.ts`, shortcuts })),
   i18n,
-  onClose,
 });
 
 /** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */

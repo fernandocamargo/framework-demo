@@ -21,15 +21,12 @@ import SellOut from './components/sell-out';
 // The lab is a tool of its own, as schema.org names a piece of software; each entry of its logs is
 // an action, with what became of it.
 export default ({
-  breakRefresh,
-  change,
   className,
-  expireToken,
   failurePercent,
   failureText,
   faults,
   force,
-  forgetChanges,
+  handlers,
   i18n,
   latency,
   latencyText,
@@ -37,18 +34,12 @@ export default ({
   network,
   offline,
   open,
-  send,
   toggleLabel,
   tokenMinutes,
   tracked,
 }) => (
   <div className={className}>
-    <Button
-      aria-controls="network-lab"
-      aria-expanded={open}
-      aria-label={toggleLabel}
-      onPress={() => send({ type: 'toggle' })}
-    >
+    <Button aria-controls="network-lab" aria-expanded={open} aria-label={toggleLabel} onPress={handlers.toggleLab}>
       <span>{i18n.title}</span>
       {faults > 0 && <data value={faults}>{faults}</data>}
     </Button>
@@ -67,19 +58,13 @@ export default ({
         >
           <header>
             <h2 itemProp="name">{i18n.title}</h2>
-            <Button onPress={() => send({ type: 'toggle' })} slot="close">
+            <Button onPress={handlers.toggleLab} slot="close">
               {i18n.close}
             </Button>
           </header>
           <p itemProp="description">{i18n.intro}</p>
           <fieldset>
-            <Slider
-              defaultValue={latency}
-              maxValue={3000}
-              minValue={0}
-              onChangeEnd={(value) => change({ latency: value as number })}
-              step={250}
-            >
+            <Slider defaultValue={latency} maxValue={3000} minValue={0} onChangeEnd={handlers.setLatency} step={250}>
               <Label>{i18n.latency.label}</Label>
               <SliderOutput>{({ state }) => latencyText({ ms: state.getThumbValue(0) })}</SliderOutput>
               <SliderTrack>
@@ -90,7 +75,7 @@ export default ({
               defaultValue={failurePercent}
               maxValue={100}
               minValue={0}
-              onChangeEnd={(value) => change({ failureRate: (value as number) / 100 })}
+              onChangeEnd={handlers.setFailureRate}
               step={10}
             >
               <Label>{i18n.failures.label}</Label>
@@ -99,13 +84,13 @@ export default ({
                 <SliderThumb />
               </SliderTrack>
             </Slider>
-            <RadioGroup onChange={(value) => change({ force: Number(value) as 0 | 429 | 500 })} value={force}>
+            <RadioGroup onChange={handlers.forceStatus} value={force}>
               <Label>{i18n.force.label}</Label>
               <Radio value="0">{i18n.force.ok}</Radio>
               <Radio value="500">500</Radio>
               <Radio value="429">429</Radio>
             </RadioGroup>
-            <RadioGroup onChange={(value) => change({ tokenMinutes: Number(value) })} value={tokenMinutes}>
+            <RadioGroup onChange={handlers.setTokenMinutes} value={tokenMinutes}>
               <Label>{i18n.token.label}</Label>
               {minutes.map((choice) => (
                 <Radio key={choice.value} value={choice.value}>
@@ -113,22 +98,22 @@ export default ({
                 </Radio>
               ))}
             </RadioGroup>
-            <Switch isSelected={offline} onChange={(selected) => change({ offline: selected })}>
+            <Switch isSelected={offline} onChange={handlers.setOffline}>
               {i18n.offline}
             </Switch>
           </fieldset>
           <menu>
             <li>
-              <Button onPress={() => expireToken()}>{i18n.actions.expire}</Button>
+              <Button onPress={handlers.expireToken}>{i18n.actions.expire}</Button>
             </li>
             <li>
-              <Button onPress={() => breakRefresh()}>{i18n.actions.revoke}</Button>
+              <Button onPress={handlers.breakRefresh}>{i18n.actions.revoke}</Button>
             </li>
             <li>
               <SellOut />
             </li>
             <li>
-              <Button onPress={() => forgetChanges()}>{i18n.actions.forget}</Button>
+              <Button onPress={handlers.forgetChanges}>{i18n.actions.forget}</Button>
             </li>
           </menu>
           <Tabs>

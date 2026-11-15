@@ -1,6 +1,5 @@
 import { Button, Link } from 'react-aria-components';
 
-import { go } from '@/address';
 import BulkPrice from '@/components/bulk-price';
 import Catalogue from '@/components/catalogue';
 import Keyboard from '@/components/keyboard';
@@ -25,6 +24,7 @@ export default ({
   brand,
   className,
   dialogs,
+  handlers,
   navigating,
   section,
   sections,
@@ -34,7 +34,7 @@ export default ({
   world,
 }) => (
   <div aria-busy={navigating} className={className} itemScope itemType="https://schema.org/WebPage">
-    <Button onPress={() => document.getElementById('main')?.focus()}>{skip}</Button>
+    <Button onPress={handlers.skipToContent}>{skip}</Button>
     <header>
       <hgroup>
         <h1 itemProp="name">{brand}</h1>
@@ -65,12 +65,12 @@ export default ({
     </main>
     {/* The product's modal opens at once; the product's dialog waits for its read inside it. */}
     {dialogs.view !== null && (
-      <Modal onClose={() => go({ view: null })}>
+      <Modal onClose={handlers.closeProduct}>
         <Detail />
       </Modal>
     )}
     {dialogs.cart !== null && (
-      <Modal onClose={() => go({ cart: null })}>
+      <Modal onClose={handlers.closeOrder}>
         <OrderDetail />
       </Modal>
     )}

@@ -6,7 +6,6 @@ export default ({ i18n, state }) => ({
   open: !state.closed,
   results: state.context.results,
   searching: state.searching,
-  send: state.send,
   shortcut: /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? '⌘K' : 'Ctrl K',
   text: state.context.text,
 });

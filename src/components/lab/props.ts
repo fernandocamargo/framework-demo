@@ -72,26 +72,17 @@ function describe(entry: Tracked, i18n: I18n<typeof messages>, intl: Intl, cause
   return { kind: event.action, text: event.action === 'stale' ? '' : event.path, where };
 }
 
-export default ({
-  async: { breakRefresh, change, default: answer, expireToken, forgetChanges },
-  i18n,
-  intl,
-  state,
-}) => {
+export default ({ async: { default: answer }, i18n, intl, state }) => {
   const { settings } = answer;
   const faults = [settings.latency > 0, settings.failureRate > 0, settings.force !== 0, settings.offline].filter(
     Boolean,
   ).length;
   const when = (at: number) => intl.formatTime(at, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   return {
-    breakRefresh,
-    change,
-    expireToken,
     failurePercent: Math.round(settings.failureRate * 100),
     failureText: i18n.failures.value,
     faults,
     force: String(settings.force),
-    forgetChanges,
     i18n,
     latency: settings.latency,
     // The messages themselves, not a function made here: the same at every run, so the sliders'
@@ -106,7 +97,6 @@ export default ({
     })),
     offline: settings.offline,
     open: state.open,
-    send: state.send,
     toggleLabel: i18n.toggle({ faults }),
     tokenMinutes: String(settings.tokenMinutes),
     tracked: (() => {
