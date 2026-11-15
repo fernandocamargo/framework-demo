@@ -1,4 +1,4 @@
-// ESLint orders the code; Prettier lays it out (.prettierrc). Both run on save in VS Code
+// ESLint orders the code; oxfmt lays it out (.oxfmtrc.json). Both run on save in VS Code
 // (.vscode/settings.json) and in `npm run check`.
 //
 // - Imports come in three groups, a blank line between them: absolute external (Node's and the
@@ -40,6 +40,8 @@ export default defineConfig([
       'perf/dist/',
       'perf/out/',
       'public/',
+      // Vendored, with its own upstream (tools/oxlint/anti-slop/UPSTREAM.md); Oxlint loads it.
+      'tools/oxlint/anti-slop/',
     ],
   },
   {

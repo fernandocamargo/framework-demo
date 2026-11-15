@@ -241,7 +241,8 @@ type StatesOf<Module> = Module extends { default: (injection: never) => infer St
 
 type StateNames<States> = {
   [Name in keyof States & string]:
-    Name | (States[Name] extends { states: infer Children } ? StateNames<Children> : never);
+    | Name
+    | (States[Name] extends { states: infer Children } ? StateNames<Children> : never);
 }[keyof States & string];
 
 type EventNames<States> = {

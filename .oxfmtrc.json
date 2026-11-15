@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 120,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "package-lock.json",
+    "public/explainer/",
+    "framework/microdata/vocabulary.json",
+    "eslint-suppressions.json",
+    "tools/oxlint/anti-slop/"
+  ]
+}

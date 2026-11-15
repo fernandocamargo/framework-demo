@@ -73,7 +73,8 @@ type ViewModule = {
    * `shape` names the hook's callbacks and their dependencies: another shape is other hooks.
    */
   handlers?:
-    undefined | { route?: 'fields' | 'whole'; shape: string; useHandlers: (given: Props, scope: Scope) => Props };
+    | undefined
+    | { route?: 'fields' | 'whole'; shape: string; useHandlers: (given: Props, scope: Scope) => Props };
   /** `props.ts`: what the render would get, shaped into what it gets. */
   props: undefined | { default?: unknown };
   render: (props: Props) => ReactNode;
