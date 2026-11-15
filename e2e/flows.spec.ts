@@ -190,6 +190,39 @@ test('a product opens with its reviews, each from its own read', async ({ page }
   expect(page.url()).not.toContain('view=');
 });
 
+test('the product and order details expose busy content only while their reads are pending', async ({ page }) => {
+  await open(page, '#/products?signin=1');
+  await signIn(page);
+  await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
+  const lab = page.getByRole('complementary', { name: 'Network lab' });
+  await act(page, async () => {
+    await lab.getByRole('slider', { name: 'Latency' }).focus();
+    for (let step = 0; step < 8; step++) await page.keyboard.press('ArrowRight');
+  });
+  await act(page, () => lab.getByRole('button', { name: 'Close the network lab' }).click());
+
+  const pending = async (loading: string, loaded: string, action: () => Promise<unknown>) => {
+    await action();
+    const waiting = dialog(page, loading);
+    await waiting.waitFor();
+    expect(await waiting.getAttribute('aria-busy')).toBeNull();
+    expect(await waiting.getByRole('article', { name: loading }).getAttribute('aria-busy')).toBe('true');
+    expect(await waiting.locator('[aria-hidden="true"]').count()).toBe(3);
+    await idle(page);
+    expect(await dialog(page, loaded).locator('[aria-busy="true"]').count()).toBe(0);
+  };
+
+  await pending('Reading the product', 'Audio Interface', () =>
+    page.getByRole('link', { exact: true, name: 'Audio Interface' }).click(),
+  );
+  // Hash navigation keeps the lab's latency in this page for the order read.
+  await pending('Reading the order', 'Order 12', () =>
+    page.evaluate(() => {
+      window.location.hash = '#/orders?cart=12';
+    }),
+  );
+});
+
 test('editing needs a session; a save makes the list read again', async ({ page }) => {
   await open(page);
   await act(page, () => page.getByRole('link', { name: 'Edit Audio Interface' }).click());

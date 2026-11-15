@@ -81,7 +81,7 @@ export default css`
       line-height: 0.8;
     }
   }
-  &[aria-busy='true'] article > div {
+  & article[aria-busy='true'] > div {
     border: 1px solid var(--text);
     background: var(--placeholder);
     animation: shimmer 2.4s linear infinite;

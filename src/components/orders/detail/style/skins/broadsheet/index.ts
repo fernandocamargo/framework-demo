@@ -68,7 +68,7 @@ export default css`
     letter-spacing: 0;
     text-transform: none;
   }
-  &[aria-busy='true'] article > div {
+  & article[aria-busy='true'] > div {
     border: 1px solid var(--text);
     background: var(--placeholder);
     animation: shimmer 2.4s linear infinite;

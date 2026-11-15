@@ -67,7 +67,7 @@ export default css`
     color: var(--accent);
   }
   /* While the product is read: its title, its pictures and its facts, as shapes. */
-  &[aria-busy='true'] article > div {
+  & article[aria-busy='true'] > div {
     border-radius: var(--radius-s);
     background: var(--placeholder);
     animation: shimmer 1.4s linear infinite;
