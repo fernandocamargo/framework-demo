@@ -5,12 +5,13 @@
 //   more than the baseline fails;
 // - react-aria's and the shell's re-renders, and the renders React threw away: reported only. They
 //   move with timing from one run to the next.
-// The figure is the least of the runs. A run's count is never under what the code costs: timing
-// only adds to it (a commit that lands apart from another: one render more in one run in five on
-// a quiet machine, one to three more in most runs on a busy one). So a visit is played until its
-// least figures are within the baseline, RUNS times at most: once on a quiet machine. Code that
-// renders more stays over the baseline in every run, and fails after RUNS of them. Writing the
-// baseline plays every visit five times.
+// Timing moves a visit's figures from one run to the next, by one in the runs on record (a commit
+// that lands apart from another, or with another), and further on a busy machine. The baseline is
+// the figure most runs give; a visit is played until its least figures are within it, RUNS times
+// at most, which is once in most runs. Code that renders two more is over the baseline in every
+// run on record and fails after RUNS of them; one more can pass, when a run comes in one under
+// the usual. Writing the baseline plays every visit five times and keeps the figure most of them
+// give, the higher of two as common.
 // A run with a failed check or a page error did not play the whole visit, and is left out; a
 // visit with no clean run fails.
 //
@@ -50,6 +51,12 @@ if (!process.argv.includes('--no-build')) {
 }
 
 const least = (clean, key) => Math.min(...clean.map((run) => run[key]));
+// The figure most runs give, the higher of two as common: what a baseline records.
+const usual = (clean, key) => {
+  const counts = new Map();
+  for (const run of clean) counts.set(run[key], (counts.get(run[key]) ?? 0) + 1);
+  return [...counts].sort(([a, m], [b, n]) => n - m || b - a)[0][0];
+};
 // One baseline per platform: fonts and timers differ between them (WebKit on Linux renders a component
 // or two more in the visit than on macOS), and each is compared with its own.
 const PLATFORM = process.platform;
@@ -86,7 +93,10 @@ for (const engine of ENGINES) {
         output,
       );
     const figures = Object.fromEntries(Object.keys({ ...GATED, ...REPORTED }).map((key) => [key, least(whole, key)]));
-    measured[engine][visit] = figures;
+    measured[engine][visit] = {
+      ...figures,
+      usual: Object.fromEntries(Object.keys(GATED).map((key) => [key, usual(whole, key)])),
+    };
     const each = (key) => (all.length > 1 ? ` (${all.map((run) => run[key]).join(', ')})` : '');
     const list = (names) =>
       Object.entries(names)
@@ -106,7 +116,7 @@ if (write) {
       Object.fromEntries(
         VISITS.map((visit) => [
           visit,
-          Object.fromEntries(Object.keys(GATED).map((key) => [key, measured[engine][visit][key]])),
+          Object.fromEntries(Object.keys(GATED).map((key) => [key, measured[engine][visit].usual[key]])),
         ]),
       ),
     ]),
