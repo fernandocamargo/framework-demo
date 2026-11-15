@@ -7,7 +7,7 @@ import { inRegion, REGIONS } from '@/services/orders/regions';
 
 const PER_PAGE = 12;
 
-export default ({ acl, async: { default: answer }, i18n, intl, route }) => {
+export default ({ acl, async: { default: answer }, i18n, intl }) => {
   const { orders, page, region } = answer;
   const matching = inRegion(orders, region);
   const pages = Math.max(1, Math.ceil(matching.length / PER_PAGE));
@@ -26,7 +26,7 @@ export default ({ acl, async: { default: answer }, i18n, intl, route }) => {
       customer: full
         ? `${order.customer.firstName} ${order.customer.lastName}`
         : `${order.customer.firstName} ${order.customer.lastName.charAt(0)}.`,
-      href: format({ ...route, cart: order.id }),
+      href: format({ ...HOME, cart: order.id, page, region, section: 'orders' }),
       id: order.id,
       items: i18n.items({ count: order.items }),
       number: i18n.number({ number: order.id }),
