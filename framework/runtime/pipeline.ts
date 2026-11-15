@@ -56,7 +56,17 @@ export type Interaction = {
 };
 
 /** The layer a failure happened in. */
-export type Layer = 'acl' | 'async' | 'global' | 'handler' | 'props' | 'render' | 'service' | 'shortcuts' | 'state';
+export type Layer =
+  | 'acl'
+  | 'async'
+  | 'global'
+  | 'handler'
+  | 'i18n'
+  | 'props'
+  | 'render'
+  | 'service'
+  | 'shortcuts'
+  | 'state';
 
 export type Failure = {
   at: number;

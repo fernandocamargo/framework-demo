@@ -1,8 +1,12 @@
 import { act, fireEvent, render } from '@testing-library/react';
 import { createContext, createElement, type ReactNode, startTransition, use, useState } from 'react';
+import { useLocale } from 'react-aria';
+import { I18nProvider } from 'react-aria-components';
 
+import { whenIdle } from '../activity';
 import { component } from '../component';
 import { createQueryClient } from '../data';
+import { onFailure } from '../pipeline';
 import { Root } from '../root';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
@@ -31,7 +35,7 @@ async function show(element: ReactNode) {
   return {
     container: shown!.container,
     rerender: async (next: ReactNode) => {
-      await act(async () => shown!.rerender(next));
+      await act(() => startTransition(() => shown!.rerender(next)));
       await settle();
     },
   };
@@ -139,6 +143,227 @@ test('framework siblings receive a changed locale after a translation suspends i
   await act(async () => finish({ default: { 'components/transition-speaks/title': 'Produtos' } }));
   await settle();
   expect(container.textContent).toBe('SwitchProdutos1.234,5');
+});
+
+test('react-aria and a folder change together after delayed messages settle', async () => {
+  let finish!: (value: { default: Record<string, string> }) => void;
+
+  const pending = new Promise<{ default: Record<string, string> }>((resolve) => {
+    finish = resolve;
+  });
+
+  const Speaks = component({
+    i18n: { default: { title: 'Products' } },
+    path: 'components/paired-speaks',
+    skins: {},
+    translations: { 'pt-BR': () => pending },
+    view: view(({ i18n }) => {
+      // SAFETY: This folder declares title in its source messages.
+      return createElement('span', null, (i18n as { title: string }).title);
+    }),
+  });
+
+  function AriaLocale() {
+    return createElement('span', null, useLocale().locale);
+  }
+
+  const client = createQueryClient();
+
+  function Page() {
+    const [locale, setLocale] = useState('en');
+
+    return createElement(I18nProvider, {
+      children: createElement(
+        Root,
+        { client, entity, locale },
+        createElement(
+          'button',
+          { onClick: () => startTransition(() => setLocale(locale === 'en' ? 'pt-BR' : 'en')) },
+          'Switch',
+        ),
+        createElement(Speaks),
+        createElement(AriaLocale),
+      ),
+      locale,
+    });
+  }
+
+  const { container } = await show(createElement(Page));
+  expect(container.textContent).toBe('SwitchProductsen');
+
+  const changes: string[] = [];
+  const observer = new MutationObserver(() => changes.push(container.textContent ?? ''));
+  observer.observe(container, { characterData: true, childList: true, subtree: true });
+
+  await act(() => fireEvent.click(container.querySelector('button')!));
+  expect(container.textContent).toBe('SwitchProductsen');
+
+  let idle = false;
+  const waiting = whenIdle().then(() => {
+    idle = true;
+  });
+
+  await settle();
+  expect(idle).toBe(false);
+  await act(async () => finish({ default: { 'components/paired-speaks/title': 'Produtos' } }));
+  await settle();
+  await waiting;
+  observer.disconnect();
+  expect(container.textContent).toBe('SwitchProdutospt-BR');
+  expect(changes).toEqual(['SwitchProdutospt-BR']);
+
+  await act(() => fireEvent.click(container.querySelector('button')!));
+  expect(container.textContent).toBe('SwitchProductsen');
+  await act(() => fireEvent.click(container.querySelector('button')!));
+  expect(container.textContent).toBe('SwitchProdutospt-BR');
+});
+
+test('rapid switches show the last requested locale', async () => {
+  const finishes: Record<string, (value: { default: Record<string, string> }) => void> = {};
+  const translation = (locale: string) =>
+    new Promise<{ default: Record<string, string> }>((resolve) => {
+      finishes[locale] = resolve;
+    });
+
+  const Speaks = component({
+    i18n: { default: { title: 'Products' } },
+    path: 'components/rapid-speaks',
+    skins: {},
+    translations: { de: () => translation('de'), 'pt-BR': () => translation('pt-BR') },
+    view: view(({ i18n }) => {
+      // SAFETY: This folder declares title in its source messages.
+      return createElement('span', null, (i18n as { title: string }).title);
+    }),
+  });
+
+  const client = createQueryClient();
+
+  function Page() {
+    const [locale, setLocale] = useState('en');
+
+    return createElement(
+      Root,
+      { client, entity, locale },
+      createElement('button', { onClick: () => startTransition(() => setLocale('pt-BR')) }, 'Portuguese'),
+      createElement('button', { onClick: () => startTransition(() => setLocale('de')) }, 'German'),
+      createElement(Speaks),
+    );
+  }
+
+  const { container } = await show(createElement(Page));
+  await act(() => fireEvent.click(container.querySelectorAll('button')[0]!));
+  await act(() => fireEvent.click(container.querySelectorAll('button')[1]!));
+  expect(container.textContent).toBe('PortugueseGermanProducts');
+  await act(async () => finishes['de']!({ default: { 'components/rapid-speaks/title': 'Produkte' } }));
+  await settle();
+  expect(container.textContent).toBe('PortugueseGermanProdukte');
+  await act(async () => finishes['pt-BR']!({ default: { 'components/rapid-speaks/title': 'Produtos' } }));
+  await settle();
+  expect(container.textContent).toBe('PortugueseGermanProdukte');
+});
+
+test('a failed translation shows source words and reports once', async () => {
+  let fail!: (error: Error) => void;
+
+  const pending = new Promise<{ default: Record<string, string> }>((_, reject) => {
+    fail = reject;
+  });
+
+  const Speaks = component({
+    i18n: { default: { title: 'Products' } },
+    path: 'components/failed-speaks',
+    skins: {},
+    translations: { 'pt-BR': () => pending },
+    view: view(({ i18n, locale }) => {
+      // SAFETY: This folder declares title in its source messages.
+      return createElement('span', null, `${(i18n as { title: string }).title}:${String(locale)}`);
+    }),
+  });
+
+  const failures: string[] = [];
+  const stop = onFailure((failure) =>
+    failures.push(`${failure.layer}:${failure.path}:${failure.during}:${failure.error.message}`),
+  );
+  const client = createQueryClient();
+
+  function Page() {
+    const [locale, setLocale] = useState('en');
+
+    return createElement(
+      Root,
+      { client, entity, locale },
+      createElement('button', { onClick: () => startTransition(() => setLocale('pt-BR')) }, 'Switch'),
+      createElement(Speaks),
+      createElement(Speaks),
+    );
+  }
+
+  try {
+    const { container } = await show(createElement(Page));
+    expect(container.textContent).toBe('SwitchProducts:enProducts:en');
+    await act(() => fireEvent.click(container.querySelector('button')!));
+    expect(container.textContent).toBe('SwitchProducts:enProducts:en');
+    await act(async () => fail(new Error('Translation unavailable')));
+    await settle();
+    expect(container.textContent).toBe('SwitchProducts:pt-BRProducts:pt-BR');
+    expect(failures).toEqual(['i18n:components/failed-speaks:pt-BR:Translation unavailable']);
+  } finally {
+    stop();
+  }
+});
+
+test('a loaded view starts its child messages in the locale it rendered', async () => {
+  let finishView!: () => void;
+  let finishTranslation!: (value: { default: Record<string, string> }) => void;
+  let loads = 0;
+
+  const loadingView = new Promise<void>((resolve) => {
+    finishView = resolve;
+  });
+  const loadingTranslation = new Promise<{ default: Record<string, string> }>((resolve) => {
+    finishTranslation = resolve;
+  });
+
+  const Child = component({
+    i18n: { default: { title: 'Child' } },
+    path: 'components/preloaded-child',
+    skins: {},
+    translations: {
+      'pt-BR': () => {
+        loads++;
+        return loadingTranslation;
+      },
+    },
+    view: view(({ i18n }) => {
+      // SAFETY: This folder declares title in its source messages.
+      return createElement('span', null, (i18n as { title: string }).title);
+    }),
+  });
+
+  const Parent = component({
+    path: 'components/preloading-parent',
+    skins: {},
+    view: () =>
+      loadingView.then(() => ({
+        async: undefined,
+        children: [Child],
+        form: undefined,
+        props: undefined,
+        render: () => createElement('span', null, 'parent'),
+        state: undefined,
+      })),
+  });
+
+  const client = createQueryClient();
+  let shown!: ReturnType<typeof render>;
+  await act(async () => {
+    shown = render(createElement(Root, { client, entity, locale: 'pt-BR' }, createElement(Parent)));
+  });
+  expect(loads).toBe(0);
+  await act(async () => finishView());
+  expect(shown.container.textContent).toBe('parent');
+  expect(loads).toBe(1);
+  await act(async () => finishTranslation({ default: { 'components/preloaded-child/title': 'Filho' } }));
 });
 
 test('a component with messages shows them in the locale on screen, and only components that read the locale render again', async () => {

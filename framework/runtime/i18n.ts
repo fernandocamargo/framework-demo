@@ -21,6 +21,7 @@ import { createContext } from 'react';
 import { createIntl, createIntlCache, type IntlShape } from 'react-intl';
 
 import { hold } from './activity';
+import { report } from './pipeline';
 import { tracked } from './thenable';
 
 /** The language `i18n.ts` files are written in. */
@@ -36,13 +37,6 @@ export type MessagesSpec = {
 /** The locale being shown. Only components that read it subscribe, so the others never re-render for it. */
 export const LocaleContext = createContext<string>(SOURCE_LOCALE);
 LocaleContext.displayName = 'Locale';
-
-let active = SOURCE_LOCALE;
-/** The locale `Root` shows, for loads started outside a render (a view's children preloading). */
-export const activeLocale = () => active;
-export const activateLocale = (locale: string) => {
-  active = locale;
-};
 
 const cache = createIntlCache();
 /** Per locale, every message of the folders loaded so far, by id. react-intl reads it at call time. */
@@ -92,25 +86,6 @@ export function build(spec: MessagesSpec, translated: Record<string, string>, in
 
 const loaded = new Map<string, Promise<Tree>>();
 
-/** The folders with messages that have a component on screen, each with how many. */
-const shown = new Map<MessagesSpec, number>();
-
-/** Counts a folder's component as on screen, until the returned function is called. */
-export function showing(spec: MessagesSpec): () => void {
-  shown.set(spec, (shown.get(spec) ?? 0) + 1);
-  return () => {
-    const count = (shown.get(spec) ?? 1) - 1;
-    if (count > 0) shown.set(spec, count);
-    else shown.delete(spec);
-  };
-}
-
-/**
- * The messages, in a locale, of every folder with a component on screen. `Root` waits for them
- * before it shows the locale, so the change happens in one commit and no component suspends.
- */
-export const loadShown = (locale: string) => Promise.all([...shown.keys()].map((spec) => loadMessages(spec, locale)));
-
 /** Under the dev server: a folder's messages are built again, from its `i18n.ts` as it is now. */
 export function forgetMessages(path: string) {
   for (const key of loaded.keys()) if (key.startsWith(`${path}\0`)) loaded.delete(key);
@@ -126,15 +101,23 @@ export function loadMessages(spec: MessagesSpec, locale: string): Promise<Tree> 
   let messages = loaded.get(key);
   if (!messages) {
     const language = locale.split('-')[0] ?? locale;
+
     const file = locale === SOURCE_LOCALE ? undefined : (spec.translations?.[locale] ?? spec.translations?.[language]);
-    messages = tracked(
-      hold(
-        (file ? file().then((module) => module.default) : Promise.resolve({})).then((translated) =>
-          build(spec, translated, intlFor(locale)),
-        ),
-      ),
-    );
+
+    const translated = file
+      ? Promise.resolve()
+          .then(file)
+          .then((module) => module.default)
+          .catch((error) => {
+            report(error, { during: locale, layer: 'i18n', path: spec.path });
+
+            return {};
+          })
+      : Promise.resolve({});
+
+    messages = tracked(hold(translated.then((words) => build(spec, words, intlFor(locale)))));
     loaded.set(key, messages);
   }
+
   return messages;
 }

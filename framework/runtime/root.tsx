@@ -22,9 +22,9 @@ import {
   useState,
 } from 'react';
 
-import { hold, Pending, useCommitted, watch } from './activity';
+import { Pending, useCommitted, watch } from './activity';
 import { createDataLayer, type DataLayer, recording } from './data';
-import { activateLocale, loadShown, LocaleContext, SOURCE_LOCALE } from './i18n';
+import { LocaleContext, SOURCE_LOCALE } from './i18n';
 import type { Acl, Entity, Env, Flags, Navigation, Route, User } from './index';
 import { createInjection, type Injection } from './injection';
 import { report, setLocation } from './pipeline';
@@ -221,6 +221,7 @@ export type RootProps = {
    * The locale the page shows (`pt-BR`). A component with an `i18n.ts`, or one that reads `intl`
    * or `locale`, follows it, and no other. When it changes, the page keeps the old locale on
    * screen until every component on it has its messages in the new one, then shows it at once.
+   * Change it in a transition so a suspended component does not expose a mixed page.
    */
   locale?: string;
   /**
@@ -303,26 +304,7 @@ export function Root({
   // A new route counts as pending for `whenIdle()` until React commits it: a navigation in a
   // transition keeps the old page on screen with no placeholder while React renders the new one.
   useCommitted(route);
-  // Loads started outside a render (a view preloading its children's) use the locale asked for,
-  // so a change of locale starts loading the new messages as early as it can.
-  activateLocale(locale);
-  // The locale on screen follows the one asked for once the messages of every component on
-  // screen are loaded in it: one commit, nothing suspending. React loses a change of context
-  // for a component whose sibling suspends in the same update, so the framework never lets a
-  // change of locale suspend.
-  const [shown, setShown] = useState(locale);
-  useEffect(() => {
-    if (shown === locale) return;
-    let current = true;
-    void hold(loadShown(locale)).then(
-      () => current && setShown(locale),
-      () => current && setShown(locale),
-    );
-    return () => {
-      current = false;
-    };
-  }, [locale, shown]);
-  useCommitted(shown);
+  useCommitted(locale);
   // Root's reads are keyed by the entity, as every read is: another entity is another person's
   // answer, so each is made again for the entity selected.
   const userRead = useMemo(
@@ -390,7 +372,7 @@ export function Root({
   }, []);
 
   let page: ReactNode = (
-    <LocaleContext value={shown}>
+    <LocaleContext value={locale}>
       <Suspense fallback={<Pending />}>{children}</Suspense>
     </LocaleContext>
   );

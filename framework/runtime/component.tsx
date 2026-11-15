@@ -46,7 +46,7 @@ import { type AsyncModule, execute, useOperations } from './async';
 import { recording, recordingRoute, shareByIdentity } from './data';
 import { shareElements } from './elements';
 import { type FormModule, useFormLayer } from './form';
-import { activeLocale, forgetMessages, intlFor, loadMessages, LocaleContext, showing, SOURCE_LOCALE } from './i18n';
+import { forgetMessages, intlFor, loadMessages, LocaleContext, SOURCE_LOCALE } from './i18n';
 import type { Allowed, Flags, Route } from './index';
 import { type StateModule, useStateLayer } from './machine';
 import { PinContext } from './pin';
@@ -65,7 +65,7 @@ type ViewModule = {
   acl?: undefined | { default?: unknown };
   async: AsyncModule | undefined;
   /** The components the render shows, from the plugin: their loads start when this view has loaded. */
-  children?: readonly { preload?: () => void }[];
+  children?: readonly { preload?: (locale?: string) => void }[];
   form: FormModule | undefined;
   /**
    * `handlers.ts`, as the plugin wrote it into a hook: one `useCallback` per export, each given
@@ -357,9 +357,9 @@ export function component(spec: Spec) {
   /** The same for a skin: its sheet takes the CSS as the file has it now. */
   const restyle = (skin: string, module: SkinModule) => replaceSkin(spec.path, skin, module.default);
   /** Starts loading the view, the page's skin and the messages, ahead of the first render. */
-  const preload = () => {
+  const preload = (locale?: string) => {
     void loadView();
-    if (spec.i18n) void loadMessages(spec, activeLocale());
+    if (spec.i18n && locale) void loadMessages(spec, locale);
     const skin = activeSkin();
     const loadThisSkin = spec.skins[skin];
     if (loadThisSkin) void loadSkin(spec.path, skin, loadThisSkin);
@@ -372,8 +372,6 @@ export function component(spec: Spec) {
   function useLanguage() {
     const locale = followsLocale ? use(LocaleContext) : SOURCE_LOCALE;
     const messages = spec.i18n ? use(loadMessages(spec, locale)) : undefined;
-    // While on screen, a change of locale loads this folder's messages before it shows.
-    useLayoutEffect(() => (spec.i18n ? showing(spec) : undefined), []);
     return useMemo(
       () => ({
         i18n: messages,
@@ -861,6 +859,9 @@ export function component(spec: Spec) {
   function View(props: Props) {
     useEdited(edits);
     const module = use(loadView());
+    const locale = module.children?.length ? use(LocaleContext) : SOURCE_LOCALE;
+
+    for (const child of module.children ?? []) child.preload?.(locale);
     const Chosen = module.state ? StatefulView : StatelessView;
     // The key says which hooks the view calls, so an edit that changes them mounts it again.
     return createElement(
