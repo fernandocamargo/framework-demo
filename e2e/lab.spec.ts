@@ -56,8 +56,7 @@ test('the gallery lists the two child charts under their own folders', async ({ 
 test('the API client tab never shows an empty list after the skin changed', async ({ page }) => {
   await page.goto('./?world=memory#/products');
   await page.evaluate(() => window.__framework.idle());
-  await page.getByRole('button', { name: /Skin/ }).click();
-  await page.getByRole('option', { name: /Broadsheet/ }).click();
+  await page.getByRole('combobox', { name: 'Skin' }).selectOption('broadsheet');
   await page.evaluate(() => window.__framework.idle());
 
   const lab = page.getByRole('complementary', { name: 'Network lab' });
@@ -81,8 +80,7 @@ test('the API client tab never shows an empty list after the skin changed', asyn
 test('the Inspector tab shows at once, its files loaded with the lab', async ({ page }) => {
   await page.goto('./?world=memory#/products');
   await page.evaluate(() => window.__framework.idle());
-  await page.getByRole('button', { name: /Skin/ }).click();
-  await page.getByRole('option', { name: /Broadsheet/ }).click();
+  await page.getByRole('combobox', { name: 'Skin' }).selectOption('broadsheet');
   await page.evaluate(() => window.__framework.idle());
 
   const lab = page.getByRole('complementary', { name: 'Network lab' });

@@ -59,6 +59,8 @@ test('starting on orders shows the catalogue at the first step', async ({ page }
 
 test('the tour walks every step, does each one, and finishing it tidies the lab', async ({ page }) => {
   await open(page);
+  const skin = page.getByRole('combobox', { name: /^(Skin|Visual)$/ });
+  const skinNode = await skin.elementHandle();
   await act(page, () => page.getByRole('button', { name: 'Take the tour' }).click());
   expect(await visible(panel(page))).toBe(true);
   // Address: the list is sorted by price.
@@ -94,6 +96,8 @@ test('the tour walks every step, does each one, and finishing it tidies the lab'
   await act(page, () => forward(page).click());
   // Skin: the page wears the broadsheet.
   expect(await htmlAttribute(page, 'data-skin')).toBe('broadsheet');
+  expect(await skin.inputValue()).toBe('default');
+  expect(await skin.evaluate((element, original) => element === original, skinNode)).toBe(true);
 
   await act(page, () => forward(page).click());
   // Language: the page speaks Brazilian Portuguese.
@@ -110,6 +114,9 @@ test('the tour walks every step, does each one, and finishing it tidies the lab'
   expect(await htmlAttribute(page, 'data-skin')).toBe('default');
   expect(await htmlAttribute(page, 'lang')).toBe('en');
   expect(await page.getByRole('combobox', { name: 'Language' }).inputValue()).toBe('en');
+  expect(await skin.inputValue()).toBe('default');
+  expect(await skin.evaluate((element, original) => element === original, skinNode)).toBe(true);
+  await skinNode?.dispose();
   expect(await faults(page)).toBe(0);
 });
 
