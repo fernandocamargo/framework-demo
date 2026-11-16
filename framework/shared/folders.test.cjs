@@ -170,7 +170,7 @@ test('unresolved observers are broad, while source props are left for their own 
   assert.deepEqual(manifest().status, { remove: [], save: [] });
 });
 
-test('the plugin serializes status metadata without connecting generated execution', async () => {
+test('the plugin serializes status metadata and connects its generated execution', async () => {
   const { default: framework } = await import('../plugin/index.mjs');
   operationFixture('status-manifest', 'export default ({ status }) => status.save.pending;');
   const plugin = framework({ cwd: root, root: '.', runtime: 'runtime.ts' });
@@ -186,7 +186,8 @@ test('the plugin serializes status metadata without connecting generated executi
     view: [],
   });
   const view = plugin.load(`\0framework-view:${dir}`);
-  assert.doesNotMatch(view, /useOperation|useSelector/);
+  assert.equal((view.match(/ = useOperation\(/g) ?? []).length, 2);
+  assert.equal((view.match(/ = useSelector\(/g) ?? []).length, 1);
   assert.match(view, /export \* as async from/);
 });
 

@@ -4,6 +4,7 @@ import { createElement, type ReactNode, startTransition, Suspense, use, useState
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { Root } from '../root';
+import { wiredOperations } from './operations.cases';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 // One service, which answers with the entity it is run for.
@@ -43,6 +44,7 @@ function setup() {
     skins: {},
     view: () =>
       Promise.resolve({
+        ...wiredOperations({ names: ['write'], status: { write: [] } }),
         async: {
           default: ({ services }: { services: { tenant: Tenant } }) => services.tenant.read(),
           write:

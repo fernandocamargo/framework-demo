@@ -5,10 +5,11 @@
 import { act, render } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 
-import type { Operation } from '../async';
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { Root } from '../root';
+import type { Operation } from '../types';
+import { wiredOperations } from './operations.cases';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
@@ -244,13 +245,16 @@ test.each([false, true])(
   async (read) => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     let operation: Operation | undefined;
+    let status: undefined | { pending: boolean };
     let signal: AbortSignal | undefined;
     let finish: (answer: string) => void = () => undefined;
     const files = {
       async: read ? { default: () => Promise.resolve('answer') } : undefined,
       form: undefined,
       props: undefined,
-      render: ({ async }: Props) => {
+      render: ({ async, status: selected }: Props) => {
+        // SAFETY: The generated fixture selects save.pending when the operation exists.
+        status = (selected as undefined | { save?: { pending: boolean } })?.save;
         const layer = async as undefined | { default?: string; save?: Operation };
         operation = layer?.save;
         return createElement('input', { defaultValue: layer?.default ?? 'no read' });
@@ -262,6 +266,7 @@ test.each([false, true])(
     const first = container.querySelector('input')!;
     const withOperation = {
       ...files,
+      ...wiredOperations({ names: ['save'], status: { save: ['pending'] } }),
       async: {
         ...files.async,
         save: (given: { signal: AbortSignal }) => {
@@ -279,7 +284,7 @@ test.each([false, true])(
     act(() => {
       pending = operation!();
     });
-    expect(operation!.pending).toBe(true);
+    expect(status!.pending).toBe(true);
     expect(signal?.aborted).toBe(false);
 
     // A render edit with the same layers keeps the field and the operation in flight.
@@ -290,7 +295,7 @@ test.each([false, true])(
     await settle();
     expect(container.querySelector('input')).toBe(active);
     expect(active.value).toBe('typed');
-    expect(operation!.pending).toBe(true);
+    expect(status!.pending).toBe(true);
     expect(signal?.aborted).toBe(false);
 
     await act(async () => (Editor as unknown as Hot).replace(files));
@@ -306,6 +311,113 @@ test.each([false, true])(
     errors.mockRestore();
   },
 );
+
+test('adding or removing an export or selector remounts a view that already owns operations', async () => {
+  let save: Operation | undefined;
+  let signal: AbortSignal | undefined;
+  let finish!: (value: string) => void;
+
+  const files = {
+    ...wiredOperations({ names: ['save'], status: { save: [] } }),
+    async: {
+      save: ({ signal: current }: { signal: AbortSignal }) => {
+        signal = current;
+
+        return new Promise<string>((resolve) => (finish = resolve));
+      },
+    },
+    form: undefined,
+    props: undefined,
+    render: ({ async }: Props) => {
+      // SAFETY: The fixture declares save as its named command.
+      save = (async as { save: Operation }).save;
+
+      return createElement('input');
+    },
+    state: undefined,
+  };
+
+  const Editor = component({ path: 'components/operation-shape-edit', skins: {}, view: () => Promise.resolve(files) });
+  // SAFETY: These cases run the dev runtime, which exposes replace on the component type.
+  const HotEditor = Editor as Hot & typeof Editor;
+  const container = await show(createElement(Editor));
+
+  const manifests: Parameters<typeof wiredOperations>[0][] = [
+    { names: ['erase', 'save'], status: { erase: [], save: [] } },
+    { names: ['save'], status: { save: [] } },
+    { names: ['save'], status: { save: ['pending'] } },
+    { names: ['save'], status: { save: [] } },
+  ];
+
+  for (const manifest of manifests) {
+    const before = container.querySelector('input');
+    const pending = save!();
+    const running = signal!;
+    await act(async () =>
+      HotEditor.replace({
+        ...files,
+        ...wiredOperations(manifest),
+        async: { ...files.async, erase: () => Promise.resolve() },
+      }),
+    );
+    await settle();
+    expect(container.querySelector('input')).not.toBe(before);
+    expect(running.aborted).toBe(true);
+    await act(async () => {
+      finish('saved');
+      await pending;
+    });
+  }
+});
+
+test('an ordinary export edit keeps the actor and running implementation; new calls use the edited export', async () => {
+  let save!: Operation<string>;
+  let signal!: AbortSignal;
+  let finish!: (value: string) => void;
+
+  const files = {
+    ...wiredOperations({ names: ['save'], status: { save: [] } }),
+    async: {
+      save: ({ signal: current }: { signal: AbortSignal }) => {
+        signal = current;
+
+        return new Promise<string>((resolve) => (finish = resolve));
+      },
+    },
+    form: undefined,
+    props: undefined,
+    render: ({ async }: Props) => {
+      // SAFETY: The fixture declares save as its named command.
+      save = (async as { save: typeof save }).save;
+
+      return createElement('input');
+    },
+    state: undefined,
+  };
+
+  const Editor = component({
+    path: 'components/operation-implementation-edit',
+    skins: {},
+    view: () => Promise.resolve(files),
+  });
+
+  // SAFETY: These cases run the dev runtime, which exposes replace on the component type.
+  const HotEditor = Editor as Hot & typeof Editor;
+  const container = await show(createElement(Editor));
+  const field = container.querySelector('input');
+  const before = save;
+  const pending = save();
+  await act(async () => HotEditor.replace({ ...files, async: { save: () => Promise.resolve('edited') } }));
+  await settle();
+  expect(container.querySelector('input')).toBe(field);
+  expect(signal.aborted).toBe(false);
+  expect(save).not.toBe(before);
+  await act(async () => {
+    finish('original');
+    await expect(pending).resolves.toBe('original');
+    await expect(save()).resolves.toBe('edited');
+  });
+});
 
 test("the plugin's module for a folder takes an edit to its view or a skin under the dev server, and not in a build", async () => {
   const { mkdirSync, mkdtempSync, writeFileSync } = await import('node:fs');

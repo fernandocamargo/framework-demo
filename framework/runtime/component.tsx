@@ -41,7 +41,7 @@ import {
 import { useErrorBoundary } from 'react-error-boundary';
 
 import { hold, usePending } from './activity';
-import { type AsyncModule, execute, useOperations } from './async';
+import { type AsyncModule, execute } from './async';
 import { type Around, type Edits, sameProps, ScopeContext, useBound } from './boundaries';
 import { recording, recordingRoute, shareByIdentity } from './data';
 import { shareElements } from './elements';
@@ -76,6 +76,8 @@ type ViewModule = {
   handlers?:
     | undefined
     | { route?: 'fields' | 'whole'; shape: string; useHandlers: (given: Props, scope: Scope) => Props };
+  /** The ordered operation exports and selectors: an edit to this changes the hook stack. */
+  operationSignature?: string;
   /** `props.ts`: what the render would get, shaped into what it gets. */
   props: undefined | { default?: unknown };
   render: (props: Props) => ReactNode;
@@ -84,6 +86,7 @@ type ViewModule = {
   /** Where each key is declared in `shortcuts.ts`, from the plugin, for the interactions it runs. */
   shortcutSites?: ShortcutSites;
   state: StateModule | undefined;
+  useOperations?: (path: string, module: AsyncModule, injection: Props) => { commands: Props; status: Props };
 };
 
 export type Spec = {
@@ -205,7 +208,8 @@ const NO_READ = {
 const useNothing = (..._: unknown[]) => undefined;
 const useNoForm = () => NO_FORM;
 const useNoChart = (..._: unknown[]) => NO_CHART;
-const useNoOperations = () => NO_LAYER;
+const NO_OPERATIONS = Object.freeze({ commands: NO_LAYER, status: NO_LAYER });
+const useNoOperations = () => NO_OPERATIONS;
 /** The person signed in, from Root's `user` read: `null` when nobody is, or Root has no such read. */
 const useUserRead = (): unknown => useSuspenseQuery(useFramework().user ?? NO_READ).data;
 /**
@@ -281,7 +285,7 @@ export function component(spec: Spec) {
   // And whether it has a handlers.ts: then the hook the plugin wrote from it.
   let useHandlers: (given: Props, scope: Scope) => Props | undefined = useNothing;
   let useForm: typeof useFormLayer | typeof useNoForm = useNoForm;
-  let useAsync: typeof useOperations = useNoOperations;
+  let useAsync: NonNullable<ViewModule['useOperations']> = useNoOperations;
   // And whether it has a state.ts: then its chart, and the decision that comes before it.
   let useChart: typeof useChartLayer | typeof useNoChart = useNoChart;
   /** The folder's edits under the dev server (below). */
@@ -293,13 +297,11 @@ export function component(spec: Spec) {
     useAnswer = typeof module.async?.default === 'function' ? useAnswerOf : useNothing;
     useHandlers = module.handlers?.useHandlers ?? useNothing;
     useForm = module.form ? useFormLayer : useNoForm;
-    useAsync = Object.keys(module.async ?? NO_LAYER).some((name) => name !== 'default')
-      ? useOperations
-      : useNoOperations;
+    useAsync = module.useOperations ?? useNoOperations;
     useChart = module.state ? useChartLayer : useNoChart;
     for (const child of module.children ?? []) child.preload?.();
     // Other hooks than the view called before (an edit under the dev server): its instances are mounted again.
-    const now = `${module.state ? 'chart' : 'none'} ${useAnswer === useAnswerOf ? 'read' : 'none'} ${module.form ? 'form' : 'none'} ${useAsync === useOperations ? 'operations' : 'none'} ${module.handlers?.shape ?? ''}`;
+    const now = `${module.state ? 'chart' : 'none'} ${useAnswer === useAnswerOf ? 'read' : 'none'} ${module.form ? 'form' : 'none'} ${module.operationSignature ?? ''} ${module.handlers?.shape ?? ''}`;
     if (hooks !== undefined && hooks !== now) edits.hooks += 1;
     hooks = now;
     return module;
@@ -552,7 +554,8 @@ export function component(spec: Spec) {
       () => (module.form ? { ...injected, form: running } : injected),
       [injected, running, module.form],
     );
-    const operations = useAsync(spec.path, module.async, withForm);
+
+    const { commands: operations, status } = useAsync(spec.path, module.async ?? NO_LAYER, withForm);
     const hasRead = query !== null;
     const async = useMemo(
       () => module.async && { ...operations, ...(hasRead ? { default: initial } : {}) },
@@ -586,6 +589,7 @@ export function component(spec: Spec) {
       rendering,
       scope,
       sources,
+      status,
       withForm,
     };
   }
@@ -602,11 +606,11 @@ export function component(spec: Spec) {
 
   /** What a render, props.ts and acl.ts get from the props and the layers. */
   function givenOf(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, className: string): Props {
-    const { access, async, form, language, module } = layers;
+    const { access, async, form, language, module, status } = layers;
     return {
       ...props,
       className,
-      ...(async ? { async } : {}),
+      ...(async ? { async, status } : {}),
       ...(state ? { state } : {}),
       ...(module.form ? { form } : {}),
       ...defined(language),
@@ -649,7 +653,20 @@ export function component(spec: Spec) {
    * keeps its identity, so react-aria's collections and memoized children inside skip it.
    */
   function useShow(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, decided?: boolean) {
-    const { access, async, decided: committed, form, judged, language, module, operations, rendering, scope } = layers;
+    const {
+      access,
+      async,
+      decided: committed,
+      form,
+      judged,
+      language,
+      module,
+      operations,
+      rendering,
+      scope,
+      status,
+    } = layers;
+
     // What React committed last: the render before this one that reached the page. A render React
     // throws away leaves it as it was, so the next one is compared with what the page shows, and
     // shares its elements with it.
@@ -701,7 +718,7 @@ export function component(spec: Spec) {
       // Other files (an edit under the dev server) are another render: nothing before compares with it.
       const from = (known: null | Shown) => (known?.module === module ? known : null);
       const before = from(last.current);
-      const inputs = [scope, async, state, form, language, access, decided, handlers];
+      const inputs = [scope, async, status, state, form, language, access, decided, handlers];
       const again = [before, from(tried.current)].find(
         (known) => known && sameEach(known.inputs, inputs) && sameProps(known.props, props),
       );

@@ -12,6 +12,7 @@ import { createDataLayer, createQueryClient } from '../data';
 import { type DataEvent, type Failure, type Interaction, onData, onFailure, pipeline, type Scope } from '../pipeline';
 import { Root } from '../root';
 import { interact } from '../track';
+import { wiredOperations } from './operations.cases';
 
 // No app here: the plugin's modules of clients and services are empty.
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
@@ -72,6 +73,7 @@ function folder(
     skins: {},
     view: () =>
       Promise.resolve({
+        ...wiredOperations({ names: Object.keys(layers.async ?? {}), status: { save: ['pending', 'data'] } }),
         async: layers.async as never,
         children: [],
         form: layers.form as never,
@@ -310,9 +312,10 @@ test("a handler that calls an operation keeps its identity while the operation r
     'components/handler-operation',
     'export const store = ({ async }) => () => async.save();',
     { async: { save: () => new Promise((resolve) => (answer = resolve)) } },
-    // No props.ts: the render reads the state on the operation itself.
-    ({ async }) => {
-      const { save } = async as { save: { data: unknown; pending: boolean } };
+    // No props.ts: the render reads the selected status.
+    ({ status }) => {
+      // SAFETY: The generated fixture selects these two save fields.
+      const { save } = status as { save: { data: unknown; pending: boolean } };
       return save.pending ? 'saving' : String(save.data ?? 'idle');
     },
   );

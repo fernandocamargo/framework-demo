@@ -6,7 +6,7 @@
 import { act, render } from '@testing-library/react';
 import { createElement, type ReactNode, useState } from 'react';
 
-import { useOperations } from '../async';
+import { useOperation } from '../async';
 import { component, type Spec } from '../component';
 import { createQueryClient } from '../data';
 import { useFormLayer } from '../form';
@@ -61,7 +61,7 @@ test.each([
   { answer: { default: 'answer' }, async: { default: () => Promise.resolve('answer') }, name: 'only a default read' },
 ])('a folder with $name runs no absent form or operation hooks', async ({ answer, async }) => {
   vi.mocked(useFormLayer).mockClear();
-  vi.mocked(useOperations).mockClear();
+  vi.mocked(useOperation).mockClear();
   const calls = vi.fn((props: Props) => createElement('p', null, String(props['round'])));
   const Plain = component({
     path: 'components/without-layers',
@@ -80,7 +80,8 @@ test.each([
     expect(given).not.toHaveProperty('form');
     expect(given['async']).toEqual(answer);
   }
-  expect([vi.mocked(useFormLayer).mock.calls.length, vi.mocked(useOperations).mock.calls.length]).toEqual([0, 0]);
+
+  expect([vi.mocked(useFormLayer).mock.calls.length, vi.mocked(useOperation).mock.calls.length]).toEqual([0, 0]);
 });
 
 test('each kind of component gets what it reads, and renders again without a hook coming or going', async () => {

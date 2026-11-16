@@ -5,10 +5,12 @@
  */
 
 import type { ReactNode } from 'react';
+import type { ActorRefFrom, SnapshotFrom } from 'xstate';
 
 import type { Update } from './data';
 import type { I18n, Intl } from './i18n-types';
 import type { Allowed, Entity, Env, Flags, Navigation, Route, User } from './index';
+import type { latency } from './latency';
 import type { Keyboard } from './shortcuts';
 
 /** The page's URL, read when an operation runs. */
@@ -131,25 +133,30 @@ type NodeOf<Entries, Key extends string> = [Self<Entries, Key>] extends [never]
  */
 export type ServiceTree<Entries extends [string, unknown]> = Shown<{ [Key in Head<Entries[0]>]: NodeOf<Entries, Key> }>;
 
-/** What an operation carries beside being callable. */
+type OperationSnapshot<Data> = Omit<SnapshotFrom<typeof latency>, 'context'> & {
+  context: Omit<SnapshotFrom<typeof latency>['context'], 'data'> & { data: Data | undefined };
+};
+
+/** The owned operation's selected status. The actor is read-only in TypeScript, not a runtime membrane. */
 export type OperationState<Data> = {
+  readonly actor: Pick<ActorRefFrom<typeof latency>, 'subscribe'> & {
+    readonly getSnapshot: () => OperationSnapshot<Data>;
+  };
   /** What the last successful run resolved to. */
-  data: Data | undefined;
+  readonly data: Data | undefined;
   /** The last run's failure, as an `Error` even when something else was thrown. */
-  error: Error | undefined;
+  readonly error: Error | undefined;
   /** True while a run is in flight. */
-  pending: boolean;
+  readonly pending: boolean;
 };
 
 /**
- * An async operation as the render sees it, named after what it resolves to: call it to run it,
- * and read its state. `Operation<Saved>` takes no arguments.
+ * An async command, named after what it resolves to. `Operation<Saved>` takes no arguments.
  */
-export type Operation<Data = unknown> = (() => Promise<Data>) & OperationState<Data>;
+export type Operation<Data = unknown> = () => Promise<Data>;
 
 /** An async operation that takes arguments: `OperationWith<[id: string], Saved>`. */
-export type OperationWith<Args extends unknown[], Data = unknown> = ((...args: Args) => Promise<Data>) &
-  OperationState<Data>;
+export type OperationWith<Args extends unknown[], Data = unknown> = (...args: Args) => Promise<Data>;
 
 /**
  * An export takes the injection and returns a promise (the operation takes no arguments), or
@@ -157,9 +164,11 @@ export type OperationWith<Args extends unknown[], Data = unknown> = ((...args: A
  */
 type OperationOf<Export> =
   Created<Export> extends (...args: infer Args) => infer Result
-    ? [] extends Args
-      ? Operation<Awaited<Result>>
-      : OperationWith<Args, Awaited<Result>>
+    ? Result extends Promise<Awaited<Result>>
+      ? Created<Export>
+      : [] extends Args
+        ? Operation<Awaited<Result>>
+        : OperationWith<Args, Awaited<Result>>
     : Operation<Awaited<Created<Export>>>;
 
 type Resolved<Export> =
@@ -171,6 +180,11 @@ export type AsyncProps<Module> = Shown<
     [Name in Exclude<keyof Module, 'default'>]: OperationOf<Module[Name]>;
   }
 >;
+
+/** Named operation status lives beside the commands; the default export remains a query. */
+export type StatusProps<Module> = {
+  readonly [Name in Exclude<keyof Module, 'default'>]: OperationState<Resolved<Module[Name]>>;
+};
 
 /** What a service folder's `meta.ts` says, by export (`default` for the default export). */
 export type ServiceMeta<Module> = {
@@ -332,7 +346,7 @@ export type HandlerProps<Module> = Shown<{
  * `async.ts`, `state.ts` and `form.ts`.
  */
 export type RenderProps<Folder extends Layers = Layers> = ('async' extends keyof Folder
-  ? { async: AsyncProps<Folder['async']> }
+  ? { async: AsyncProps<Folder['async']>; status: StatusProps<Folder['async']> }
   : unknown) &
   ('form' extends keyof Folder ? { form: FormProps<Folder['form']> } : unknown) &
   ('handlers' extends keyof Folder ? { handlers: HandlerProps<Folder['handlers']> } : unknown) &

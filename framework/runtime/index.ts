@@ -86,5 +86,6 @@ export type {
   Shortcuts,
   StateArgs,
   StateProps,
+  StatusProps,
   Url,
 } from './types';

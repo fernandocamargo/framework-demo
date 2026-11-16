@@ -7,7 +7,7 @@ import type { Listed } from '@/services/products/types';
 
 export type Props = { filters: Filters; product: Listed };
 
-export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product }) => {
+export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product, status }) => {
   const level = stockLevel(product.stock);
   // Counting stock is being rolled out (the `stockCount` flag), and needs the grant to update
   // products and someone signed in to send it.
@@ -38,7 +38,7 @@ export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product 
             press: () => setStock(product.id, product.stock - 1),
           },
           more: { label: i18n.count.more, press: () => setStock(product.id, product.stock + 1) },
-          sending: setStock.pending,
+          sending: status.setStock.pending,
         }
       : null,
     stock: {

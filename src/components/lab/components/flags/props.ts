@@ -4,7 +4,7 @@
 
 import { definitions, names } from '@/clients/flags/definitions';
 
-export default ({ async: { default: served, serve }, flags, i18n, intl }) => ({
+export default ({ async: { default: served, serve }, flags, i18n, intl, status }) => ({
   flags: names.map((name) => {
     const value = flags[name];
     const ways = i18n.flags[name].ways as Record<string, string>;
@@ -27,5 +27,5 @@ export default ({ async: { default: served, serve }, flags, i18n, intl }) => ({
   }),
   intro: served ? i18n.intro : i18n.remote,
   label: i18n.label,
-  sending: serve.pending,
+  sending: status.serve.pending,
 });
