@@ -22,11 +22,14 @@
  * - **Failures** go to the error pipeline, tagged with the service's or component's path.
  */
 
-import { hashKey, type Query, QueryCache, QueryClient } from '@tanstack/react-query';
+import { hashKey, notifyManager, type Query, QueryCache, QueryClient } from '@tanstack/react-query';
 
 import { hold } from './activity';
 import { emitData, isAbortError, report } from './pipeline';
 import { activeInteraction } from './track';
+
+// Background tabs throttle timers; deliver query changes before the page can report itself idle.
+notifyManager.setScheduler(queueMicrotask);
 
 /** What a service folder's `meta.ts` says about one of its operations. */
 export type ServiceRule = {

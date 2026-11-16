@@ -119,6 +119,44 @@ export const startSelectTimeline = (page, during) =>
     };
   }, during);
 
+// Keep the two entrance probes for the native picker. Firefox has a platform list with no CSS entrance.
+const chooseNativeSort = async (page, value, afterEntrance) => {
+  const sort = page.getByRole('combobox', { name: 'Sort' });
+
+  await sort.evaluate((select) => {
+    const timeline = { custom: CSS.supports('appearance', 'base-select'), runningAtChoice: null };
+    window.__nativeSortTimeline = timeline;
+    select.addEventListener(
+      'change',
+      () => {
+        timeline.runningAtChoice = select
+          .getAnimations({ subtree: true })
+          .some(
+            (animation) => animation.effect?.pseudoElement === '::picker(select)' && animation.playState === 'running',
+          );
+      },
+      { once: true },
+    );
+  });
+  await sort.click();
+
+  if (afterEntrance)
+    await sort.evaluate((select) =>
+      Promise.all(select.getAnimations({ subtree: true }).map((animation) => animation.finished)),
+    );
+
+  // Selection follows the platform; Escape dismisses a picker opened by the pointer.
+  await sort.selectOption(value);
+  await sort.press('Escape');
+};
+
+const nativeSortClosed = (page, duringEntrance) =>
+  page.getByRole('combobox', { name: 'Sort' }).evaluate((select, during) => {
+    const timeline = window.__nativeSortTimeline;
+
+    return !select.matches(':open') && (!timeline.custom || timeline.runningAtChoice === during);
+  }, duringEntrance);
+
 /** In the page: serves the flags these ways, as another tab of the world would. */
 const serve = (ways) => {
   window.localStorage.setItem('memory:flags', JSON.stringify(ways));
@@ -141,8 +179,7 @@ export const STEPS = [
   },
   {
     act: async (page) => {
-      await page.getByRole('button', { name: /Sort/ }).click();
-      await page.getByRole('option', { name: 'Price, high to low' }).click();
+      await page.getByRole('combobox', { name: 'Sort' }).selectOption('price:desc');
     },
     check: async (page) => page.url().includes('sort=price&order=desc'),
     name: 'sort by price, high to low',
@@ -154,16 +191,14 @@ export const STEPS = [
   },
   {
     act: async (page) => {
-      await page.getByRole('button', { name: /Category/ }).click();
-      await page.getByRole('option', { name: 'Desks' }).click();
+      await page.getByRole('combobox', { name: 'Category' }).selectOption('desks');
     },
     check: async (page) => (await status(page)).includes('in Desks'),
     name: 'choose a category',
   },
   {
     act: async (page) => {
-      await page.getByRole('button', { name: /Category/ }).click();
-      await page.getByRole('option', { name: 'All categories' }).click();
+      await page.getByRole('combobox', { name: 'Category' }).selectOption('all');
       await page.getByRole('link', { name: 'Next' }).click();
     },
     check: async (page) => page.url().includes('page=2'),
@@ -176,8 +211,7 @@ export const STEPS = [
   },
   {
     act: async (page) => {
-      await page.getByRole('button', { name: /Sort/ }).click();
-      await page.getByRole('option', { name: 'Title, A to Z' }).click();
+      await page.getByRole('combobox', { name: 'Sort' }).selectOption('title:asc');
     },
     check: async (page) => !page.url().includes('sort='),
     name: 'sort by title again',
@@ -246,7 +280,7 @@ export const STEPS = [
       await dialog(page, 'Bulk price change')
         .getByRole('button', { name: /Category/ })
         .click();
-      await page.getByRole('option', { name: 'Keyboards' }).click();
+      await page.getByRole('listbox', { name: 'Category' }).getByRole('option', { name: 'Keyboards' }).click();
     },
     check: async (page) => (await dialog(page, 'Bulk price change').innerText()).includes('9 of 9 products selected'),
     name: 'choose the keyboards',
@@ -411,51 +445,21 @@ export const STEPS = [
     name: 'back to the catalogue',
   },
   {
-    act: async (page) => {
-      await startSelectTimeline(page, 'Price, low to high');
-      await page.getByRole('button', { name: /Sort/ }).click();
-      await page.waitForFunction(() => window.__selectTimeline.events.some(({ event }) => event === 'choice'));
-      await page.evaluate(() => window.__framework.idle());
-      await page.locator('.react-aria-Popover').waitFor({ state: 'detached' });
-    },
-    check: async (page) => {
-      const events = await page.evaluate(() => window.__selectTimeline.events);
-
-      return (
-        (await page.getByRole('button', { name: /Sort/ }).innerText()).includes('Price, low to high') &&
-        (await page.locator('.react-aria-Popover').count()) === 0 &&
-        events.some(({ event, running }) => event === 'choice' && running) &&
-        events.some(({ detail, event }) => event === 'removal' && detail !== 'later') &&
-        page.url().includes('sort=price') &&
-        !page.url().includes('order=')
-      );
-    },
+    act: (page) => chooseNativeSort(page, 'price:asc', false),
+    check: async (page) =>
+      (await page.getByRole('combobox', { name: 'Sort' }).inputValue()) === 'price:asc' &&
+      (await nativeSortClosed(page, true)) &&
+      page.url().includes('sort=price') &&
+      !page.url().includes('order='),
     further: true,
     name: 'sort during the entrance',
   },
   {
-    act: async (page) => {
-      await startSelectTimeline(page);
-      await page.getByRole('button', { name: /Sort/ }).click();
-      await page.evaluate(() => window.__selectTimeline.entrance.finished);
-      await page.getByRole('option', { name: 'Title, A to Z' }).click();
-      await page.evaluate(() => window.__framework.idle());
-      await page.locator('.react-aria-Popover').waitFor({ state: 'detached' });
-    },
-    check: async (page) => {
-      const events = await page.evaluate(() => window.__selectTimeline.events);
-      const end = events.findIndex(({ event }) => event === 'entrance end');
-
-      const choice = events.findIndex(({ event }) => event === 'choice');
-
-      return (
-        (await page.getByRole('button', { name: /Sort/ }).innerText()).includes('Title, A to Z') &&
-        (await page.locator('.react-aria-Popover').count()) === 0 &&
-        end >= 0 &&
-        choice > end &&
-        !page.url().includes('sort=')
-      );
-    },
+    act: (page) => chooseNativeSort(page, 'title:asc', true),
+    check: async (page) =>
+      (await page.getByRole('combobox', { name: 'Sort' }).inputValue()) === 'title:asc' &&
+      (await nativeSortClosed(page, false)) &&
+      !page.url().includes('sort='),
     further: true,
     name: 'sort after the entrance',
   },

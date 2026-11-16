@@ -1,8 +1,37 @@
-import { QueryObserver } from '@tanstack/react-query';
+import { notifyManager, QueryObserver } from '@tanstack/react-query';
 
-import { isBusy } from '../activity';
+import { isBusy, watch, whenIdle } from '../activity';
 import { createDataLayer, createQueryClient, name, recording, shareByIdentity, update } from '../data';
 import { type DataEvent, onData, onFailure, toError } from '../pipeline';
+
+test('idle sees the signed-out permissions delivered even when background timers are throttled', async () => {
+  const client = createQueryClient();
+  const queryKey = ['permissions'];
+  client.setQueryData(queryKey, 'admin');
+  const observer = new QueryObserver(client, { queryKey, staleTime: Infinity });
+  let shown = observer.getCurrentResult().data;
+  const stop = observer.subscribe(notifyManager.batchCalls(({ data }) => (shown = data)));
+
+  // A background tab can paint and become idle before its timeout notifications are allowed to run.
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) =>
+    queueMicrotask(() => callback(performance.now())),
+  );
+  vi.stubGlobal('requestIdleCallback', (callback: () => void) => queueMicrotask(callback));
+  const unwatch = watch(client);
+
+  try {
+    client.setQueryData(queryKey, 'guest');
+    await whenIdle();
+    expect(shown).toBe('guest');
+  } finally {
+    stop();
+    unwatch();
+    client.clear();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  }
+});
 
 test.each(['native', 'normalized'])('a %s cancellation rolls back a write without reporting failure', async (kind) => {
   const client = createQueryClient();

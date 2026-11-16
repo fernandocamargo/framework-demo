@@ -62,14 +62,23 @@ test('the catalogue follows the address: search, category, sort and page', async
   expect(await summary(page)).toBe('3 products matching “lamp”');
   expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp']);
 
-  await act(page, async () => {
-    await page.getByRole('button', { name: /Sort/ }).click();
-    await page.getByRole('option', { name: 'Price, high to low' }).click();
-  });
+  const sort = page.getByRole('combobox', { name: 'Sort' });
+  await act(page, () => sort.selectOption('price:desc'));
   expect(page.url()).toContain('sort=price&order=desc');
   expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp']);
 
-  await open(page, '#/products?category=desks&page=1');
+  await page.getByRole('combobox', { name: 'Category' }).focus();
+  await page.keyboard.press('Tab');
+  expect(await sort.evaluate((element) => element === document.activeElement)).toBe(true);
+  // Native select keyboard selection follows the platform, so choose the option directly.
+  await act(page, () => sort.selectOption('price:asc'));
+  expect(await sort.inputValue()).toBe('price:asc');
+  expect(page.url()).toContain('sort=price');
+  expect(page.url()).not.toContain('order=desc');
+  expect(await titles(page)).toEqual(['Task Lamp', 'Clamp Lamp', 'Arc Floor Lamp']);
+
+  await act(page, () => page.getByRole('button', { name: 'Clear the search' }).click());
+  await act(page, () => page.getByRole('combobox', { name: 'Category' }).selectOption('desks'));
   expect(await summary(page)).toBe('10 products in Desks');
 
   await open(page, '#/products?page=4');
@@ -77,6 +86,30 @@ test('the catalogue follows the address: search, category, sort and page', async
   await act(page, () => page.goBack());
   expect(await summary(page)).toBe('10 products in Desks');
 });
+
+for (const skin of ['default', 'broadsheet', 'blueprint']) {
+  test(`native catalogue choices follow the address in ${skin}`, async ({ page }) => {
+    await act(page, () => page.goto(`./?world=memory&skin=${skin}#/products?page=2`));
+    const category = page.getByRole('combobox', { name: 'Category' });
+    const sort = page.getByRole('combobox', { name: 'Sort' });
+
+    await act(page, () => category.selectOption('lighting'));
+    expect(await category.inputValue()).toBe('lighting');
+    expect(page.url()).not.toContain('page=');
+    expect(await summary(page)).toBe('9 products in Lighting');
+    await act(page, () => sort.selectOption('rating:desc'));
+    expect(await sort.locator('option:checked').innerText()).toBe('Rating, best first');
+    expect(page.url()).toContain('sort=rating&order=desc');
+    await act(page, () => category.selectOption('all'));
+    expect(await summary(page)).toBe('37 products');
+    expect(page.url()).not.toContain('category=');
+    await act(page, () => page.goBack());
+    expect(await category.inputValue()).toBe('lighting');
+    expect(await sort.inputValue()).toBe('rating:desc');
+    await act(page, () => page.goForward());
+    expect(await category.inputValue()).toBe('all');
+  });
+}
 
 test('paging keeps the focused link when it reaches either end', async ({ page }) => {
   await open(page);
@@ -177,6 +210,13 @@ test('a search keeps its field and the focus; the back button takes the text bac
   expect(await summary(page)).toBe('37 products');
   expect(await search.inputValue()).toBe('');
   expect(await same()).toBe(true);
+  expect(await focused()).toBe(true);
+
+  await act(page, () => search.fill('draft'));
+  await act(page, () => search.press('Escape'));
+  expect(await search.inputValue()).toBe('');
+  expect(await summary(page)).toBe('37 products');
+  expect(await focused()).toBe(true);
 });
 
 test('a product opens with its reviews, each from its own read', async ({ page }) => {
@@ -287,7 +327,7 @@ test('a product is created, then deleted after a confirmation', async ({ page })
   const editor = dialog(page, 'New product');
   await editor.getByRole('textbox', { name: 'Title' }).fill('Cork Coaster');
   await editor.getByRole('button', { name: /Category/ }).click();
-  await page.getByRole('option', { name: 'Desks' }).click();
+  await page.getByRole('listbox', { name: 'Category' }).getByRole('option', { name: 'Desks' }).click();
   await editor.getByRole('textbox', { name: 'Price' }).fill('7.5');
   await act(page, () => editor.getByRole('button', { name: 'Create product' }).click());
   expect(await summary(page)).toBe('38 products');
@@ -312,7 +352,7 @@ test('the bulk price change applies a rule, lists what failed, and sends the fai
 
   await act(page, async () => {
     await wizard.getByRole('button', { name: /Category/ }).click();
-    await page.getByRole('option', { name: 'Keyboards' }).click();
+    await page.getByRole('listbox', { name: 'Category' }).getByRole('option', { name: 'Keyboards' }).click();
   });
   expect(await wizard.innerText()).toContain('9 of 9 products selected');
   await act(page, () => choose(wizard.getByRole('checkbox', { name: /Coiled Cable/ })));
@@ -378,6 +418,10 @@ test('the page speaks Brazilian Portuguese, and changes language in place', asyn
   await act(page, () => page.goto('./?world=memory&lang=pt-BR#/products'));
   expect(await page.locator('html').getAttribute('lang')).toBe('pt-BR');
   expect(await summary(page)).toBe('37 produtos');
+  expect(await page.getByRole('combobox', { exact: true, name: 'Categoria' }).inputValue()).toBe('all');
+  expect(await page.getByRole('combobox', { name: 'Ordenar' }).locator('option:checked').innerText()).toBe(
+    'Título, de A a Z',
+  );
   // Prices and ratings are written the Brazilian way; DummyJSON's product names are not translated.
   expect(await rows(page, 'Produtos').first().innerText()).toMatch(/US\$\s273,99/);
   expect(await rows(page, 'Produtos').first().innerText()).toContain('4,2');

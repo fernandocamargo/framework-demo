@@ -48,7 +48,9 @@ test('the catalogue, a product, the editor and the dialogs name their pieces as 
   await open(page, '#/products?bulk=1');
   const wizard = page.getByRole('dialog', { name: 'Bulk price change' });
   await act(page, () => wizard.getByRole('button', { name: /Category/ }).click());
-  await act(page, () => page.getByRole('option', { name: 'Keyboards' }).click());
+  await act(page, () =>
+    page.getByRole('listbox', { name: 'Category' }).getByRole('option', { name: 'Keyboards' }).click(),
+  );
   expect(await problems(page)).toEqual([]);
   await act(page, () => wizard.getByRole('button', { name: 'Next: the rule' }).click());
   await act(page, () => wizard.getByRole('button', { name: 'Next: preview' }).click());

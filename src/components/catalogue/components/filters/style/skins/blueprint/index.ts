@@ -11,10 +11,10 @@ export default css`
     flex-wrap: wrap;
     align-items: center;
   }
-  .react-aria-SearchField {
+  form {
     flex: 1 1 18rem;
   }
-  .react-aria-Select {
+  select {
     flex: 0 1 13rem;
   }
 `;

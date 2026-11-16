@@ -4,21 +4,47 @@ import { sorting } from './props';
 
 export const setSearch =
   ({ form }) =>
-  (typed: string) =>
-    form.set('q', typed);
+  (event: React.ChangeEvent<HTMLInputElement>) =>
+    form.set('q', event.currentTarget.value);
+
 export const clearSearch =
-  ({ navigation }) =>
-  () =>
+  ({ form, navigation }) =>
+  (event: React.SyntheticEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    form.set('q', '');
     navigation.go({ page: 1, q: '' });
+    event.currentTarget.querySelector('input')?.focus();
+  };
+
+export const keepSearchFocus = () => (event: React.PointerEvent<HTMLButtonElement>) => {
+  // Clearing on touch keeps the field's keyboard open.
+  event.preventDefault();
+  event.currentTarget.form?.querySelector('input')?.focus();
+};
+
+export const searchKey =
+  ({ form, navigation }) =>
+  (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Escape' || !event.currentTarget.value) return;
+    event.preventDefault();
+    event.stopPropagation();
+    form.set('q', '');
+    navigation.go({ page: 1, q: '' });
+  };
+
 export const search =
-  ({ navigation }) =>
-  (typed: string) =>
-    navigation.go({ page: 1, q: typed.trim() });
+  ({ form, navigation }) =>
+  (event: React.SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    navigation.go({ page: 1, q: form.values.q.trim() });
+  };
+
 export const pickCategory =
   ({ navigation }) =>
-  (key: null | React.Key) =>
-    navigation.go({ category: key === 'all' ? '' : String(key), page: 1 });
+  (event: React.ChangeEvent<HTMLSelectElement>) =>
+    navigation.go({ category: event.currentTarget.value === 'all' ? '' : event.currentTarget.value, page: 1 });
+
 export const pickSort =
   ({ navigation }) =>
-  (key: null | React.Key) =>
-    navigation.go({ ...sorting(String(key)), page: 1 });
+  (event: React.ChangeEvent<HTMLSelectElement>) =>
+    navigation.go({ ...sorting(event.currentTarget.value), page: 1 });
