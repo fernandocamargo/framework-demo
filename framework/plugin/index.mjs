@@ -1,7 +1,8 @@
 // The framework's Vite plugin.
 //
 // It reads one root folder that holds `clients/`, `services/` and `components/`, and:
-// - serves `virtual:framework/clients` and `virtual:framework/services`: the modules it finds
+// - serves `virtual:framework/clients`, `virtual:framework/services` and
+//   `virtual:framework/messages`: the modules it finds
 //   there, which the runtime turns into the injected trees;
 // - resolves an import of a component folder (a folder with a `render` file and no `index`)
 //   to a module it writes from the folder's files;
@@ -50,6 +51,7 @@ const {
 const CLIENTS = 'virtual:framework/clients';
 const SERVICES = 'virtual:framework/services';
 const CHARTS = 'virtual:framework/charts';
+const MESSAGES = 'virtual:framework/messages';
 const COMPONENT = '\0framework-component:';
 const VIEW = 'framework-view:';
 const HANDLERS = 'framework-handlers:';
@@ -813,7 +815,8 @@ export default function framework(userOptions) {
               id.startsWith(`\0${HANDLERS}`) ||
               id === `\0${CLIENTS}` ||
               id === `\0${SERVICES}` ||
-              id === `\0${CHARTS}`
+              id === `\0${CHARTS}` ||
+              id === `\0${MESSAGES}`
             ) {
               graph.invalidateModule(mod);
             }
@@ -919,6 +922,30 @@ export default function framework(userOptions) {
                 ),
                 '}',
               ]),
+        ].join('\n');
+      }
+
+      if (id === `\0${MESSAGES}`) {
+        const folders = listComponentFolders(options.root).flatMap((dir) => {
+          const i18n = findLayer(dir, 'i18n');
+
+          return i18n ? [{ dir, i18n }] : [];
+        });
+
+        return [
+          `import { preloadMessages } from ${JSON.stringify(path.join(path.dirname(options.runtime), 'i18n.ts'))};`,
+          ...folders.map(({ i18n }, index) => `import * as words${index} from ${JSON.stringify(i18n)};`),
+          `const folders = [${folders
+            .map(
+              ({ dir }, index) =>
+                `{ path: ${JSON.stringify(componentPath(options.root, dir))}, i18n: words${index}, translations: { ${listTranslations(
+                  dir,
+                )
+                  .map(({ file, locale }) => `${JSON.stringify(locale)}: () => import(${JSON.stringify(file)})`)
+                  .join(', ')} } }`,
+            )
+            .join(', ')}];`,
+          'export default (locale) => preloadMessages(folders, locale);',
         ].join('\n');
       }
 
@@ -1042,6 +1069,7 @@ export default function framework(userOptions) {
         source === CLIENTS ||
         source === SERVICES ||
         source === CHARTS ||
+        source === MESSAGES ||
         source.startsWith(VIEW) ||
         source.startsWith(HANDLERS)
       )

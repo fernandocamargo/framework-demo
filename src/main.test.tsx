@@ -1,7 +1,7 @@
 import { act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
-const rendered = vi.hoisted(() => ({ roots: 0 }));
+const rendered = vi.hoisted(() => ({ preload: (_locale: string): Promise<void> => Promise.resolve(), roots: 0 }));
 
 vi.mock('framework', () => ({
   chartAt: () => Promise.resolve(null),
@@ -30,6 +30,7 @@ vi.mock('react-aria-components', () => ({
 }));
 vi.mock('./components/app', () => ({ default: () => null }));
 vi.mock('./components/states', () => ({ default: () => null }));
+vi.mock('virtual:framework/messages', () => ({ default: (locale: string) => rendered.preload(locale) }));
 
 test('an unchanged locale and skin do not render the shell on popstate', async () => {
   window.history.replaceState(null, '', '/?world=memory&lang=en#/products');
@@ -47,4 +48,19 @@ test('an unchanged locale and skin do not render the shell on popstate', async (
   expect(document.querySelector('main')?.getAttribute('data-locale')).toBe('pt-BR');
   expect(document.querySelector('main')?.getAttribute('data-skin')).toBe('blueprint');
   expect(document.documentElement.lang).toBe('pt-BR');
+
+  let finishEnglish!: () => void;
+  rendered.preload = (locale) =>
+    locale === 'en'
+      ? new Promise<void>((resolve) => {
+          finishEnglish = resolve;
+        })
+      : Promise.resolve();
+  window.history.pushState(null, '', '/?world=memory&lang=en&skin=blueprint#/products');
+  await act(async () => window.dispatchEvent(new PopStateEvent('popstate')));
+  window.history.pushState(null, '', '/?world=memory&lang=pt-BR&skin=blueprint#/products');
+  await act(async () => window.dispatchEvent(new PopStateEvent('popstate')));
+  expect(document.querySelector('main')?.getAttribute('data-locale')).toBe('pt-BR');
+  await act(async () => finishEnglish());
+  expect(document.querySelector('main')?.getAttribute('data-locale')).toBe('pt-BR');
 });

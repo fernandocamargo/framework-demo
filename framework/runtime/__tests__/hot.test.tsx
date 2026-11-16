@@ -319,6 +319,13 @@ test("the plugin's module for a folder takes an edit to its view or a skin under
   writeFileSync(path.join(dir, 'render.tsx'), 'export default () => <p />;\n');
   writeFileSync(path.join(dir, 'state.ts'), 'export default { idle: {} };\n');
   writeFileSync(path.join(dir, 'style/skins/default/index.ts'), 'export default ``;\n');
+  mkdirSync(path.join(dir, 'i18n'), { recursive: true });
+  writeFileSync(path.join(dir, 'i18n.ts'), "export default { title: 'Card' };\n");
+  writeFileSync(path.join(dir, 'i18n/pt-BR.json'), '{"components/card/title":"Cartão"}\n');
+  const other = path.join(cwd, 'src/components/other');
+  mkdirSync(other, { recursive: true });
+  writeFileSync(path.join(other, 'render.tsx'), 'export default () => <p />;\n');
+  writeFileSync(path.join(other, 'i18n.ts'), "export default { title: 'Other' };\n");
   const load = (command: 'build' | 'serve', id: string) => {
     const plugin = framework({ cwd, root: 'src', runtime: 'runtime.ts' }) as unknown as {
       configResolved: (config: { command: string }) => void;
@@ -338,4 +345,9 @@ test("the plugin's module for a folder takes an edit to its view or a skin under
   );
   expect(load('build', folder)).not.toContain('import.meta.hot');
   expect(load('build', '\0virtual:framework/charts')).not.toContain('import.meta.hot');
+  const allMessages = load('build', '\0virtual:framework/messages');
+  expect(allMessages).toContain('components/card');
+  expect(allMessages).toContain('components/other');
+  expect(allMessages).toContain('i18n/pt-BR.json');
+  expect(allMessages).toContain('preloadMessages(folders, locale)');
 });

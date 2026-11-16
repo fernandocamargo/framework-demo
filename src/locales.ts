@@ -1,5 +1,8 @@
+/// <reference path="../framework/plugin/messages.d.ts" />
 // The locales the app speaks, and the part of the address that says which one shows:
 // `?lang=pt-BR`, before the hash, beside `?world=memory`, so every link inside the app keeps it.
+export { default as preloadLocale } from 'virtual:framework/messages';
+
 export const LOCALES = ['en', 'pt-BR'] as const;
 export type Locale = (typeof LOCALES)[number];
 

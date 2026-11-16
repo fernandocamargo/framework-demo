@@ -121,3 +121,8 @@ export function loadMessages(spec: MessagesSpec, locale: string): Promise<Tree> 
 
   return messages;
 }
+
+/** Settle every folder's messages before publishing a new locale to the page. */
+export async function preloadMessages(specs: readonly MessagesSpec[], locale: string): Promise<void> {
+  await Promise.all(specs.map((spec) => loadMessages(spec, locale)));
+}

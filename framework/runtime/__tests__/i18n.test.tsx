@@ -1,11 +1,12 @@
 import { act, fireEvent, render } from '@testing-library/react';
-import { createContext, createElement, type ReactNode, startTransition, use, useState } from 'react';
+import { createContext, createElement, type ReactNode, startTransition, Suspense, use, useState } from 'react';
 import { useLocale } from 'react-aria';
 import { I18nProvider } from 'react-aria-components';
 
 import { whenIdle } from '../activity';
 import { component } from '../component';
 import { createQueryClient } from '../data';
+import { loadMessages, preloadMessages } from '../i18n';
 import { onFailure } from '../pipeline';
 import { Root } from '../root';
 
@@ -57,6 +58,116 @@ const translations = {
       },
     }),
 };
+
+test('preloading two folders waits for both and leaves settled messages for a later mount', async () => {
+  let finish!: (value: { default: Record<string, string> }) => void;
+  const slow = new Promise<{ default: Record<string, string> }>((resolve) => {
+    finish = resolve;
+  });
+  const first = {
+    i18n: { default: { title: 'First' } },
+    path: 'components/preload-first',
+    translations: { 'pt-BR': () => Promise.resolve({ default: { 'components/preload-first/title': 'Primeiro' } }) },
+  };
+  const second = {
+    i18n: { default: { title: 'Second' } },
+    path: 'components/preload-second',
+    translations: { 'pt-BR': () => slow },
+  };
+  let finished = false;
+  const loading = preloadMessages([first, second], 'pt-BR').then(() => {
+    finished = true;
+  });
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  expect(finished).toBe(false);
+  await act(async () => finish({ default: { 'components/preload-second/title': 'Segundo' } }));
+  await loading;
+
+  // SAFETY: Both folders declare title in their source messages.
+  const Reader = ({ spec }: { spec: typeof first | typeof second }) =>
+    createElement('span', null, (use(loadMessages(spec, 'pt-BR')) as { title: string }).title);
+  const { container, rerender } = render(
+    createElement(
+      Suspense,
+      { fallback: createElement('span', null, 'Waiting') },
+      createElement(Reader, { spec: first }),
+    ),
+  );
+  expect(container.textContent).toBe('Primeiro');
+  await act(async () => {
+    // A folder mounted after the switch reads the same settled cache.
+    rerender(createElement(Reader, { spec: second }));
+  });
+  expect(container.textContent).toBe('Segundo');
+});
+
+test('two folders and react-aria change once together after the slower translation', async () => {
+  let finish!: (value: { default: Record<string, string> }) => void;
+  const slow = new Promise<{ default: Record<string, string> }>((resolve) => {
+    finish = resolve;
+  });
+  const first = {
+    i18n: { default: { title: 'First' } },
+    path: 'components/paired-first',
+    translations: { 'pt-BR': () => Promise.resolve({ default: { 'components/paired-first/title': 'Primeiro' } }) },
+  };
+  const second = {
+    i18n: { default: { title: 'Second' } },
+    path: 'components/paired-second',
+    translations: { 'pt-BR': () => slow },
+  };
+  const First = component({
+    ...first,
+    skins: {},
+    // SAFETY: This folder declares title in its source messages.
+    view: view(({ i18n }) => createElement('span', null, (i18n as { title: string }).title)),
+  });
+  const Second = component({
+    ...second,
+    skins: {},
+    // SAFETY: This folder declares title in its source messages.
+    view: view(({ i18n }) => createElement('span', null, (i18n as { title: string }).title)),
+  });
+  const client = createQueryClient();
+  function AriaLocale() {
+    return createElement('span', null, useLocale().locale);
+  }
+  function Page() {
+    const [locale, setLocale] = useState('en');
+    const switchLocale = () =>
+      startTransition(async () => {
+        await preloadMessages([first, second], 'pt-BR');
+        startTransition(() => setLocale('pt-BR'));
+      });
+    return createElement(I18nProvider, {
+      children: createElement(
+        Root,
+        { client, entity, locale },
+        createElement('button', { onClick: switchLocale }, 'Switch'),
+        createElement(First),
+        createElement(Second),
+        createElement(AriaLocale),
+      ),
+      locale,
+    });
+  }
+
+  const { container } = await show(createElement(Page));
+  expect(container.textContent).toBe('SwitchFirstSeconden');
+  const changes: string[] = [];
+  const observer = new MutationObserver(() => changes.push(container.textContent ?? ''));
+  observer.observe(container, { characterData: true, childList: true, subtree: true });
+  await act(() => fireEvent.click(container.querySelector('button')!));
+  expect(container.textContent).toBe('SwitchFirstSeconden');
+  await act(async () => finish({ default: { 'components/paired-second/title': 'Segundo' } }));
+  await settle();
+  observer.disconnect();
+  expect(container.textContent).toBe('SwitchPrimeiroSegundopt-BR');
+  expect(changes).toEqual(['SwitchPrimeiroSegundopt-BR']);
+});
 
 test('a sibling reads the new context after another consumer suspends in a transition', async () => {
   const Language = createContext('en');
@@ -269,7 +380,7 @@ test('a failed translation shows source words and reports once', async () => {
     fail = reject;
   });
 
-  const Speaks = component({
+  const spec = {
     i18n: { default: { title: 'Products' } },
     path: 'components/failed-speaks',
     skins: {},
@@ -278,7 +389,8 @@ test('a failed translation shows source words and reports once', async () => {
       // SAFETY: This folder declares title in its source messages.
       return createElement('span', null, `${(i18n as { title: string }).title}:${String(locale)}`);
     }),
-  });
+  };
+  const Speaks = component(spec);
 
   const failures: string[] = [];
   const stop = onFailure((failure) =>
@@ -292,7 +404,17 @@ test('a failed translation shows source words and reports once', async () => {
     return createElement(
       Root,
       { client, entity, locale },
-      createElement('button', { onClick: () => startTransition(() => setLocale('pt-BR')) }, 'Switch'),
+      createElement(
+        'button',
+        {
+          onClick: () =>
+            startTransition(async () => {
+              await preloadMessages([spec], 'pt-BR');
+              startTransition(() => setLocale('pt-BR'));
+            }),
+        },
+        'Switch',
+      ),
       createElement(Speaks),
       createElement(Speaks),
     );

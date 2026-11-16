@@ -19,7 +19,7 @@ import { chartAt, createQueryClient, type Env, type Navigation, onFailure, Pinne
 import { go, parse } from './address';
 import App from './components/app';
 import States from './components/states';
-import { currentLocale, type Locale } from './locales';
+import { currentLocale, type Locale, preloadLocale } from './locales';
 import { featureFlags, permissions, whoIsSignedIn } from './reads';
 import { currentSkin, type Skin } from './skins';
 import './base.css';
@@ -124,9 +124,18 @@ function Frame({ path, state }: { path: string; state: string }) {
 function useLocale() {
   const [locale, setLocale] = useState<Locale>(currentLocale);
   useEffect(() => {
-    const follow = () => startTransition(() => setLocale(currentLocale()));
+    const follow = () => {
+      const next = currentLocale();
+      startTransition(async () => {
+        await preloadLocale(next);
+
+        if (currentLocale() === next) startTransition(() => setLocale(next));
+      });
+    };
+
     window.addEventListener('localechange', follow);
     window.addEventListener('popstate', follow);
+
     return () => {
       window.removeEventListener('localechange', follow);
       window.removeEventListener('popstate', follow);
