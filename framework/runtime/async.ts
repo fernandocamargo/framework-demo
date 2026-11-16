@@ -14,9 +14,11 @@
  * - A failure the services did not report already is reported as the async layer's.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useActorRef } from '@xstate/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { hold } from './activity';
+import { latency } from './latency';
 import { report, toError } from './pipeline';
 
 export type AsyncModule = Record<string, unknown> & { default?: unknown };
@@ -40,6 +42,58 @@ export const execute = async (exported: unknown, injection: Record<string, unkno
   const result: unknown = exported(injection);
   return typeof result === 'function' ? result(...args) : result;
 };
+
+/** Watches each call without subscribing its owner to the operation's status. */
+export function useOperation<Injection extends object, Result>(
+  path: string,
+  name: string,
+  exported: (injection: Injection & { signal: AbortSignal }) => Result,
+  injection: Injection,
+) {
+  const actor = useActorRef(latency);
+
+  // The machine watches promises; stopping it cannot abort the work that created them.
+  useEffect(
+    () => () => {
+      for (const call of actor.getSnapshot().context.running) {
+        actor.send({ call, type: 'ABORT' });
+        call.abort();
+      }
+    },
+    [actor],
+  );
+
+  const run = useCallback(
+    (...args: unknown[]) => {
+      const call = new AbortController();
+      actor.send({ call, type: 'WATCH' });
+
+      const promise = (async () => {
+        try {
+          const data = await hold(execute(exported, { ...injection, signal: call.signal }, args));
+
+          actor.send({ call, data, type: 'RESOLVE' });
+
+          return data;
+        } catch (thrown) {
+          const error = call.signal.aborted ? toError(thrown) : report(thrown, { during: name, layer: 'async', path });
+
+          actor.send({ call, error, type: 'REJECT' });
+          throw error;
+        } finally {
+          actor.send({ call, type: 'FINISH' });
+        }
+      })();
+
+      promise.catch(() => undefined);
+
+      return promise;
+    },
+    [actor, exported, injection, name, path],
+  );
+
+  return [run, actor] as const;
+}
 
 /** The named exports, as operations with their state. */
 export function useOperations(
