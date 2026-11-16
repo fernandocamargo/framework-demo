@@ -8,7 +8,7 @@ Per step it counts:
 
 - **calls**: every call of a framework component's render, and **thrown**, the calls whose output React never showed (a render it threw away, which no later render reused);
 - **fw**: the framework components React committed, new or again, and of those rendered again, how many changed nothing in the page;
-- **plumbing**: the framework's wrappers around them;
+- **plumbing**: the framework's own components around them. A folder is one component, so these are only a folder's error boundary (react-error-boundary's, with the context provider it renders), and its placeholder and error file while they show;
 - **other**: every other component (react-aria's, the shell's), the same way;
 - **ms** and **wasted**: their render time in the profiling build, and the part that changed nothing;
 - **miss**: a check that failed right after `idle()`, which would make an end-to-end test flaky.

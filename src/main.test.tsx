@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 const rendered = vi.hoisted(() => ({ roots: 0 }));
 
 vi.mock('framework', () => ({
+  // The shell's folders are stand-ins here: nothing to compose around them.
+  bound: <T,>(element: T) => element,
   chartAt: () => Promise.resolve(null),
   createQueryClient: () => ({}),
   onFailure: () => {},

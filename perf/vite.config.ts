@@ -44,10 +44,56 @@ const EDITS: [anchor: string, before: string][] = [
   ['const parent = use(ScopeContext);\n    const scope', 'const __client = useQueryClient()\n    '],
 ];
 
+/**
+ * What is composed around a folder's component, counted where each starts: the library's error
+ * boundary and its context provider, and the idle signal's placeholder. A leading `?` marks a
+ * function only some trees have.
+ */
+const AROUND: [suffix: string, edits: [at: string, counted: string][]][] = [
+  [
+    '/react-error-boundary/dist/react-error-boundary.js',
+    [
+      ['  render() {\n', "    globalThis.__executed?.('ErrorBoundary', '');\n"],
+      ['  resetErrorBoundary: o\n}) {\n', "  globalThis.__executed?.('ErrorBoundaryContext', '');\n"],
+    ],
+  ],
+  [
+    '/framework/runtime/activity.ts',
+    [
+      [
+        'export function Pending({ children }: { children?: ReactNode }) {\n',
+        "  globalThis.__executed?.('Pending', '');\n",
+      ],
+    ],
+  ],
+  [
+    '/framework/runtime/component.tsx',
+    [
+      [
+        'function Retrying({ children, retry }: { children?: ReactNode; retry: () => void }) {\n',
+        "?  globalThis.__executed?.('Retrying', '');\n",
+      ],
+    ],
+  ],
+];
+
 const countRenders: Plugin = {
   enforce: 'pre',
   name: 'perf:count-renders',
   transform(code, id) {
+    for (const [suffix, edits] of AROUND) {
+      if (!id.split('?')[0].endsWith(suffix)) continue;
+      let patched = code;
+      for (const [at, counted] of edits) {
+        if (!patched.includes(at)) {
+          if (counted.startsWith('?')) continue;
+          throw new Error(`perf: ${suffix} no longer has \`${at}\`; update perf/vite.config.ts`);
+        }
+        patched = patched.replace(at, `${at}${counted.replace(/^\?/, '')}`);
+      }
+      if (!suffix.endsWith('component.tsx')) return patched;
+      code = patched;
+    }
     if (!id.endsWith('/framework/runtime/component.tsx')) return null;
     const imports = '  useQueryErrorResetBoundary,\n';
     if (!code.includes(imports))
@@ -58,7 +104,11 @@ const countRenders: Plugin = {
         throw new Error(`perf: component.tsx no longer has \`${anchor}\`; update perf/vite.config.ts`);
       patched = patched.replace(anchor, `${before}${anchor}`);
     }
-    return patched;
+    // Every execution of the framework's own components, counted where each starts.
+    const OWN = /function (View|Waiting|Failed)\(props: Props\) \{/g;
+    if (!OWN.test(patched))
+      throw new Error("perf: component.tsx no longer has the framework's components; update perf/vite.config.ts");
+    return patched.replace(OWN, (start, fn) => `${start}\n    globalThis.__executed?.('${fn}', spec.path);`);
   },
 };
 

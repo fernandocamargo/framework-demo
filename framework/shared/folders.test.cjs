@@ -171,3 +171,71 @@ test('a handler whose dependencies cannot be read is named, with what to write',
   assert.match(found[2].message, /handler made is not a function written in this file/);
   assert.ok(found.every((problem) => problem.message.includes('destructuring what it uses')));
 });
+
+test("a folder's element gets its boundaries only as a JSX tag of a default import: any other use is named", () => {
+  write('components/page/components/row/render.tsx', 'export default () => <li />;\n');
+  write('components/page/components/other/render.tsx', 'export default () => <li />;\n');
+  write(
+    'components/page/render.tsx',
+    [
+      "import Row from './components/row';",
+      "import Other from '@/components/page/components/other';",
+      "import { Up, Down } from 'icons';",
+      "import type Typed from './components/row';",
+      'export default ({ items, open, wide }) => {',
+      '  const Icon = open ? Up : Down;',
+      '  return (',
+      '    <ul>',
+      '      {wide ? <Row /> : <Other>text</Other>}',
+      '      {items.map((item) => <Row key={item} />)}',
+      '      <Icon side={<Row />} />',
+      '    </ul>',
+      '  );',
+      '};',
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(about('components/page'), []);
+
+  write(
+    'components/values/render.tsx',
+    [
+      "import { createElement } from 'react';",
+      "import Row from '../page/components/row';",
+      "import Other from '../page/components/other';",
+      "import { default as Named } from '../page/components/row';",
+      "import * as All from '../page/components/other';",
+      "import { Box } from 'library';",
+      'export default ({ wide }) => {',
+      '  const Chosen = wide ? Row : Other;',
+      '  return (',
+      '    <Box as={Row} slots={{ row: Other }}>',
+      '      <Chosen />',
+      '      {createElement(Row, { id: 1 })}',
+      '    </Box>',
+      '  );',
+      '};',
+      '',
+    ].join('\n'),
+  );
+  const found = about('components/values');
+  assert.deepEqual(
+    found.map((problem) => problem.file),
+    [4, 5, 8, 8, 10, 10, 12].map((line) => `components/values/render.tsx:${line}`),
+  );
+  assert.match(found[0].message, /imports the component .* by another name than its default/);
+  assert.match(found[2].message, /uses the component Row as a value: write it as a JSX tag, `<Row … \/>`/);
+
+  write('components/shaped/render.tsx', 'export default ({ row }) => <ul>{row}</ul>;\n');
+  write(
+    'components/shaped/props.ts',
+    "import Row from '../page/components/row';\nexport default () => ({ row: Row });\n",
+  );
+  write('components/shaped/style/skins/plain/index.ts', "import Row from '../../../../page/components/row';\n");
+  const shaped = about('components/shaped');
+  assert.deepEqual(
+    shaped.map((problem) => problem.file),
+    ['components/shaped/props.ts:1'],
+  );
+  assert.match(shaped[0].message, /a component is written in a render, placeholder or error file, as a JSX tag/);
+});

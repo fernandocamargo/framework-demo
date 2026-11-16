@@ -2,8 +2,10 @@
 // step, the render cycles it costs:
 // - calls: every call of a framework component's render, and `thrown`, those React did not commit;
 // - framework: the framework components React committed, new or again, and of those rendered
-//   again, how many changed nothing in the page (`no change`);
-// - plumbing: the framework's own wrappers around them (Component, View);
+//   again, how many changed nothing in the page (`no change`). A folder is one component (`View`);
+// - plumbing: what the framework composes around them: a folder's error boundary
+//   (react-error-boundary's, as `Reporting`, and the context provider it renders), and the folder's
+//   placeholder and error file while they show (`Waiting`, `Failed`);
 // - other: every other component (react-aria's, the shell's).
 // With DETAIL=1, each group that changed nothing says which framework component it is inside of.
 // It also reports a miss for each check that failed right after `idle()`.
@@ -38,10 +40,11 @@ const features = env.VISIT === 'features';
 const STEPS = features ? FEATURES : VISIT;
 const here = (file) => path.join(import.meta.dirname, file);
 const DIST = here('dist');
-const RENDERS = new Set(['StatefulView', 'StatelessView']);
-const PLUMBING = new Set(['Component', 'View']);
-// The framework's wrappers carry the folder's path as their name; react-aria has a `Component` of its own.
-const isPlumbing = (component) => PLUMBING.has(component.fn) && component.name !== component.fn;
+const PLUMBING = new Set(['Reporting', 'Waiting', 'Failed']);
+// A folder's component carries the folder's path as its name; another library may have a `View` of its own.
+const isRender = (component) => component.fn === 'View' && component.name !== component.fn;
+// The library's provider has only its minified name: it is the one function the boundary renders.
+const isPlumbing = (component) => PLUMBING.has(component.fn) || component.under === 'Reporting';
 const recorder = readFileSync(here('recorder.js'), 'utf8');
 const BASEMAP = /^https:\/\/(tiles\.openfreemap\.org\/styles\/|api\.maptiler\.com\/maps\/)/;
 const EMPTY_STYLE = JSON.stringify({ layers: [], sources: {}, version: 8 });
@@ -107,9 +110,13 @@ async function run() {
   }
   await page.waitForTimeout(300);
   // Both at once: a commit between two reads would leave its calls without it.
-  const { calls, commits } = await page.evaluate(() => ({ calls: window.__calls, commits: window.__renders }));
+  const { calls, commits, executions } = await page.evaluate(() => ({
+    calls: window.__calls,
+    commits: window.__renders,
+    executions: window.__executions ?? [],
+  }));
   await browser.close();
-  return { calls, commits, errors, results };
+  return { calls, commits, errors, executions, results };
 }
 
 const summarize = ({ calls, commits, results }) =>
@@ -128,8 +135,8 @@ const summarize = ({ calls, commits, results }) =>
       ...step,
       calls: calls.filter((call) => call.phase === step.name && !call.suspend).length,
       commits: commits.filter((commit) => commit.phase === step.name).length,
-      framework: count((component) => RENDERS.has(component.fn)),
-      other: count((component) => !RENDERS.has(component.fn) && !isPlumbing(component)),
+      framework: count(isRender),
+      other: count((component) => !isRender(component) && !isPlumbing(component)),
       plumbing: count(isPlumbing),
       suspends: calls.filter((call) => call.phase === step.name && call.suspend).length,
       thrown: calls.filter((call) => call.phase === step.name && !call.suspend && !call.kept).length,
@@ -218,7 +225,7 @@ summaries[0].forEach((step, index) => {
           : component.why?.cause === 'own'
             ? `own${component.why.hooks?.length ? ` hooks ${component.why.hooks.join(',')}` : ''}${component.why.contexts?.length ? ` contexts ${component.why.contexts.join(',')}` : ''}`
             : component.why?.cause;
-      const key = `${RENDERS.has(component.fn) ? '' : `  (in ${(component.within || 'the shell').replace('components/', '')}) `}${component.name} ← ${cause}`;
+      const key = `${isRender(component) ? '' : `  (in ${(component.within || 'the shell').replace('components/', '')}) `}${component.name} ← ${cause}`;
       byName.set(key, (byName.get(key) ?? 0) + 1);
     }
     for (const [key, value] of [...byName].sort((a, b) => b[1] - a[1]).slice(0, Number(env.TOP ?? 8)))
@@ -251,6 +258,43 @@ writeFileSync(
     1,
   )}\n`,
 );
+// Each run's executions of the framework's own components, by function, and the components React
+// committed in each bucket (mounted and again), for the visit and for the further steps apart.
+{
+  const isFurther = new Map(STEPS.map((step) => [step.name, Boolean(step.further)]));
+  const part = (run, summary, further) => {
+    const executed = {};
+    for (const { fn, phase } of run.executions)
+      if ((isFurther.get(phase) ?? false) === further) executed[fn] = (executed[fn] ?? 0) + 1;
+    const steps = summary.filter((_, index) => Boolean(STEPS[index].further) === further);
+    const sum = (pick) => steps.reduce((total, step) => total + pick(step), 0);
+    const committed = (bucket) => ({
+      again: sum((step) => step[bucket].again),
+      mounted: sum((step) => step[bucket].mounted),
+      unchanged: sum((step) => step[bucket].unchanged.length),
+    });
+    return {
+      calls: sum((step) => step.calls),
+      committed: { framework: committed('framework'), other: committed('other'), plumbing: committed('plumbing') },
+      executed,
+      misses: sum((step) => (step.ok ? 0 : 1)),
+      suspends: sum((step) => step.suspends),
+      thrown: sum((step) => step.thrown),
+    };
+  };
+  writeFileSync(
+    here(`out/${label}/buckets.json`),
+    `${JSON.stringify(
+      all.map((run, index) => ({
+        errors: run.errors,
+        further: part(run, summaries[index], true),
+        visit: part(run, summaries[index], false),
+      })),
+      null,
+      1,
+    )}\n`,
+  );
+}
 if (all.some((run) => run.errors.length))
   say(`page errors: ${[...new Set(all.flatMap((run) => run.errors))].join(' | ')}`);
 writeFileSync(here(`out/${label}/summary.txt`), `${lines.join('\n')}\n`);

@@ -3,7 +3,9 @@
  * TanStack Query client), the sources the state and async layers read (`entity`, `route`,
  * `navigation`), the reads every layer may follow (`user`, `acl`, `flags`), the page's skin, and the app's global error listeners, the
  * last resort of the error pipeline. A `Suspense` at the top catches components with no
- * placeholder.
+ * placeholder. The folders it is given get their own boundaries where the shell writes them, from
+ * the plugin, as a folder's children do; an element given to it directly by other code (a test)
+ * gets them here (boundaries.ts).
  */
 
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -23,6 +25,7 @@ import {
 } from 'react';
 
 import { Pending, useCommitted, watch } from './activity';
+import { boundEach } from './boundaries';
 import { createDataLayer, type DataLayer, recording } from './data';
 import { LocaleContext, SOURCE_LOCALE } from './i18n';
 import type { Acl, Entity, Env, Flags, Navigation, Route, User } from './index';
@@ -373,7 +376,7 @@ export function Root({
 
   let page: ReactNode = (
     <LocaleContext value={locale}>
-      <Suspense fallback={<Pending />}>{children}</Suspense>
+      <Suspense fallback={<Pending />}>{boundEach(children)}</Suspense>
     </LocaleContext>
   );
   for (const key of [...fields].reverse())

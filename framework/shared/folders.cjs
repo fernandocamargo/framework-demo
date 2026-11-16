@@ -231,6 +231,73 @@ function secondComponents(root, file) {
   return found;
 }
 
+/**
+ * The uses of a component folder that leave it without its boundaries. A folder is one component,
+ * and its `Suspense` and error boundary are composed around its element where the plugin sees the
+ * element written: a default import, used as a JSX tag, in a render, placeholder or error file.
+ * Anything else is named, each as `{ line, what }`:
+ * - in one of those files, an import of a folder that is not its default alone, and the folder's
+ *   name used as a value (held in a variable, passed as a prop, given to `createElement`);
+ * - in any other file of a component folder (`props.ts`, `state.ts`, `handlers.ts`…), an import of
+ *   a folder at all: what it would build there, no render composes.
+ * A type-only import says nothing at runtime, and a skin imports a folder for its selector.
+ */
+function unboundFolders(root, file, rendering) {
+  const ts = typescriptFor(root);
+  const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const line = (node) => source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
+  const found = [];
+  const names = new Set();
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+    const clause = statement.importClause;
+    if (!clause || clause.isTypeOnly) continue;
+    const from = statement.moduleSpecifier.text;
+    const resolved = from.startsWith('@/')
+      ? path.join(root, from.slice(2))
+      : from.startsWith('.')
+        ? path.resolve(path.dirname(file), from)
+        : null;
+    if (!resolved || !isComponentFolder(root, resolved)) continue;
+    if (!rendering) {
+      found.push({
+        line: line(statement),
+        what: `imports the component ${from}: a component is written in a render, placeholder or error file, as a JSX tag, where its boundaries are composed around it`,
+      });
+      continue;
+    }
+    if (clause.namedBindings)
+      found.push({
+        line: line(statement),
+        what: `imports the component ${from} by another name than its default: write \`import Name from '${from}'\`, the import whose elements get the folder's boundaries`,
+      });
+    if (clause.name) names.add(clause.name.text);
+  }
+  if (!names.size) return found;
+  const visit = (node) => {
+    if (ts.isImportDeclaration(node)) return;
+    if (ts.isIdentifier(node) && names.has(node.text)) {
+      const parent = node.parent;
+      const isTag =
+        (ts.isJsxOpeningElement(parent) || ts.isJsxSelfClosingElement(parent) || ts.isJsxClosingElement(parent)) &&
+        parent.tagName === node;
+      // A name that is not a reference: a member (`all.Row`), a key (`{ Row: 1 }`), an attribute.
+      const isName =
+        (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
+        (ts.isPropertyAssignment(parent) && parent.name === node) ||
+        ts.isJsxAttribute(parent);
+      if (!isTag && !isName)
+        found.push({
+          line: line(node),
+          what: `uses the component ${node.text} as a value: write it as a JSX tag, \`<${node.text} … />\`, so its placeholder and error file are composed around it`,
+        });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
 /** Inline event handlers in a render: every event a render wires is a handler of its folder's handlers.ts. */
 function inlineHandlers(root, file) {
   const ts = typescriptFor(root);
@@ -698,6 +765,15 @@ function problems(root) {
             const child = path.join(dir, entry);
             return isDirectory(child) ? files(child) : isCode(entry) ? [child] : [];
           });
+  // A folder's element gets the folder's boundaries only where the plugin sees it written.
+  for (const file of files(path.join(root, 'components'))) {
+    const inStyle = relative(file).split('/').includes('style');
+    if (inStyle || /\.(test|spec|stories)\.[jt]sx?$/.test(file) || !isComponentFolder(root, path.dirname(file)))
+      continue;
+    const rendering = JSX_FILE.test(file) && RENDERING_LAYERS.includes(stripExtension(path.basename(file)));
+    for (const { line, what } of unboundFolders(root, file, rendering))
+      found.push({ file: `${relative(file)}:${line}`, message: what });
+  }
   for (const file of ['components', 'services', 'clients'].flatMap((layer) => files(path.join(root, layer)))) {
     if (!JSX_FILE.test(file)) continue;
     const rendering = RENDERING_LAYERS.includes(stripExtension(path.basename(file)));
