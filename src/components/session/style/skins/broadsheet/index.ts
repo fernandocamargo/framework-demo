@@ -87,21 +87,35 @@ export default css`
       gap: 0.25rem 1rem;
       margin-block-start: 0.35rem;
     }
-    .react-aria-Button {
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       min-block-size: 0;
       padding: 0;
       border: 0;
+      border-radius: 0;
       background: none;
       box-shadow: none;
       color: var(--accent);
       font-family: var(--serif);
       font-size: 0.92rem;
+      font-weight: 600;
       letter-spacing: 0;
       text-decoration: underline;
       text-transform: none;
-      &[data-hovered] {
+      white-space: nowrap;
+      cursor: pointer;
+      transition: transform 120ms var(--ease);
+      &:hover {
         background: none;
         color: var(--text);
+      }
+      &:active {
+        transform: translate(2px, 2px);
+      }
+      &:focus-visible {
+        box-shadow: var(--ring);
       }
     }
   }

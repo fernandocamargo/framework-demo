@@ -94,17 +94,26 @@ export default css`
       gap: 0.25rem 0.9rem;
       margin-block-start: 0.25rem;
     }
-    .react-aria-Button {
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       min-block-size: 0;
       padding: 0;
       border: 0;
+      border-radius: var(--radius-s);
       background: none;
       color: var(--accent);
       font: inherit;
+      white-space: nowrap;
       cursor: pointer;
-      &[data-hovered] {
+      transition: transform 120ms var(--ease);
+      &:hover {
         background: none;
         text-decoration: underline;
+      }
+      &:active {
+        transform: scale(0.98);
       }
     }
   }

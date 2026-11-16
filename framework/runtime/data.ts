@@ -319,7 +319,8 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
     // revisit reads it anew rather than showing the answer from before the write; reading every
     // such answer again now would cost a request for each filter and page visited.
     client.removeQueries({ predicate: (query) => query.queryKey[0] === 'component' && stale(query), type: 'inactive' });
-    return client.invalidateQueries({ predicate: stale });
+    // Service reads have no observers: invalidation alone lets a component reuse an older read in flight.
+    return client.cancelQueries({ predicate: stale }).then(() => client.invalidateQueries({ predicate: stale }));
   };
 
   return {

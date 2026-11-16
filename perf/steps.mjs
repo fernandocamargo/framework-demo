@@ -239,7 +239,11 @@ export const STEPS = [
         .getByRole('button', { name: /^Emily,/ })
         .click(),
     check: async (page) =>
-      (await dialog(page, 'Sign in').getByRole('textbox', { name: 'Username' }).inputValue()) !== '',
+      (await dialog(page, 'Sign in').getByRole('textbox', { name: 'Username' }).inputValue()) === 'emilys' &&
+      (await dialog(page, 'Sign in').getByLabel('Password', { exact: true }).inputValue()) === 'emilyspass' &&
+      (await dialog(page, 'Sign in')
+        .getByRole('button', { name: /^Emily,/ })
+        .getAttribute('type')) === 'button',
     name: 'fill the demo account in',
   },
   {

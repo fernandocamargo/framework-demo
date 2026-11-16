@@ -49,6 +49,73 @@ test.beforeEach(({ page }) => {
   });
 });
 
+for (const skin of ['default', 'broadsheet', 'blueprint']) {
+  for (const locale of ['en', 'pt-BR']) {
+    test(`native demo accounts fill without submitting in ${skin}, ${locale}`, async ({ page }) => {
+      await act(page, () => page.goto(`./?world=memory&skin=${skin}&lang=${locale}#/products?signin=1`));
+      const signIn = dialog(page, locale === 'en' ? 'Sign in' : 'Entrar');
+      const username = signIn.getByRole('textbox', { name: locale === 'en' ? 'Username' : 'Usuário' });
+      const password = signIn.getByLabel(locale === 'en' ? 'Password' : 'Senha', { exact: true });
+      const usernameNode = await username.elementHandle();
+      const passwordNode = await password.elementHandle();
+
+      for (const [name, login, secret] of [
+        ['Emily', 'emilys', 'emilyspass'],
+        ['Olivia', 'oliviaw', 'oliviawpass'],
+        ['Avery', 'averyp', 'averyppass'],
+      ]) {
+        const button = signIn.getByRole('button', { name: new RegExp(`^${name},`) });
+
+        expect(await button.getAttribute('type')).toBe('button');
+        expect(await button.getAttribute('data-rac')).toBeNull();
+
+        for (const activation of ['pointer', 'Enter', 'Space']) {
+          await act(page, () => username.fill('draft'));
+          await act(page, () => password.fill('draft'));
+          await act(page, async () => {
+            if (activation === 'pointer') await button.click();
+            else {
+              await button.focus();
+              expect(await button.evaluate((element) => element === document.activeElement)).toBe(true);
+              await page.keyboard.press(activation);
+            }
+          });
+          expect(await username.inputValue()).toBe(login);
+          expect(await password.inputValue()).toBe(secret);
+          expect(await username.evaluate((field, original) => field === original, usernameNode)).toBe(true);
+          expect(await password.evaluate((field, original) => field === original, passwordNode)).toBe(true);
+          expect(page.url()).toContain('signin=1');
+        }
+      }
+
+      await act(page, () => page.keyboard.press('Escape'));
+      await act(page, () =>
+        page.getByRole('button', { name: locale === 'en' ? 'Network lab' : 'Laboratório de rede' }).click(),
+      );
+      const lab = page.getByRole('complementary', { name: locale === 'en' ? 'Network lab' : 'Laboratório de rede' });
+      await act(page, () => lab.getByRole('tab', { name: locale === 'en' ? 'Inspector' : 'Inspetor' }).click());
+      expect(
+        await lab
+          .getByRole('listitem')
+          .filter({ hasText: 'components/session/components/demo-account/handlers.ts' })
+          .count(),
+      ).toBe(9);
+    });
+  }
+}
+
+test('demo accounts remain available while signing in, and the pending flow ignores another fill', async ({ page }) => {
+  await open(page, '#/states/components%2Fsession/signingIn');
+  const signIn = dialog(page, 'Sign in');
+
+  for (const name of ['Emily', 'Olivia', 'Avery'])
+    expect(await signIn.getByRole('button', { name: new RegExp(`^${name},`) }).isEnabled()).toBe(true);
+
+  await act(page, () => signIn.getByRole('button', { name: /^Olivia,/ }).click());
+  expect(await signIn.getByRole('textbox', { name: 'Username' }).inputValue()).toBe('emilys');
+  expect(await signIn.getByLabel('Password', { exact: true }).inputValue()).toBe('emilyspass');
+});
+
 test('the catalogue follows the address: search, category, sort and page', async ({ page }) => {
   await open(page);
   expect(await summary(page)).toBe('37 products');

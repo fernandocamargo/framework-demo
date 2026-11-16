@@ -1,7 +1,7 @@
-import { Button } from 'react-aria-components';
-
 export default ({ account, handlers }) => (
   <li>
-    <Button onPress={handlers.fill}>{account.label}</Button>
+    <button onClick={handlers.fill} type="button">
+      {account.label}
+    </button>
   </li>
 );

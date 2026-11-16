@@ -1,8 +1,57 @@
 import { notifyManager, QueryObserver } from '@tanstack/react-query';
 
 import { isBusy, watch, whenIdle } from '../activity';
-import { createDataLayer, createQueryClient, name, recording, shareByIdentity, update } from '../data';
+import { createDataLayer, createQueryClient, fromTab, name, recording, shareByIdentity, update } from '../data';
 import { type DataEvent, onData, onFailure, toError } from '../pipeline';
+
+test('a storage change supersedes a service read started by an earlier tab message', async () => {
+  const client = createQueryClient();
+  const data = createDataLayer(client, { id: 'shop' });
+  let stock = 58;
+  let changed = () => undefined as void;
+  let finish = () => undefined as void;
+  let started = () => undefined as void;
+  const reading = new Promise<void>((resolve) => (started = resolve));
+  let delay = false;
+  const search = async () => {
+    const answer = stock;
+    if (delay) {
+      delay = false;
+      started();
+      await new Promise<void>((resolve) => (finish = resolve));
+    }
+    return answer;
+  };
+  data.rule('products.search', { follows: (stale) => void (changed = stale), reads: true });
+  const query = data.component('components/catalogue', {}, async (record) => {
+    record.service('products.search');
+    return data.call('products.search', search, []);
+  });
+  await client.fetchQuery(query);
+  const stop = new QueryObserver(client, query).subscribe(() => undefined);
+  const unwatch = watch(client);
+  const unshare = data.share('storage-race');
+  const sender = new BroadcastChannel('storage-race');
+
+  try {
+    delay = true;
+    const heard = fromTab();
+    sender.postMessage({ by: 'products.setStock', invalidate: ['products.search'] });
+    await heard;
+    await reading;
+    stock = 59;
+    changed();
+    finish();
+    await whenIdle();
+    expect(client.getQueryData(query.queryKey)).toBe(59);
+  } finally {
+    sender.close();
+    unshare();
+    stop();
+    unwatch();
+    client.clear();
+  }
+});
 
 test('idle sees the signed-out permissions delivered even when background timers are throttled', async () => {
   const client = createQueryClient();
