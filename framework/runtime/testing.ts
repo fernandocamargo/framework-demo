@@ -10,11 +10,15 @@
  *   expect(flow.states).toEqual(['saved'])
  */
 
+import { createElement } from 'react';
+import { createMemoryRouter, type RouteObject, RouterProvider } from 'react-router';
 import { createActor } from 'xstate';
 
+import type { AddressCodec } from './address';
 import { build, intlFor } from './i18n';
 import type { I18n } from './i18n-types';
 import { buildMachine, type StateModule } from './machine';
+import { createRouterAddress, Navigating } from './router';
 
 /**
  * For tests of a `props.ts` or a `state.ts`: a folder's `i18n` as the component gets it, in the
@@ -97,5 +101,35 @@ export function formOf<Data, Values extends Record<string, unknown>, Payload, Pr
     get values() {
       return values;
     },
+  };
+}
+
+/** Route objects with only what matching needs: no folder is loaded, and no loader runs. */
+export const bare = (routes: readonly RouteObject[]): RouteObject[] =>
+  routes.map(({ children, handle, id, path }) => ({
+    ...(children ? { children: bare(children) } : {}),
+    handle,
+    ...(id === undefined ? {} : { id }),
+    ...(path === undefined ? {} : { path }),
+  }));
+
+/**
+ * An app's address on React Router in memory, for a test that renders none of its folders: the
+ * generated codec and route objects, matched as the browser's router matches them. Render `element`
+ * for the charts' say in Back and Forward (the router's blocker is a hook). `settled` waits for the
+ * router, which navigates in a later task.
+ */
+export function memoryAddress(codec: AddressCodec, routes: readonly RouteObject[], href = codec.format(codec.home)) {
+  const Shell = () => createElement(Navigating, { address });
+  const router = createMemoryRouter([{ children: [...bare(routes), { path: '*' }], Component: Shell, path: '/' }], {
+    basename: codec.base,
+    initialEntries: [href],
+  });
+  const address = createRouterAddress(codec, router);
+  return {
+    address,
+    element: createElement(RouterProvider, { router }),
+    router,
+    settled: () => new Promise<void>((resolve) => setTimeout(resolve)),
   };
 }

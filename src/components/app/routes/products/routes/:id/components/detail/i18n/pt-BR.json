@@ -1,0 +1,14 @@
+{
+  "components/app/routes/products/routes/:id/components/detail/close": "Fechar",
+  "components/app/routes/products/routes/:id/components/detail/pictures/label": "Fotos",
+  "components/app/routes/products/routes/:id/components/detail/pictures/picture": "{title}, foto {index, number}",
+  "components/app/routes/products/routes/:id/components/detail/stock": "{level, select, out {Esgotado} low {Restam {count, number}} other {{count, number} em estoque}}",
+  "components/app/routes/products/routes/:id/components/detail/change/created": "Criado neste navegador",
+  "components/app/routes/products/routes/:id/components/detail/change/edited": "Editado neste navegador",
+  "components/app/routes/products/routes/:id/components/detail/actions/edit": "Editar",
+  "components/app/routes/products/routes/:id/components/detail/loading": "Lendo o produto",
+  "components/app/routes/products/routes/:id/components/detail/failed/title": "Não foi possível ler o produto",
+  "components/app/routes/products/routes/:id/components/detail/failed/close": "Fechar",
+  "components/app/routes/products/routes/:id/components/detail/failed/retry": "Tentar de novo",
+  "components/app/routes/products/routes/:id/components/detail/keys/edit": "Editar o produto"
+}

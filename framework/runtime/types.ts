@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 
 import type { Update } from './data';
 import type { I18n, Intl } from './i18n-types';
-import type { Allowed, Entity, Env, Flags, Navigation, Route, User } from './index';
+import type { Allowed, Entity, Env, Flags, Navigation, RouteRead, User } from './index';
 import type { Keyboard } from './shortcuts';
 
 /** The page's URL, read when an operation runs. */
@@ -37,7 +37,7 @@ export type Injection<Clients = Tree, Services = Tree> = {
 export type Sources = {
   flags: Flags;
   navigation: Navigation;
-  route: Route;
+  route: RouteRead;
 };
 
 /**
@@ -318,6 +318,7 @@ type Layers = {
   handlers?: unknown;
   i18n?: unknown;
   passed?: unknown;
+  routes?: unknown;
   state?: unknown;
 };
 
@@ -337,12 +338,13 @@ export type RenderProps<Folder extends Layers = Layers> = ('async' extends keyof
   ('form' extends keyof Folder ? { form: FormProps<Folder['form']> } : unknown) &
   ('handlers' extends keyof Folder ? { handlers: HandlerProps<Folder['handlers']> } : unknown) &
   ('passed' extends keyof Folder ? Folder['passed'] : Passed) &
+  ('routes' extends keyof Folder ? { routes: ReactNode } : unknown) &
   ('state' extends keyof Folder ? { state: StateProps<Folder['state'], Folder['events']> } : unknown) &
   Access &
   Language<'i18n' extends keyof Folder ? Folder['i18n'] : undefined> & { className: string } & {
     flags: Flags;
     keyboard: Keyboard;
-    route: Route;
+    route: RouteRead;
   };
 
 /** What each named export of handlers.ts receives when an event calls it. */

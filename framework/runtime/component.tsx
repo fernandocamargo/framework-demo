@@ -48,12 +48,12 @@ import { shareElements } from './elements';
 import { type FormModule, useFormLayer } from './form';
 import { HOT } from './hot';
 import { forgetMessages, intlFor, loadMessages, LocaleContext, SOURCE_LOCALE } from './i18n';
-import type { Allowed, Flags, Route } from './index';
+import type { Allowed, Flags } from './index';
 import { type StateModule, useStateLayer } from './machine';
 import { PinContext } from './pin';
 import { report, type Scope, toError } from './pipeline';
 import { during, sameParts, tracking, untracked } from './reads';
-import { fieldContext, followRoute, renderingRoute, RouteContext, type RouteView, useFramework } from './root';
+import { useFramework, useMoved, useRoute } from './root';
 import { type Entry, type ShortcutSites, shortcutsOf, useKeyboard, useShortcuts } from './shortcuts';
 import { activeSkin, loadSkin, replaceSkin, type SkinModule } from './style';
 import { tracked } from './thenable';
@@ -108,6 +108,9 @@ export type Spec = {
     state?: readonly string[];
     view?: readonly string[];
   };
+  /** The pattern of the route whose chart this folder's is, when its states name addresses. */
+  routed?: string;
+  routes?: ReactNode;
   skins: Record<string, () => Promise<SkinModule>>;
   /** Each translation of the messages, `i18n/<locale>.json`, loaded on demand. */
   translations?: Record<string, () => Promise<{ default: Record<string, string> }>>;
@@ -181,6 +184,7 @@ const defined = (values: object) =>
 
 const sameEach = (a: readonly unknown[], b: readonly unknown[]) =>
   a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
+const NO_ROUTE: Record<string, unknown> = {};
 const sameRoute = (a: Record<string, unknown>, b: Record<string, unknown>) => {
   const keys = Object.keys(b);
   return Object.keys(a).length === keys.length && keys.every((key) => key in a && Object.is(a[key], b[key]));
@@ -208,18 +212,6 @@ const useNoChart = (..._: unknown[]) => NO_CHART;
 const useNoOperations = () => NO_LAYER;
 /** The person signed in, from Root's `user` read: `null` when nobody is, or Root has no such read. */
 const useUserRead = (): unknown => useSuspenseQuery(useFramework().user ?? NO_READ).data;
-/**
- * The route a view's files read, followed field by field (root.tsx). Each render starts from the
- * view React committed last: one a thrown-away render made is not kept.
- */
-function useFollowedRoute(fields: ReadonlySet<string>, rendering: { readonly current: boolean }, committed: Route) {
-  const shown = useRef<null | RouteView>(null);
-  const view = followRoute(shown.current, fields, rendering, committed);
-  useLayoutEffect(() => {
-    shown.current = view;
-  });
-  return view.route;
-}
 /** The answer of the component's default read. */
 const useAnswerOf = (query: null | Read): unknown => useSuspenseQuery(query ?? NO_READ).data;
 type Followed = { decided: boolean | undefined; flags: Seen | undefined; parts: Seen | undefined };
@@ -274,7 +266,11 @@ export function component(spec: Spec) {
   const useUser = readsUser ? useUserRead : useNothing;
   const useFollowed = readsAcl || readsFlags ? useFollowedReads : useNothing;
   const useKeys = readsKeyboard ? useKeyboard : useNothing;
-  const useRouteView = viewReadsRoute ? useFollowedRoute : useNothing;
+  // The route, for a folder whose files read it while it renders: React Router's, read here
+  // (root.tsx, `useRoute`). Such a folder renders at every change of address.
+  const useRouteView = viewReadsRoute ? useRoute : useNothing;
+  // And for a default read that reads the route, chosen when the view has loaded.
+  let useReadRoute: typeof useNothing | typeof useRoute = useNothing;
   // And one chosen when the view has loaded: whether it has a default read. A view with none has
   // no query: a stand-in would cost every such component a subscription.
   let useAnswer: (query: null | Read) => unknown = useNothing;
@@ -297,6 +293,8 @@ export function component(spec: Spec) {
       ? useOperations
       : useNoOperations;
     useChart = module.state ? useChartLayer : useNoChart;
+    useReadRoute =
+      typeof module.async?.default === 'function' && (inAsync.has('route') || inAsync.has('*')) ? useRoute : useNothing;
     for (const child of module.children ?? []) child.preload?.();
     // Other hooks than the view called before (an edit under the dev server): its instances are mounted again.
     const now = `${module.state ? 'chart' : 'none'} ${useAnswer === useAnswerOf ? 'read' : 'none'} ${module.form ? 'form' : 'none'} ${useAsync === useOperations ? 'operations' : 'none'} ${module.handlers?.shape ?? ''}`;
@@ -351,7 +349,7 @@ export function component(spec: Spec) {
 
   /** Every layer of the view but the state layer, called in the same order on every render. */
   function useLayers(props: Props, module: ViewModule) {
-    const { acl: aclRead, data, fields, flags: flagsRead, injection, skin, sources } = useFramework();
+    const { acl: aclRead, data, flags: flagsRead, injection, skin, sources } = useFramework();
     const language = useLanguage();
     // The person signed in, from Root's `user` read: a sign-in or a sign-out makes it stale, and
     // only the components that read it render again.
@@ -423,8 +421,8 @@ export function component(spec: Spec) {
     // Whether this instance is rendering now: what its files and its chart read during the render
     // is this render's (the route being rendered, the decision); what runs after it, the committed.
     const rendering = useRef(false);
-    // The route its files read, followed field by field (root.tsx).
-    const route = useRouteView(fields, rendering, sources.route);
+    // The route its files read: the one React Router is rendering.
+    const route = useRouteView();
     const keyboard = useKeys();
     // The decision, twice. `judged` is this render's, for what runs inside the render: the chart's
     // declaration, and its first reads when it is created. `decided` is the one React committed,
@@ -455,22 +453,17 @@ export function component(spec: Spec) {
     // The default export of async.ts, as a query: it records the services and route parameters
     // it reads, so the data layer knows when to run it again. It gets the query's signal, which
     // aborts when nothing shows the read any more, as the named exports get theirs on unmount.
-    // Until the read has run once, the component reads the whole route. After that it reads only
-    // the fields that first run read, each from its own context (root.tsx), so a change of another
-    // field (a dialog opening over the list) does not render it again. `use` may read a context
-    // behind a condition: whether the view has a default read is fixed once it has loaded, and
-    // the fields it reads, once it has run.
+    // The read's key holds the route fields its first run read, so a change of another field (a
+    // dialog opening over the list) renders the component and finds the same query.
     const exported = module.async?.default;
     const learned = typeof exported === 'function' ? data.fieldsOf(spec.path) : undefined;
     const routeShown = useRef<null | Record<string, unknown>>(null);
+    const rendered = useReadRoute() as unknown as Record<string, unknown> | undefined;
     const readRoute = ((): null | Record<string, unknown> => {
       if (typeof exported !== 'function') return null;
-      if (!learned) return use(RouteContext) as unknown as Record<string, unknown>;
-      const values: Record<string, unknown> = {};
-      for (const key of learned)
-        values[key] = fields.has(key)
-          ? use(fieldContext(key))
-          : (use(RouteContext) as unknown as Record<string, unknown>)[key];
+      // A read that reads no route has none in its key.
+      const whole = rendered ?? NO_ROUTE;
+      const values = learned ? Object.fromEntries([...learned].map((key) => [key, whole[key]])) : whole;
       // The same fields with the same values as React committed last are the same object, so the
       // query below stays the same.
       const last = routeShown.current;
@@ -562,7 +555,6 @@ export function component(spec: Spec) {
       access,
       async,
       decided,
-      fields,
       form,
       injection,
       judged,
@@ -570,6 +562,7 @@ export function component(spec: Spec) {
       module,
       operations,
       rendering,
+      route,
       scope,
       sources,
       withForm,
@@ -591,6 +584,7 @@ export function component(spec: Spec) {
     const { access, async, form, language, module } = layers;
     return {
       ...props,
+      ...(spec.routes ? { routes: spec.routes } : {}),
       className,
       ...(async ? { async } : {}),
       ...(state ? { state } : {}),
@@ -672,9 +666,7 @@ export function component(spec: Spec) {
         ? {
             ...first.shaping,
             ...(module.form ? { form: layers.withForm.form } : {}),
-            ...(wiring.route
-              ? { route: wiring.route === 'whole' ? use(RouteContext) : renderingRoute(layers.fields) }
-              : {}),
+            ...(wiring.route ? { route: layers.route } : {}),
             entity: layers.sources.entity,
             navigation: layers.sources.navigation,
             services: layers.injection.services,
@@ -811,9 +803,9 @@ export function component(spec: Spec) {
       layers.injection,
       declared,
       layers.withForm,
-      () => renderingRoute(layers.fields),
       told,
       layers.rendering,
+      spec.routed,
     );
     return { early, state };
   }
@@ -871,7 +863,7 @@ export function component(spec: Spec) {
       reset();
       resetBoundary();
     }, [reset, resetBoundary]);
-    const route = use(RouteContext);
+    const route = useMoved();
     const [failedAt] = useState(route);
     useLayoutEffect(() => {
       if (route !== failedAt) again();

@@ -4,6 +4,8 @@
 
 import { readdirSync } from 'node:fs';
 
+import { arrive, queryOf, visit } from './address.mjs';
+
 /** Every component folder with a chart: what the states gallery must show, one region each. */
 const CHARTS = readdirSync(new URL('../src/components', import.meta.url), { recursive: true }).filter(
   (file) => String(file).split(/[\\/]/).pop() === 'state.ts',
@@ -127,7 +129,7 @@ const serve = (ways) => {
 
 export const STEPS = [
   {
-    act: (page, base) => page.goto(`${base}/?world=memory#/products`),
+    act: (page, base) => page.goto(`${base}${visit('/products')}`),
     check: async (page) => (await rows(page).count()) === 12,
     name: 'open the catalogue',
   },
@@ -144,7 +146,7 @@ export const STEPS = [
       await page.getByRole('button', { name: /Sort/ }).click();
       await page.getByRole('option', { name: 'Price, high to low' }).click();
     },
-    check: async (page) => page.url().includes('sort=price&order=desc'),
+    check: async (page) => queryOf(page.url())['sort'] === 'price' && queryOf(page.url())['order'] === 'desc',
     name: 'sort by price, high to low',
   },
   {
@@ -166,12 +168,12 @@ export const STEPS = [
       await page.getByRole('option', { name: 'All categories' }).click();
       await page.getByRole('link', { name: 'Next' }).click();
     },
-    check: async (page) => page.url().includes('page=2'),
+    check: async (page) => queryOf(page.url())['page'] === 2,
     name: 'all categories, page 2',
   },
   {
     act: (page) => page.getByRole('link', { name: 'Previous' }).click(),
-    check: async (page) => !page.url().includes('page='),
+    check: async (page) => queryOf(page.url())['page'] === undefined,
     name: 'back to page 1',
   },
   {
@@ -179,7 +181,7 @@ export const STEPS = [
       await page.getByRole('button', { name: /Sort/ }).click();
       await page.getByRole('option', { name: 'Title, A to Z' }).click();
     },
-    check: async (page) => !page.url().includes('sort='),
+    check: async (page) => queryOf(page.url())['sort'] === undefined,
     name: 'sort by title again',
   },
   {
@@ -191,7 +193,7 @@ export const STEPS = [
   },
   {
     act: (page) => page.keyboard.press('Escape'),
-    check: async (page) => !page.url().includes('view='),
+    check: async (page) => new URL(page.url()).pathname === '/products',
     name: 'close the product',
   },
   {
@@ -274,7 +276,7 @@ export const STEPS = [
   },
   {
     act: (page) => dialog(page, 'Bulk price change').getByRole('button', { name: 'Done' }).click(),
-    check: async (page) => !page.url().includes('bulk='),
+    check: async (page) => new URL(page.url()).pathname === '/products',
     name: 'done',
   },
   // A flag served another way, as another tab (or GrowthBook's dashboard) would: the provider says
@@ -369,7 +371,7 @@ export const STEPS = [
   },
   {
     act: (page) => page.keyboard.press('Escape'),
-    check: async (page) => !page.url().includes('view='),
+    check: async (page) => new URL(page.url()).pathname === '/products',
     further: true,
     name: 'slow: close the product',
   },
@@ -426,8 +428,8 @@ export const STEPS = [
         (await page.locator('.react-aria-Popover').count()) === 0 &&
         events.some(({ event, running }) => event === 'choice' && running) &&
         events.some(({ detail, event }) => event === 'removal' && detail !== 'later') &&
-        page.url().includes('sort=price') &&
-        !page.url().includes('order=')
+        queryOf(page.url())['sort'] === 'price' &&
+        queryOf(page.url())['order'] === undefined
       );
     },
     further: true,
@@ -453,7 +455,7 @@ export const STEPS = [
         (await page.locator('.react-aria-Popover').count()) === 0 &&
         end >= 0 &&
         choice > end &&
-        !page.url().includes('sort=')
+        queryOf(page.url())['sort'] === undefined
       );
     },
     further: true,
@@ -474,7 +476,7 @@ const canvas = (page) => page.locator('figure .maplibregl-map:not([hidden]) canv
 
 export const FEATURES = [
   {
-    act: (page, base) => page.goto(`${base}/?world=memory#/report`),
+    act: (page, base) => arrive(page, '/report', {}, base),
     check: async (page) => (await page.getByRole('article').getByRole('table').first().getByRole('row').count()) > 1,
     name: 'open the stock report',
   },
@@ -496,7 +498,7 @@ export const FEATURES = [
   },
   {
     act: (page) => page.getByRole('link', { name: /^Texas,/ }).click(),
-    check: async (page) => page.url().includes('region=TX') && (await ledger(page).count()) === 3,
+    check: async (page) => queryOf(page.url())['region'] === 'TX' && (await ledger(page).count()) === 3,
     name: 'choose Texas',
   },
   {
@@ -507,7 +509,7 @@ export const FEATURES = [
   },
   {
     act: (page) => page.keyboard.press('Escape'),
-    check: async (page) => !page.url().includes('cart=') && page.url().includes('region=TX'),
+    check: async (page) => new URL(page.url()).pathname === '/orders' && queryOf(page.url())['region'] === 'TX',
     name: 'close the order',
   },
   {
@@ -525,7 +527,7 @@ export const FEATURES = [
   {
     // With the map on, the list shows the states that have orders.
     act: (page) => page.getByRole('link', { name: /^Florida,/ }).click(),
-    check: async (page) => page.url().includes('region=FL') && (await canvas(page).count()) === 1,
+    check: async (page) => queryOf(page.url())['region'] === 'FL' && (await canvas(page).count()) === 1,
     name: 'choose Florida, the map on',
   },
   {
@@ -549,12 +551,12 @@ export const FEATURES = [
   },
   {
     act: (page) => page.keyboard.press('Enter'),
-    check: async (page) => page.url().includes('view=22') && (await palette(page).count()) === 0,
+    check: async (page) => new URL(page.url()).pathname === '/products/22' && (await palette(page).count()) === 0,
     name: 'run the first command: a product',
   },
   {
     act: (page) => page.keyboard.press('Escape'),
-    check: async (page) => !page.url().includes('view='),
+    check: async (page) => new URL(page.url()).pathname === '/products',
     name: 'close the product',
   },
   {
@@ -564,7 +566,7 @@ export const FEATURES = [
   },
   {
     act: (page) => page.getByRole('button', { name: 'Take the tour' }).click(),
-    check: async (page) => (await shown(tour(page))) && page.url().includes('sort=price'),
+    check: async (page) => (await shown(tour(page))) && queryOf(page.url())['sort'] === 'price',
     name: 'take the tour: the address',
   },
   {
@@ -574,7 +576,7 @@ export const FEATURES = [
   },
   {
     act: (page) => tour(page).locator('menu li').last().getByRole('button').click(),
-    check: async (page) => page.url().includes('page=2'),
+    check: async (page) => queryOf(page.url())['page'] === 2,
     name: 'the tour: a slow network',
   },
   {

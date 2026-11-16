@@ -1,12 +1,14 @@
 import { act, render, renderHook } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
+// No app here: the plugin's modules of clients and services are empty.
+import { useLocation } from 'react-router';
 
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { useFormLayer } from '../form';
 import { Root } from '../root';
+import { routed } from './routed';
 
-// No app here: the plugin's modules of clients and services are empty.
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
@@ -43,8 +45,22 @@ async function show(element: ReactNode) {
 }
 // The app declares its own route and entity (src/env.d.ts); these tests use their own.
 const entity = { id: 'shop' } as never;
+/** `tree` under a Root at `start`, in a memory router; `go` moves the address and lets the page settle. */
+async function at(client: ReturnType<typeof createQueryClient>, start: Props, tree: ReactNode) {
+  const page = routed({ edit: 0, other: '', page: 0 }, start as never, (address) =>
+    createElement(Root, { address, client, entity }, tree),
+  );
+  const { container } = await show(page.element);
+  return {
+    container,
+    go: async (route: Props) => {
+      await page.go(route as never);
+      await settle();
+    },
+  };
+}
 
-test('a change of route renders no component that has no default read', async () => {
+test('a change of address renders no component whose files do not read the route', async () => {
   const calls: string[] = [];
   const Plain = component({
     path: 'components/plain',
@@ -55,22 +71,22 @@ test('a change of route renders no component that has no default read', async ()
     }),
   });
   const client = createQueryClient();
-  const page = (route: Props) => createElement(Root, { client, entity, route: route as never }, createElement(Plain));
-  const { container, rerender } = await show(page({ page: 1 }));
+  const { container, go } = await at(client, { page: 1 }, createElement(Plain));
   expect(container.textContent).toBe('plain');
   expect(calls).toEqual(['plain']);
 
-  await rerender(page({ page: 2 }));
+  await go({ page: 2 });
   expect(calls).toEqual(['plain']);
   // Nor does it hold a query: a stand-in one would suspend its first render once.
   expect(client.getQueryCache().findAll({ queryKey: ['component', 'components/plain'] })).toHaveLength(0);
 });
 
-test('a component with a default read renders again only when the route parameters it read change', async () => {
+test('a component with a default read reads again, and calls its render, only when the route parameters it read change', async () => {
   const reads: unknown[] = [];
   const renders: unknown[] = [];
   const Reader = component({
     path: 'components/reader',
+    reads: { async: ['route'] },
     skins: {},
     view: view(
       (props) => {
@@ -85,16 +101,15 @@ test('a component with a default read renders again only when the route paramete
     ),
   });
   const client = createQueryClient();
-  const page = (route: Props) => createElement(Root, { client, entity, route: route as never }, createElement(Reader));
-  const { container, rerender } = await show(page({ other: 'a', page: 1 }));
+  const { container, go } = await at(client, { other: 'a', page: 1 }, createElement(Reader));
   expect(container.textContent).toBe('page 1');
 
   // A parameter its read never looked at: the same answer, and its render is not called.
-  await rerender(page({ other: 'b', page: 1 }));
+  await go({ other: 'b', page: 1 });
   expect(reads).toEqual([1]);
   expect(renders).toEqual([1]);
 
-  await rerender(page({ other: 'b', page: 2 }));
+  await go({ other: 'b', page: 2 });
   expect(container.textContent).toBe('page 2');
   expect(reads).toEqual([1, 2]);
   expect(renders).toEqual([1, 2]);
@@ -112,6 +127,7 @@ test('a new answer keeps the parts equal to the last one shown, so a child given
   });
   const Parent = component({
     path: 'components/parent',
+    reads: { async: ['route'] },
     skins: {},
     view: view(
       (props) => {
@@ -122,12 +138,11 @@ test('a new answer keeps the parts equal to the last one shown, so a child given
     ),
   });
   const client = createQueryClient();
-  const page = (route: Props) => createElement(Root, { client, entity, route: route as never }, createElement(Parent));
-  const { container, rerender } = await show(page({ page: 1 }));
+  const { container, go } = await at(client, { page: 1 }, createElement(Parent));
   expect(container.textContent).toBe('page 1 monday');
 
   // Another page has its own query, and its answer is a new object; its equal `meta` is the old one.
-  await rerender(page({ page: 2 }));
+  await go({ page: 2 });
   expect(container.textContent).toBe('page 2 monday');
   expect(childRenders).toHaveLength(1);
 });
@@ -220,6 +235,7 @@ test('a chart created by a change of route reads that route, not the one before 
   const read: unknown[] = [];
   const Editor = component({
     path: 'components/editor',
+    reads: { state: ['route'] },
     skins: {},
     view: () =>
       Promise.resolve({
@@ -239,10 +255,9 @@ test('a chart created by a change of route reads that route, not the one before 
       }),
   });
   const client = createQueryClient();
-  const page = (route: Props) =>
-    createElement(Root, { client, entity, route: route as never }, route['edit'] ? createElement(Editor) : null);
-  const { container, rerender } = await show(page({ edit: null }));
-  await rerender(page({ edit: 4 }));
+  const When = () => (useLocation().search.includes('edit') ? createElement(Editor) : null);
+  const { container, go } = await at(client, {}, createElement(When));
+  await go({ edit: 4 });
   expect(container.textContent).toBe('4');
   expect(read.every((value) => value === 4)).toBe(true);
 });

@@ -1,0 +1,9 @@
+{
+  "components/app/routes/products/routes/:id/components/detail/components/reviews/label": "Avaliações",
+  "components/app/routes/products/routes/:id/components/detail/components/reviews/heading": "{count, plural, =0 {Nenhuma avaliação ainda} one {<reviews># avaliação</reviews>, média de <mean>{average, number, ::.0}</mean>} other {<reviews># avaliações</reviews>, média de <mean>{average, number, ::.0}</mean>}}",
+  "components/app/routes/products/routes/:id/components/detail/components/reviews/rating": "{rating, number} de 5",
+  "components/app/routes/products/routes/:id/components/detail/components/reviews/by": "<author>{name}</author>, <date>{on}</date>",
+  "components/app/routes/products/routes/:id/components/detail/components/reviews/loading": "Lendo as avaliações…",
+  "components/app/routes/products/routes/:id/components/detail/components/reviews/failed/message": "Não foi possível ler as avaliações: {message}",
+  "components/app/routes/products/routes/:id/components/detail/components/reviews/failed/retry": "Tentar de novo"
+}

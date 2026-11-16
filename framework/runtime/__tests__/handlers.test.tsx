@@ -8,6 +8,7 @@ import { createQueryClient } from '../data';
 import { type Failure, type Interaction, onFailure, pipeline, type Scope } from '../pipeline';
 import { Root } from '../root';
 import { interact } from '../track';
+import { routed } from './routed';
 
 // No app here: the plugin's modules of clients and services are empty.
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
@@ -271,7 +272,7 @@ export const submit = ({ form, record }) => () => record(form.values.title);`,
   expect(seen.length).toBe(1);
 });
 
-test('a handler that reads a field of the route follows that field, and no other', async () => {
+test('a handler that reads a field of the route is a new function for that field, and for no other', async () => {
   const recorded: unknown[] = [];
   const record = (value: unknown) => recorded.push(value);
   const { Component, seen } = folder(
@@ -279,12 +280,14 @@ test('a handler that reads a field of the route follows that field, and no other
     'export const keep = ({ record, route }) => () => record(route.page);',
   );
   const client = createQueryClient();
-  const page = (route: Props) =>
-    createElement(Root, { client, entity, route: route as never }, createElement(Component, { record }));
-  const { rerender } = await show(page({ page: 1, query: 'a' }));
-  await rerender(page({ page: 1, query: 'b' }));
-  expect(seen.length).toBe(1);
-  await rerender(page({ page: 2, query: 'b' }));
+  const page = routed({ page: 0, q: '' }, { page: 1, q: 'a' }, (address) =>
+    createElement(Root, { address, client, entity }, createElement(Component, { record })),
+  );
+  await show(page.element);
+  // Another field: the folder renders with the router's new location, and the handler is the same function.
+  await page.go({ page: 1, q: 'b' });
+  expect(seen.at(-1)!.keep).toBe(seen[0]!.keep);
+  await page.go({ page: 2, q: 'b' });
   expect(seen.at(-1)!.keep).not.toBe(seen[0]!.keep);
   seen[0]!.keep!();
   seen.at(-1)!.keep!();

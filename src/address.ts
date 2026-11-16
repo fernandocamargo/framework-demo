@@ -1,97 +1,97 @@
-// The address, as the route and back. Hash routing, so a static host needs no rewrites:
-// `#/products?q=lamp&category=lighting&sort=price&order=desc&page=2&view=12`.
-// Fields at their defaults are left out, so the same page always has the same address.
+// The app names its pages and convenient list links. Matching and History are the router's; the
+// query codec and the navigation types are generated.
+import type { ComponentType } from 'react';
+import { createBrowserRouter, type DataRouter, type LoaderFunction } from 'react-router';
+import codec, { createAddress } from 'virtual:framework/address';
+import routes from 'virtual:framework/routes';
 
-import type { Route } from 'framework';
+import type { AddressSnapshot, Navigation, Route, RouterAddress, Values } from 'framework';
 
-import type { SortKey } from './services/products/types';
-
+/** The shell's development pages, in the hash: `#/states`, the gallery, and `#/states/<path>/<state>`, a frame of it. */
+export const STATES = '#/states';
+/** The document's router and its address. The shell is the root route, so it starts them (`start`). */
+export let router: DataRouter;
+export let address: RouterAddress;
+export let navigation: Navigation;
+/**
+ * Creates the router with the shell as its root route. Every route folder is a child of it; an
+ * address no folder names matches the last child, and the address store sends it home. The
+ * shell's `loader` runs with those of the folders an address matches, before the address shows.
+ * A test gives another router than the browser's (`create`).
+ */
+const Nothing = () => null;
+export const start = (
+  Shell: ComponentType,
+  loader?: LoaderFunction,
+  create: typeof createBrowserRouter = createBrowserRouter,
+) => {
+  router = create(
+    [
+      {
+        children: [...routes, { id: 'unknown', path: '*' }],
+        Component: Shell,
+        // Nothing shows until the first address's folders are loaded, as before the shell's first render.
+        HydrateFallback: Nothing,
+        id: 'shell',
+        ...(loader ? { loader } : {}),
+        path: '/',
+      },
+    ],
+    { basename: codec.base },
+  );
+  address = createAddress(router, { hashes: (hash) => hash === STATES || hash.startsWith(`${STATES}/`) });
+  navigation = address.navigation as Navigation;
+  return router;
+};
+export const go: Navigation['go'] = (...given: unknown[]) => (navigation.go as (...all: unknown[]) => void)(...given);
+export const query: Navigation['query'] = (...given: unknown[]) =>
+  (navigation.query as (...all: unknown[]) => void)(...given);
+/** What react-aria's links do when pressed: they keep the click to themselves, so the document never sees it. */
+export const follow = (href: string) => {
+  if (!address.open(href)) window.location.assign(href);
+};
+/** Opens a page with its own fields at their defaults. */
+export const openSection = (section: Section) =>
+  section === 'products'
+    ? go('/products', {}, HOME)
+    : section === 'orders'
+      ? go('/orders', {}, ORDERS_HOME)
+      : go('/report');
+/** Whether two addresses show the same page: they differ at most in the language and the skin. */
+export const samePage = (one: AddressSnapshot, other: AddressSnapshot) =>
+  one.href === other.href ||
+  codec.format(
+    one.pattern,
+    one.params,
+    { ...one.query, lang: other.query['lang'], skin: other.query['skin'] },
+    one.hash,
+  ) === other.href;
+/** Changes shell fields where the address is, adding no entry: Back does not undo a skin or a language. */
+export const inPlace = (changes: Partial<Pick<Route, 'lang' | 'skin'>>) => {
+  const { hash, params, pattern, query: fields } = address.latest();
+  address.replace(codec.format(pattern, params, { ...fields, ...changes }, hash));
+};
+export { codec };
 export type Filters = Pick<Route, 'category' | 'order' | 'page' | 'q' | 'sort'>;
-
-export const SORT_KEYS: readonly SortKey[] = ['title', 'price', 'rating', 'stock'];
-
-/** The pages of the app: the first part of the address's path (`#/products`). */
+export const HOME: Filters = { category: '', order: 'asc', page: 1, q: '', sort: 'title' };
+export const ORDERS_HOME = { page: 1, region: '' };
 export const SECTIONS = ['products', 'report', 'orders'] as const;
 export type Section = (typeof SECTIONS)[number];
-
-// Its order matters: it is the order of the address's fields.
-export const HOME: Route = {
-  section: 'products',
-  q: '',
-  category: '',
-  sort: 'title',
-  order: 'asc',
-  page: 1,
-  region: '',
-  view: null,
-  cart: null,
-  edit: null,
-  create: false,
-  remove: null,
-  bulk: false,
-  signin: false,
-};
-
-/** Every dialog closed. */
-export const CLOSED = {
-  bulk: false,
-  cart: null,
-  create: false,
-  edit: null,
-  remove: null,
-  signin: false,
-  view: null,
-} satisfies Partial<Route>;
-
-const id = (value: null | string) => {
-  const number = Number(value);
-  return value !== null && Number.isInteger(number) && number > 0 ? number : null;
-};
-
-export function parse(hash: string): Route {
-  const query = new URLSearchParams(hash.split('?')[1] ?? '');
-  const sort = query.get('sort') as SortKey;
-  const path = hash.replace(/\?.*$/, '').replace(/^#\//, '');
-  const region = query.get('region') ?? '';
+/** Link writers read these route fields, so a new tab keeps the settings on screen. */
+export const links = (route: Pick<Route, 'lang' | 'signin' | 'skin' | 'world'>) => {
+  const shell = { lang: route.lang, signin: route.signin, skin: route.skin, world: route.world };
+  const href: Navigation['href'] = (pattern: string, params: Values = {}, query: Record<string, unknown> = {}) =>
+    address.navigation.href(pattern, params, { ...shell, ...query });
   return {
-    bulk: query.has('bulk'),
-    cart: id(query.get('cart')),
-    category: query.get('category') ?? '',
-    create: query.has('create'),
-    edit: id(query.get('edit')),
-    order: query.get('order') === 'desc' ? 'desc' : 'asc',
-    page: id(query.get('page')) ?? 1,
-    q: query.get('q') ?? '',
-    region: /^[A-Z]{0,2}$/.test(region) ? region : '',
-    remove: id(query.get('remove')),
-    section: SECTIONS.find((section) => section === path) ?? HOME.section,
-    signin: query.has('signin'),
-    sort: SORT_KEYS.includes(sort) ? sort : HOME.sort,
-    view: id(query.get('view')),
+    filtered: (filters: Filters, changes: Partial<Filters>) =>
+      href('/products', {}, { ...filters, page: 1, ...changes }),
+    href,
+    // A page's link opens it with its own fields at their defaults, also from that page.
+    sectionHref: (section: Section) =>
+      section === 'products'
+        ? href('/products', {}, HOME)
+        : section === 'orders'
+          ? href('/orders', {}, ORDERS_HOME)
+          : href('/report'),
   };
-}
-
-export function format(route: Route): string {
-  const query = new URLSearchParams();
-  for (const key of Object.keys(HOME) as (keyof Route)[]) {
-    const value = route[key];
-    if (key === 'section' || value === HOME[key] || value === null || value === false) continue;
-    query.set(key, value === true ? '1' : String(value));
-  }
-  const text = query.toString();
-  return text ? `#/${route.section}?${text}` : `#/${route.section}`;
-}
-
-/** The address of a page with its filters and dialogs closed. */
-export const sectionHref = (section: Section) => format({ ...HOME, section });
-
-/** The address of these filters with `changes` on top, and every dialog closed unless `changes` opens one. */
-export const href = (filters: Filters, changes: Partial<Route> = {}) => format({ ...HOME, ...filters, ...changes });
-
-/** The address of the same list filtered another way: it starts again at page 1. */
-export const filtered = (filters: Filters, changes: Partial<Filters>) => href(filters, { page: 1, ...changes });
-
-/** Changes these fields of the address and keeps the others. What `navigation.go` does. */
-export const go = (changes: Partial<Route>) => {
-  window.location.hash = format({ ...parse(window.location.hash), ...changes });
 };

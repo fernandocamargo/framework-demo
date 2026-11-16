@@ -6,6 +6,8 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { readdirSync } from 'node:fs';
 
+import { arrive, moveTo, queryOf, visit } from '../perf/address.mjs';
+
 declare global {
   interface Window {
     __framework: { fromTab(): Promise<void>; idle(): Promise<void> };
@@ -25,7 +27,7 @@ async function act(page: Page, action: () => Promise<unknown>) {
   await idle(page);
 }
 
-const open = (page: Page, hash = '#/products') => act(page, () => page.goto(`./?world=memory${hash}`));
+const open = (page: Page, path = '/products', query = {}) => act(page, () => arrive(page, path, query));
 /** A list's own items, not the items of lists inside them (a row's commands). */
 const rows = (page: Page, name = 'Products') => page.getByRole('list', { name }).locator(':scope > li');
 /** Each row's title: the link in its heading. */
@@ -58,7 +60,7 @@ test('the catalogue follows the address: search, category, sort and page', async
     await page.getByRole('searchbox', { name: 'Search products' }).fill('lamp');
     await page.keyboard.press('Enter');
   });
-  expect(page.url()).toContain('q=lamp');
+  expect(queryOf(page.url())['q']).toBe('lamp');
   expect(await summary(page)).toBe('3 products matching “lamp”');
   expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp']);
 
@@ -66,13 +68,13 @@ test('the catalogue follows the address: search, category, sort and page', async
     await page.getByRole('button', { name: /Sort/ }).click();
     await page.getByRole('option', { name: 'Price, high to low' }).click();
   });
-  expect(page.url()).toContain('sort=price&order=desc');
+  expect(queryOf(page.url())).toMatchObject({ order: 'desc', sort: 'price' });
   expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp']);
 
-  await open(page, '#/products?category=desks&page=1');
+  await open(page, '/products', { category: 'desks', page: 1 });
   expect(await summary(page)).toBe('10 products in Desks');
 
-  await open(page, '#/products?page=4');
+  await open(page, '/products', { page: 4 });
   expect(await rows(page).count()).toBe(1);
   await act(page, () => page.goBack());
   expect(await summary(page)).toBe('10 products in Desks');
@@ -83,7 +85,7 @@ test('paging keeps the focused link when it reaches either end', async ({ page }
   const nav = page.getByRole('navigation', { name: 'Pages' });
   const previous = nav.getByRole('link', { name: 'Previous' });
   const next = nav.getByRole('link', { name: 'Next' });
-  const pageNumber = () => new URLSearchParams(new URL(page.url()).hash.split('?')[1] ?? '').get('page');
+  const pageNumber = () => queryOf(page.url())['page'];
   const mark = (link: Locator) =>
     link.evaluate((element) => ((element as HTMLElement & { marked?: boolean }).marked = true));
   const sameAndFocused = (link: Locator) =>
@@ -93,37 +95,37 @@ test('paging keeps the focused link when it reaches either end', async ({ page }
     );
 
   await act(page, () => next.click());
-  expect(pageNumber()).toBe('2');
+  expect(pageNumber()).toBe(2);
   await previous.focus();
   await mark(previous);
   await act(page, () => page.keyboard.press('Enter'));
-  expect(pageNumber()).toBeNull();
+  expect(pageNumber()).toBeUndefined();
   expect(await nav.innerText()).toContain('Page 1 of 4');
   expect(await sameAndFocused(previous)).toBe(true);
   expect(await previous.getAttribute('aria-disabled')).toBe('true');
   expect(await previous.getAttribute('data-disabled')).toBe('true');
   expect(await previous.getAttribute('href')).toBeNull();
   await act(page, () => page.keyboard.press('Enter'));
-  expect(pageNumber()).toBeNull();
+  expect(pageNumber()).toBeUndefined();
 
-  for (const number of ['2', '3']) {
+  for (const number of [2, 3]) {
     await act(page, () => next.click());
     expect(pageNumber()).toBe(number);
   }
   await next.focus();
   await mark(next);
   await act(page, () => page.keyboard.press('Enter'));
-  expect(pageNumber()).toBe('4');
+  expect(pageNumber()).toBe(4);
   expect(await nav.innerText()).toContain('Page 4 of 4');
   expect(await sameAndFocused(next)).toBe(true);
   expect(await next.getAttribute('aria-disabled')).toBe('true');
   expect(await next.getAttribute('data-disabled')).toBe('true');
   expect(await next.getAttribute('href')).toBeNull();
   await act(page, () => page.keyboard.press('Enter'));
-  expect(pageNumber()).toBe('4');
+  expect(pageNumber()).toBe(4);
 
   for (const skin of ['default', 'broadsheet', 'blueprint']) {
-    await act(page, () => page.goto(`./?world=memory&skin=${skin}#/products?page=4`));
+    await act(page, () => arrive(page, '/products', { page: 4, skin: skin }));
     expect(await next.getAttribute('data-disabled')).toBe('true');
     expect(await next.evaluate((element) => getComputedStyle(element).opacity)).toBe('0.55');
   }
@@ -141,7 +143,7 @@ test('a search keeps its field and the focus; the back button takes the text bac
     await search.fill('lamp');
     await page.keyboard.press('Enter');
   });
-  expect(page.url()).toContain('q=lamp');
+  expect(queryOf(page.url())['q']).toBe('lamp');
   expect(await summary(page)).toBe('3 products matching “lamp”');
   expect(await same()).toBe(true);
   expect(await focused()).toBe(true);
@@ -155,7 +157,7 @@ test('a search keeps its field and the focus; the back button takes the text bac
     await page.keyboard.type('desk');
     await page.keyboard.press('Enter');
   });
-  expect(page.url()).toContain('q=desk');
+  expect(queryOf(page.url())['q']).toBe('desk');
   expect(await search.inputValue()).toBe('desk');
   expect(await same()).toBe(true);
   expect(await focused()).toBe(true);
@@ -182,16 +184,16 @@ test('a search keeps its field and the focus; the back button takes the text bac
 test('a product opens with its reviews, each from its own read', async ({ page }) => {
   await open(page);
   await act(page, () => page.getByRole('link', { exact: true, name: 'Audio Interface' }).click());
-  expect(page.url()).toContain('view=4');
+  expect(new URL(page.url()).pathname).toBe('/products/4');
   const detail = dialog(page, 'Audio Interface');
   expect(await visible(detail)).toBe(true);
   expect(await detail.getByRole('region', { name: 'Reviews' }).getByRole('listitem').count()).toBe(3);
   await act(page, () => page.keyboard.press('Escape'));
-  expect(page.url()).not.toContain('view=');
+  expect(new URL(page.url()).pathname).toBe('/products');
 });
 
 test('the product and order details expose busy content only while their reads are pending', async ({ page }) => {
-  await open(page, '#/products?signin=1');
+  await open(page, '/products', { signin: true });
   await signIn(page);
   await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
   const lab = page.getByRole('complementary', { name: 'Network lab' });
@@ -215,12 +217,8 @@ test('the product and order details expose busy content only while their reads a
   await pending('Reading the product', 'Audio Interface', () =>
     page.getByRole('link', { exact: true, name: 'Audio Interface' }).click(),
   );
-  // Hash navigation keeps the lab's latency in this page for the order read.
-  await pending('Reading the order', 'Order 12', () =>
-    page.evaluate(() => {
-      window.location.hash = '#/orders?cart=12';
-    }),
-  );
+  // History navigation keeps the lab's latency in this page for the order read.
+  await pending('Reading the order', 'Order 12', () => moveTo(page, visit('/orders/12')));
 });
 
 test('editing needs a session; a save makes the list read again', async ({ page }) => {
@@ -239,7 +237,7 @@ test('editing needs a session; a save makes the list read again', async ({ page 
 });
 
 test('closing with unsaved changes asks first; a form with problems is not sent', async ({ page }) => {
-  await open(page, '#/products?edit=4');
+  await open(page, '/products/4/edit');
   await signIn(page);
   const editor = dialog(page, 'Edit Audio Interface');
   await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill(''));
@@ -253,7 +251,7 @@ test('closing with unsaved changes asks first; a form with problems is not sent'
   expect(await visible(editor)).toBe(true);
   await act(page, () => page.keyboard.press('Escape'));
   await act(page, () => question.getByRole('button', { name: 'Discard' }).click());
-  expect(page.url()).not.toContain('edit=');
+  expect(new URL(page.url()).pathname).toBe('/products');
   expect(await rows(page).nth(1).innerText()).toContain('Audio Interface');
 });
 
@@ -281,7 +279,7 @@ test('a save after somebody else saved is a conflict, and the person chooses', a
 });
 
 test('a product is created, then deleted after a confirmation', async ({ page }) => {
-  await open(page, '#/products?signin=1');
+  await open(page, '/products', { signin: true });
   await signIn(page);
   await act(page, () => page.getByRole('link', { name: 'New product' }).click());
   const editor = dialog(page, 'New product');
@@ -303,7 +301,7 @@ test('a product is created, then deleted after a confirmation', async ({ page })
 });
 
 test('the bulk price change applies a rule, lists what failed, and sends the failed ones again', async ({ page }) => {
-  await open(page, '#/products?category=keyboards&signin=1');
+  await open(page, '/products', { category: 'keyboards', signin: true });
   await signIn(page);
   await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
   const lab = page.getByRole('complementary', { name: 'Network lab' });
@@ -339,7 +337,7 @@ test('a failed read shows the error file and reaches the failure pipeline; tryin
   await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
   const lab = page.getByRole('complementary', { name: 'Network lab' });
   await act(page, () => choose(lab.getByRole('radio', { name: '500' })));
-  await act(page, () => page.goto('./?world=memory#/products?category=audio'));
+  await act(page, () => arrive(page, '/products', { category: 'audio' }));
   expect(await page.getByRole('alert').first().innerText()).toContain('The catalogue could not be read');
   expect(await page.getByRole('region', { name: /Failures/ }).innerText()).toContain('service · products.search');
 
@@ -349,7 +347,7 @@ test('a failed read shows the error file and reaches the failure pipeline; tryin
 });
 
 test('an expired access token is refreshed once, under the save that met it', async ({ page }) => {
-  await open(page, '#/products?signin=1');
+  await open(page, '/products', { signin: true });
   await signIn(page);
   await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
   const lab = page.getByRole('complementary', { name: 'Network lab' });
@@ -375,7 +373,7 @@ test('an expired access token is refreshed once, under the save that met it', as
 });
 
 test('the page speaks Brazilian Portuguese, and changes language in place', async ({ page }) => {
-  await act(page, () => page.goto('./?world=memory&lang=pt-BR#/products'));
+  await act(page, () => arrive(page, '/products', { lang: 'pt-BR' }));
   expect(await page.locator('html').getAttribute('lang')).toBe('pt-BR');
   expect(await summary(page)).toBe('37 produtos');
   // Prices and ratings are written the Brazilian way; DummyJSON's product names are not translated.
@@ -393,7 +391,7 @@ test('the page speaks Brazilian Portuguese, and changes language in place', asyn
     await page.getByRole('button', { name: 'Idioma' }).click();
     await page.getByRole('option', { name: 'English' }).click();
   });
-  expect(page.url()).toContain('lang=en');
+  expect(queryOf(page.url())['lang']).toBe('en');
   expect(await page.locator('html').getAttribute('lang')).toBe('en');
   expect(await summary(page)).toBe('37 products');
   expect(await rows(page).first().innerText()).toContain('$273.99');
@@ -423,7 +421,7 @@ test('each role sees what it may do: users browse, moderators edit and change pr
   expect(await deleteLinks.count()).toBe(0);
   expect(await page.getByRole('note').first().innerText()).toContain('Changing it needs a permission you do not have.');
   // An address that opens the editor anyway shows it read-only, with nothing to save.
-  await open(page, '#/products?edit=4');
+  await open(page, '/products/4/edit');
   const editor = dialog(page, 'Edit Audio Interface');
   expect(await editor.getByRole('note').innerText()).toContain('Changing it needs a permission you do not have.');
   expect(await editor.getByRole('button', { name: 'Save changes' }).isDisabled()).toBe(true);
@@ -454,7 +452,7 @@ test('each role sees what it may do: users browse, moderators edit and change pr
   expect(await wizard.getByRole('button', { name: /^Apply to/ }).isDisabled()).toBe(false);
   await act(page, () => page.keyboard.press('Escape'));
   // A deletion asked for by the address is shown, and refused.
-  await open(page, '#/products?remove=4');
+  await open(page, '/products/4/remove');
   const question = dialog(page, /^Delete/);
   expect(await question.getByRole('note').innerText()).toContain(
     'Deleting a product needs a permission you do not have.',
@@ -498,7 +496,7 @@ test('keys follow what may be done and where the flow is; `?` lists them, transl
   await act(page, () => page.keyboard.press('n'));
   expect(await dialog(page, 'New product').count()).toBe(0);
   // A read-only editor's chart has no `save`: the key does nothing, and the browser does not save the page.
-  await open(page, '#/products?edit=4');
+  await open(page, '/products/4/edit');
   const editor = dialog(page, 'Edit Audio Interface');
   await act(page, () => page.keyboard.press('ControlOrMeta+s'));
   expect(await editor.getByText('A product needs a title.').count()).toBe(0);
@@ -509,9 +507,9 @@ test('keys follow what may be done and where the flow is; `?` lists them, transl
   await act(page, () => page.getByRole('button', { name: 'Sign in' }).click());
   await signIn(page);
   await act(page, () => page.keyboard.press(']'));
-  expect(page.url()).toContain('page=2');
+  expect(queryOf(page.url())['page']).toBe(2);
   await act(page, () => page.keyboard.press('['));
-  expect(page.url()).not.toContain('page=');
+  expect(queryOf(page.url())['page']).toBeUndefined();
   await act(page, () => page.getByRole('link', { name: 'Edit Audio Interface' }).click());
   await act(page, () => editor.getByRole('textbox', { name: 'Title' }).fill('Audio Interface Mk III'));
   await act(page, () => page.keyboard.press('ControlOrMeta+s'));
@@ -519,13 +517,13 @@ test('keys follow what may be done and where the flow is; `?` lists them, transl
   expect(await rows(page).nth(1).innerText()).toContain('Audio Interface Mk III');
 
   // The list speaks the page's language.
-  await act(page, () => page.goto('./?world=memory&lang=pt-BR#/products'));
+  await act(page, () => arrive(page, '/products', { lang: 'pt-BR' }));
   await act(page, () => page.keyboard.press('?'));
   expect(await dialog(page, 'Atalhos de teclado').innerText()).toContain('Buscar no catálogo');
 });
 
 test('a count shows at once, before the server answers; one the server refuses is taken back', async ({ page }) => {
-  await open(page, '#/products?signin=1');
+  await open(page, '/products', { signin: true });
   await signIn(page);
   const lamp = rows(page).filter({ hasText: 'Arc Floor Lamp' });
   const more = lamp.getByRole('button', { name: 'One more in stock' });
@@ -655,7 +653,7 @@ test('flags are for the person signed in; one served another way in the lab reac
   await heard(other);
   expect(await deletes(one)).toBe(0);
   expect(await deletes(other)).toBe(0);
-  await open(other, '#/products?remove=1');
+  await open(other, '/products/1/remove');
   const question = other.getByRole('alertdialog');
   expect(await question.getByRole('note').innerText()).toBe('Deleting products is paused for now.');
   expect(await question.getByRole('button', { name: 'Delete' }).isDisabled()).toBe(true);
@@ -676,7 +674,7 @@ test('flags are for the person signed in; one served another way in the lab reac
 test('the inspector shows what a press did: the write, its optimistic change, the answer worked out from the cache, and what went stale', async ({
   page,
 }) => {
-  await open(page, '#/products?signin=1');
+  await open(page, '/products', { signin: true });
   await signIn(page);
   await act(page, () =>
     rows(page).filter({ hasText: 'Arc Floor Lamp' }).getByRole('button', { name: 'One more in stock' }).click(),
@@ -687,7 +685,7 @@ test('the inspector shows what a press did: the write, its optimistic change, th
   const inspector = lab.getByRole('list', { name: 'What the app did, latest first' });
   // The lab reads what the pipelines carried once a second while it is open.
   await expect(inspector).toContainText(
-    'products.setStock sent by Button.onPress (components/catalogue/components/product-row/render.tsx:',
+    'products.setStock sent by Button.onPress (components/app/routes/products/components/catalogue/components/product-row/render.tsx:',
   );
   const text = await inspector.innerText();
   expect(text).toContain('shows its change to products.search and products.get now');
@@ -701,15 +699,17 @@ test('the inspector shows what a press did: the write, its optimistic change, th
 test('the states gallery shows every chart in each of its states; a frame holds its component in one state, with its example', async ({
   page,
 }) => {
-  await act(page, () => page.goto('./?world=memory#/states'));
+  await act(page, () => page.goto(visit('/products') + '#/states'));
   expect(await page.getByRole('heading', { level: 1 }).innerText()).toBe('States');
   expect(await page.getByRole('region').count()).toBe(CHARTS);
-  const editor = page.getByRole('region', { name: 'components/product/editor' });
+  const editor = page.getByRole('region', { name: 'components/app/routes/products/components/editor' });
   expect(await editor.locator('iframe').count()).toBe(11);
   expect(await editor.innerText()).toContain('Somebody else saved this product meanwhile.');
 
   // One frame on its own: the editor held in a conflict, the question over the form it keeps.
-  await act(page, () => page.goto('./?world=memory#/states/components%2Fproduct%2Feditor/conflict'));
+  await act(page, () =>
+    page.goto(visit('/products') + '#/states/components%2Fapp%2Froutes%2Fproducts%2Fcomponents%2Feditor/conflict'),
+  );
   const held = dialog(page, 'Edit Arc Floor Lamp');
   expect(await held.getByRole('alert').innerText()).toContain('Somebody else changed this product');
   expect(await held.getByRole('textbox', { name: 'Title' }).inputValue()).toBe('Arc Floor Lamp');
@@ -718,7 +718,11 @@ test('the states gallery shows every chart in each of its states; a frame holds 
   expect(await held.getByRole('alert').count()).toBe(1);
 
   // A question shown with the dialog it asks about sits above it, though the page added it first.
-  await act(page, () => page.goto('./?world=memory#/states/components%2Fproduct%2Feditor/confirmingDiscard'));
+  await act(page, () =>
+    page.goto(
+      visit('/products') + '#/states/components%2Fapp%2Froutes%2Fproducts%2Fcomponents%2Feditor/confirmingDiscard',
+    ),
+  );
   // (A frame is a picture: the gallery lets no pointer reach it.)
   const layers = await page.evaluate(() =>
     Object.fromEntries(

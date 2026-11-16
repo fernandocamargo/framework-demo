@@ -5,12 +5,14 @@
 // starts at the address its example names, and then follows its links, as the app does.
 
 import type { Decorator, Preview } from '@storybook/react-vite';
-import { type ReactNode, useEffect, useMemo, useState, useTransition } from 'react';
-import { I18nProvider } from 'react-aria-components';
+import { type ComponentType, createContext, use } from 'react';
+import { I18nProvider, RouterProvider } from 'react-aria-components';
+import { createBrowserRouter, createMemoryRouter, type DataRouter } from 'react-router';
+import { RouterProvider as Router } from 'react-router/dom';
 
-import { createQueryClient, type Env, type Navigation, Root, type Route } from 'framework';
+import { createQueryClient, type Env, Root, type Route } from 'framework';
 
-import { format, go, HOME, parse } from '../src/address';
+import { address, codec, follow, start } from '../src/address';
 import memory from '../src/clients/memory';
 import { DEMOS } from '../src/components/session/form';
 import { LOCALES } from '../src/locales';
@@ -22,7 +24,6 @@ import '../src/blueprint.css';
 
 const env: Env = { apiUrl: 'https://dummyjson.com', world: 'memory' };
 const entity = { id: 'memory' };
-const navigation: Navigation = { go };
 // Each person's reads, cached for as long as the stories are open: Root is given a query client, as
 // the app gives it one, and each person has their own.
 const clients = Object.fromEntries(
@@ -39,46 +40,42 @@ async function signInAs(role: string) {
   await api.session.signIn({ password: demo.password, username: demo.username });
 }
 
-/** The address: the story's example first, then wherever its links and `navigation.go` take it. */
-function Stage({ children, start }: { children: (route: Route) => ReactNode; start: Partial<Route> | undefined }) {
-  const [hash, setHash] = useState(() => format({ ...HOME, ...start }));
-  const [, navigate] = useTransition();
-  useEffect(() => {
-    window.location.hash = hash;
-    const follow = () => navigate(() => setHash(window.location.hash));
-    window.addEventListener('hashchange', follow);
-    return () => window.removeEventListener('hashchange', follow);
-    // The story's own address, once, when it mounts.
-  }, []);
-  const route = useMemo(() => parse(hash), [hash]);
-  return children(route);
+/** What a story's frame shows: the story, and the toolbars' choices. The router's root route reads it. */
+type Shown = { locale: (typeof LOCALES)[number]; role: string; skin: string; Story: ComponentType };
+const ShownContext = createContext<null | Shown>(null);
+
+/** The root route of a story's router: the app's `Root` around the story, as the shell has it around the page. */
+function Stage() {
+  const { locale, role, skin, Story } = use(ShownContext)!;
+  return (
+    <RouterProvider navigate={follow}>
+      {/* A new Root for each person, so its reads start over for them. */}
+      <Root
+        acl={permissions}
+        address={address}
+        client={clients[role]!}
+        entity={entity}
+        env={env}
+        flags={featureFlags}
+        key={role}
+        locale={locale}
+        skin={skin}
+        user={whoIsSignedIn}
+      >
+        <Story />
+      </Root>
+    </RouterProvider>
+  );
 }
 
+// Each story has a router of its own, in memory: Storybook's own address is not the story's.
 const inRoot: Decorator = (Story, context) => {
-  const { locale, role, skin } = context.globals as { locale: (typeof LOCALES)[number]; role: string; skin: string };
-  const start = (context.parameters['framework'] as undefined | { route?: Partial<Route> })?.route;
+  const { locale, role, skin } = context.globals as Omit<Shown, 'Story'>;
   return (
     <I18nProvider locale={locale}>
-      <Stage start={start}>
-        {(route) => (
-          // A new Root for each person, so its reads start over for them.
-          <Root
-            acl={permissions}
-            client={clients[role]}
-            entity={entity}
-            env={env}
-            flags={featureFlags}
-            key={role}
-            locale={locale}
-            navigation={navigation}
-            route={route}
-            skin={skin}
-            user={whoIsSignedIn}
-          >
-            <Story />
-          </Root>
-        )}
-      </Stage>
+      <ShownContext value={{ locale, role, skin, Story }}>
+        <Router router={context.loaded['router'] as DataRouter} />
+      </ShownContext>
     </I18nProvider>
   );
 };
@@ -118,7 +115,20 @@ export default {
     },
   },
   initialGlobals: { locale: 'en', role: 'guest', skin: 'default' },
-  loaders: [({ globals }) => signInAs(globals['role'] as string)],
+  loaders: [
+    ({ globals, parameters }) => {
+      // The address: the story's example first, then wherever its links and `navigation.go` take it.
+      const example = (parameters['framework'] as undefined | { route?: Partial<Route> })?.route;
+      const href = codec.format(example?.pattern ?? '/products', (example?.params as never) ?? {}, {
+        ...example,
+        world: 'memory',
+      });
+      const inMemory: typeof createBrowserRouter = (routes, options) =>
+        createMemoryRouter(routes, { ...options, initialEntries: [href] });
+      const router = start(Stage, undefined, inMemory);
+      return signInAs(globals['role'] as string).then(() => ({ router }));
+    },
+  ],
   parameters: {
     // Each story of a docs page in a frame of its own: a story's address, its dialogs and its keys
     // stay its own.

@@ -43,6 +43,7 @@ const rendered = vi.hoisted(() => {
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { Root } from '../root';
+import { routed } from './routed';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
@@ -78,35 +79,58 @@ const module = (parts: Props) => () =>
     ...parts,
   }) as never;
 
-test('a component with a default read follows only the route fields its read used: another field does not render it at all', async () => {
+const SAMPLE = { edit: 0, page: 0, q: '', view: 0 };
+/** `tree` under a Root at `start`, in a memory router; `go` moves the address and lets the page settle. */
+async function at(start: Props, tree: ReactNode) {
+  const client = createQueryClient();
+  const page = routed(SAMPLE, start as never, (address) => createElement(Root, { address, client, entity }, tree));
+  const { container } = await show(page.element);
+  return {
+    container,
+    go: async (route: Props) => {
+      await page.go(route as never);
+      await settle();
+    },
+  };
+}
+
+test('a component with a default read renders at each change of address, and reads again only for the fields its read used', async () => {
+  const reads: unknown[] = [];
   const List = component({
     path: 'components/list',
+    reads: { async: ['route'] },
     skins: {},
     view: module({
-      async: { default: ({ route }: { route: Props }) => Promise.resolve({ page: route['page'] }) },
+      async: {
+        default: ({ route }: { route: Props }) => {
+          reads.push(route['page']);
+          return Promise.resolve({ page: route['page'] });
+        },
+      },
       render: (props: Props) =>
         createElement('p', null, `page ${(props['async'] as { default: { page: number } }).default.page}`),
     }),
   });
-  const client = createQueryClient();
-  const tree = createElement(List);
-  const page = (route: Props) => createElement(Root, { client, entity, route: route as never }, tree);
-  const { container, rerender } = await show(page({ page: 1, view: null }));
+  const { container, go } = await at({ page: 1 }, createElement(List));
   expect(container.textContent).toBe('page 1');
+  expect(reads).toEqual([1]);
   rendered.clear();
 
-  // A dialog opens over the list.
-  await rerender(page({ page: 1, view: 7 }));
-  expect(rendered.get('components/list')).toBeUndefined();
-
-  await rerender(page({ page: 2, view: 7 }));
-  expect(container.textContent).toBe('page 2');
+  // A dialog opens over the list: the list reads React Router's location, so it renders, and its
+  // read's key holds `page` alone, so nothing is read.
+  await go({ page: 1, view: 7 });
   expect(rendered.get('components/list')).toBeGreaterThan(0);
+  expect(reads).toEqual([1]);
+
+  await go({ page: 2, view: 7 });
+  expect(container.textContent).toBe('page 2');
+  expect(reads).toEqual([1, 2]);
 });
 
-test('a chart reads the route field by field: after its first commit, a change of a field it did not read does not render it', async () => {
+test('a folder whose chart alone reads the route calls no hook of the router: a change of address does not render it', async () => {
   const Editor = component({
     path: 'components/editor',
+    reads: { state: ['route'] },
     skins: {},
     view: module({
       render: (props: Props) =>
@@ -114,19 +138,17 @@ test('a chart reads the route field by field: after its first commit, a change o
       state: { context: ({ route }: { route: Props }) => ({ id: route['edit'] }), default: { editing: {} } },
     }),
   });
-  const client = createQueryClient();
-  const tree = createElement(Editor);
-  const page = (route: Props) => createElement(Root, { client, entity, route: route as never }, tree);
-  const { container, rerender } = await show(page({ edit: 4, q: 'lamp' }));
+  const { container, go } = await at({ edit: 4, q: 'lamp' }, createElement(Editor));
   expect(container.textContent).toBe('4');
   rendered.clear();
 
-  await rerender(page({ edit: 4, q: 'desk' }));
+  await go({ edit: 4, q: 'desk' });
   expect(rendered.get('components/editor')).toBeUndefined();
 });
 
-test('a view follows the route fields its files read: another field does not render it, and a handler reads the committed route', async () => {
+test('a view whose files read the route renders at each change of address, and what it wires reads the route of its render', async () => {
   const pressed: unknown[] = [];
+  const renders: unknown[] = [];
   const Button = component({
     path: 'components/sell',
     reads: { view: ['route'] },
@@ -135,33 +157,32 @@ test('a view follows the route fields its files read: another field does not ren
       props: {
         default: ({ route }: { route: Props }) => ({
           edit: () => pressed.push(route['edit']),
-          editing: route['edit'] !== null,
+          editing: route['edit'] !== undefined,
         }),
       },
-      render: (props: Props) =>
-        createElement('button', { onClick: props['edit'] as () => void }, props['editing'] ? 'on' : 'off'),
+      render: (props: Props) => {
+        renders.push(props['editing']);
+        return createElement('button', { onClick: props['edit'] as () => void }, props['editing'] ? 'on' : 'off');
+      },
     }),
   });
-  const client = createQueryClient();
-  const tree = createElement(Button);
-  const page = (route: Props) => createElement(Root, { client, entity, route: route as never }, tree);
-  const { container, rerender } = await show(page({ edit: null, page: 1 }));
+  const { container, go } = await at({ page: 1 }, createElement(Button));
   expect(container.textContent).toBe('off');
   rendered.clear();
 
-  await rerender(page({ edit: null, page: 2 }));
-  expect(rendered.get('components/sell')).toBeUndefined();
-
-  await rerender(page({ edit: 4, page: 2 }));
-  expect(container.textContent).toBe('on');
+  // A field it does not read: the folder renders, since it reads the router's location.
+  await go({ page: 2 });
   expect(rendered.get('components/sell')).toBeGreaterThan(0);
+  expect(container.textContent).toBe('off');
 
-  // Outside the render, the view reads the route React committed.
+  await go({ edit: 4, page: 2 });
+  expect(container.textContent).toBe('on');
+
   await act(async () => container.querySelector('button')!.click());
   expect(pressed).toEqual([4]);
 });
 
-test('a view that spreads the route follows all of it', async () => {
+test('a view that spreads the route gets all of it', async () => {
   const Link = component({
     path: 'components/address',
     reads: { view: ['route'] },
@@ -171,20 +192,18 @@ test('a view that spreads the route follows all of it', async () => {
       render: (props: Props) => createElement('a', null, props['text'] as string),
     }),
   });
-  const client = createQueryClient();
-  const tree = createElement(Link);
-  const page = (route: Props) => createElement(Root, { client, entity, route: route as never }, tree);
-  const { container, rerender } = await show(page({ edit: null, page: 1 }));
+  const { container, go } = await at({ page: 1 }, createElement(Link));
   rendered.clear();
-  await rerender(page({ edit: null, page: 2 }));
-  expect(container.textContent).toBe('{"edit":null,"page":2}');
+  await go({ page: 2 });
+  expect(JSON.parse(container.textContent!)).toEqual({ page: 2, params: {}, path: '/page', pattern: '/page' });
   expect(rendered.get('components/address')).toBeGreaterThan(0);
 });
 
-test('a failed read shows the error file until the address it read moves on: a new value of a field it followed reads again', async () => {
+test('a failed read shows the error file until the address moves on: a new value of a field it read reads again', async () => {
   const List = component({
     error: () => createElement('p', null, 'failed'),
     path: 'components/failing',
+    reads: { async: ['route'] },
     skins: {},
     view: module({
       async: {
@@ -195,19 +214,16 @@ test('a failed read shows the error file until the address it read moves on: a n
         createElement('p', null, `page ${(props['async'] as { default: { page: number } }).default.page}`),
     }),
   });
-  const client = createQueryClient();
-  const tree = createElement(List);
-  const page = (route: Props) => createElement(Root, { client, entity, route: route as never }, tree);
   const silenced = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-  const { container, rerender } = await show(page({ page: 3 }));
+  const { container, go } = await at({ page: 3 }, createElement(List));
   expect(container.textContent).toBe('failed');
 
-  await rerender(page({ page: 1 }));
+  await go({ page: 1 });
   expect(container.textContent).toBe('page 1');
   silenced.mockRestore();
 });
 
-test('a render that reads the route itself, with no props.ts, follows the fields it reads', async () => {
+test('a render that reads the route itself, with no props.ts, gets the route React Router renders', async () => {
   const Crumb = component({
     path: 'components/crumb',
     reads: { view: ['route'] },
@@ -216,16 +232,9 @@ test('a render that reads the route itself, with no props.ts, follows the fields
       render: ({ route }: { route: Props }) => createElement('i', null, `page ${String(route['page'])}`),
     }),
   });
-  const client = createQueryClient();
-  const tree = createElement(Crumb);
-  const page = (route: Props) => createElement(Root, { client, entity, route: route as never }, tree);
-  const { container, rerender } = await show(page({ edit: null, page: 1 }));
+  const { container, go } = await at({ page: 1 }, createElement(Crumb));
   expect(container.textContent).toBe('page 1');
-  rendered.clear();
 
-  await rerender(page({ edit: 4, page: 1 }));
-  expect(rendered.get('components/crumb')).toBeUndefined();
-
-  await rerender(page({ edit: 4, page: 2 }));
+  await go({ edit: 4, page: 2 });
   expect(container.textContent).toBe('page 2');
 });

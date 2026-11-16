@@ -5,6 +5,7 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
 import { checkMicrodata, type Vocabulary } from '../framework/microdata/check';
+import { arrive, queryOf } from '../perf/address.mjs';
 
 const vocabulary = JSON.parse(
   readFileSync(new URL('../framework/microdata/vocabulary.json', import.meta.url), 'utf8'),
@@ -20,7 +21,7 @@ const act = async (page: Page, action: () => Promise<unknown>) => {
   await action();
   await page.evaluate(() => window.__framework.idle());
 };
-const open = (page: Page, hash = '#/products') => act(page, () => page.goto(`./?world=memory${hash}`));
+const open = (page: Page, path = '/products', query = {}) => act(page, () => arrive(page, path, query));
 const rows = (page: Page) => page.getByRole('list', { name: 'Products' }).locator(':scope > li');
 const dialog = (page: Page, name: string) =>
   page.getByRole('dialog', { name }).or(page.getByRole('alertdialog', { name }));
@@ -43,18 +44,18 @@ test.beforeEach(({ page }) => {
 });
 
 test('starting on orders shows the catalogue at the first step', async ({ page }) => {
-  await open(page, '#/orders');
+  await open(page, '/orders');
   expect(await rows(page).count()).toBe(0);
 
   await act(page, () => page.getByRole('button', { name: 'Take the tour' }).click());
   expect(await visible(panel(page))).toBe(true);
   expect(await panel(page).getByRole('heading', { name: 'The address holds the filters' }).count()).toBe(1);
-  expect(new URL(page.url()).hash).toContain('#/products?');
+  expect(new URL(page.url()).pathname).toBe('/products');
   expect(await rows(page).count()).toBeGreaterThan(0);
 
   await act(page, () => panel(page).locator('header button').click());
   expect(await panel(page).count()).toBe(0);
-  expect(new URL(page.url()).hash).toContain('#/products?');
+  expect(new URL(page.url()).pathname).toBe('/products');
 });
 
 test('the tour walks every step, does each one, and finishing it tidies the lab', async ({ page }) => {
@@ -62,7 +63,7 @@ test('the tour walks every step, does each one, and finishing it tidies the lab'
   await act(page, () => page.getByRole('button', { name: 'Take the tour' }).click());
   expect(await visible(panel(page))).toBe(true);
   // Address: the list is sorted by price.
-  expect(page.url()).toContain('sort=price');
+  expect(queryOf(page.url())['sort']).toBe('price');
 
   await act(page, () => forward(page).click());
   // Product: its dialog opens over the list.
@@ -70,7 +71,7 @@ test('the tour walks every step, does each one, and finishing it tidies the lab'
 
   await act(page, () => forward(page).click());
   // Slow: the address is on page 2.
-  expect(page.url()).toContain('page=2');
+  expect(queryOf(page.url())['page']).toBe(2);
 
   await act(page, () => forward(page).click());
   // Failing: the catalogue offers to try again.
