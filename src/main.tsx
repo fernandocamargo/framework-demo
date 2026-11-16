@@ -1,11 +1,12 @@
 // The app's shell: everything outside the framework's root folders. It decides which world the
-// app sees, stands in for a router, hands `Root` what the framework injects, and shows what the
+// app sees, hands `Root` what the framework injects, and shows what the
 // failure pipeline carries. The app itself starts at components/app.
 
-import { startTransition, StrictMode, use, useEffect, useMemo, useState, useTransition } from 'react';
+import { StrictMode, Suspense, use, useCallback, useEffect, useMemo } from 'react';
 import {
   Button,
   I18nProvider,
+  RouterProvider,
   Text,
   UNSTABLE_Toast as Toast,
   UNSTABLE_ToastContent as ToastContent,
@@ -13,25 +14,31 @@ import {
   UNSTABLE_ToastRegion as ToastRegion,
 } from 'react-aria-components';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter, Navigate, UNSAFE_NavigationContext as NavigationContext, useLocation } from 'react-router';
+import { useNavigation } from 'virtual:framework/address';
 
-import { bound, chartAt, createQueryClient, type Env, type Navigation, onFailure, Pinned, Root } from 'framework';
+import { bound, chartAt, createQueryClient, type Env, onFailure, Pending, Pinned, Root } from 'framework';
 
-import { go, parse } from './address';
+import { useCommitted } from '../framework/runtime/activity';
+import { setLocation } from '../framework/runtime/pipeline';
+import { codec, EditingProductContext, type Settings, settingsOf, STATES } from './address';
 import App from './components/app';
 import States from './components/states';
-import { currentLocale, type Locale, preloadLocale } from './locales';
+import { fromLegacy } from './legacy';
+import { currentLocale, preloadLocale } from './locales';
 import { featureFlags, permissions, whoIsSignedIn } from './reads';
-import { currentSkin, type Skin } from './skins';
+import { currentSkin } from './skins';
 import './base.css';
 import './broadsheet.css';
 import './blueprint.css';
 
-// `?world=memory` (or a build with VITE_WORLD=memory) swaps the API client for one that answers
-// from fixtures. Nothing else changes: the same services, flows and components run on it.
+// A bookmark from before the routes opens its new address (legacy.ts).
+const moved = fromLegacy(window.location);
+if (moved !== null) window.history.replaceState(window.history.state, '', moved);
+
+const initial = codec.read(window.location.pathname.slice(codec.base.length - 1), window.location.search);
 const world: Env['world'] =
-  new URLSearchParams(window.location.search).get('world') === 'memory' || import.meta.env['VITE_WORLD'] === 'memory'
-    ? 'memory'
-    : 'dummyjson';
+  initial.query['world'] === 'memory' || import.meta.env['VITE_WORLD'] === 'memory' ? 'memory' : 'dummyjson';
 // GrowthBook serves the real world's flags when its client key is in the build (.env.local).
 const env: Env = {
   apiUrl: 'https://dummyjson.com',
@@ -40,7 +47,6 @@ const env: Env = {
   world,
 };
 const entity = { id: world };
-const navigation: Navigation = { go };
 // One cache for the app's life, so a page's reads survive a dialog opening over it.
 const client = createQueryClient();
 
@@ -73,22 +79,8 @@ const failures = (
   </ToastRegion>
 );
 
-// The address changes inside a transition: a page whose read is keyed by the address keeps
-// showing until the new read arrives, instead of falling back to its placeholder.
-function useRoute() {
-  const [hash, setHash] = useState(() => window.location.hash);
-  const [navigating, startNavigation] = useTransition();
-  useEffect(() => {
-    const follow = () => startNavigation(() => setHash(window.location.hash));
-    window.addEventListener('hashchange', follow);
-    return () => window.removeEventListener('hashchange', follow);
-  }, []);
-  return [useMemo(() => parse(hash), [hash]), navigating, hash] as const;
-}
-
 // The states gallery: `#/states` lists every chart; `#/states/<path>/<state>` is one frame of it,
 // the component alone, held in that state.
-const STATES = '#/states';
 function pageOf(hash: string): null | { gallery: true } | { path: string; state: string } {
   if (hash !== STATES && !hash.startsWith(`${STATES}/`)) return null;
   const [path, state] = hash.slice(STATES.length + 1).split('/');
@@ -118,87 +110,134 @@ function Frame({ path, state }: { path: string; state: string }) {
   );
 }
 
-// The locale is part of the address too (`?lang=pt-BR`, src/locales.ts). A change shows in a
-// transition: the page keeps the old locale on screen until every component on it has its new
-// messages, then shows the new one at once. react-aria formats its own fields (a price field, a
-// percentage) in the same locale.
-function useLocale() {
-  const [locale, setLocale] = useState<Locale>(currentLocale);
-  useEffect(() => {
-    const follow = () => {
-      const next = currentLocale();
-      startTransition(async () => {
-        await preloadLocale(next);
+const messages = new Map<string, Promise<unknown>>();
 
-        if (currentLocale() === next) startTransition(() => setLocale(next));
-      });
-    };
+const messagesFor = (locale: string) => {
+  let loading = messages.get(locale);
 
-    window.addEventListener('localechange', follow);
-    window.addEventListener('popstate', follow);
+  if (!loading) messages.set(locale, (loading = preloadLocale(locale)));
 
-    return () => {
-      window.removeEventListener('localechange', follow);
-      window.removeEventListener('popstate', follow);
-    };
-  }, []);
-  useEffect(() => {
-    document.documentElement.lang = locale;
-  }, [locale]);
-  return locale;
+  return loading;
+};
+
+function useSettings({ lang, signin, skin, world }: Settings) {
+  return useMemo(() => ({ lang, signin, skin, world }), [lang, signin, skin, world]);
 }
 
-// The skin is part of the address too (`?skin=broadsheet`, src/skins.ts). A change shows in a
-// transition: the page keeps the old skin until every component on it has its new sheet.
-function useSkin() {
-  const [skin, setSkin] = useState<Skin>(currentSkin);
-  useEffect(() => {
-    const follow = () => startTransition(() => setSkin(currentSkin()));
-    window.addEventListener('skinchange', follow);
-    window.addEventListener('popstate', follow);
-    return () => {
-      window.removeEventListener('skinchange', follow);
-      window.removeEventListener('popstate', follow);
-    };
-  }, []);
-  return skin;
+/** The address changes the page and its diagnostic location, without rebuilding the providers. */
+function Content({ settings }: { settings: Settings }) {
+  const location = useLocation();
+  const shown = codec.read(location.pathname, location.search, location.hash);
+  const page = pageOf(shown.hash);
+  useCommitted(shown.href);
+  useEffect(() => setLocation(shown.href), [shown.href]);
+
+  return page === null ? (
+    <EditingProductContext value={shown.pattern === '/products/:id/edit' ? Number(shown.params['id']) : null}>
+      <App pattern={shown.pattern} settings={settings} />
+    </EditingProductContext>
+  ) : 'gallery' in page ? (
+    <States settings={settings} />
+  ) : (
+    <Frame key={`${page.path}/${page.state}`} path={page.path} state={page.state} />
+  );
 }
 
 function Shell() {
-  const [route, navigating, hash] = useRoute();
-  const locale = useLocale();
-  const skin = useSkin();
-  const page = pageOf(hash);
+  const location = useLocation();
+  const navigation = useNavigation(codec);
+  const shown = codec.read(location.pathname, location.search, location.hash);
+  // SAFETY: The generated schema supplies and validates every shell setting.
+  const settings = useSettings(settingsOf(shown.query as Settings));
+  const locale = currentLocale(shown.query['lang'] as string);
+  use(messagesFor(locale));
+  const skin = currentSkin(shown.query['skin'] as string);
+
+  const { navigator } = use(NavigationContext);
+
+  const follow = useCallback(
+    (href: string) => {
+      const url = new URL(href, window.location.href);
+
+      if (url.origin !== window.location.origin || !url.pathname.startsWith(codec.base))
+        return window.location.assign(href);
+      navigator.push(`${url.pathname}${url.search}${url.hash}`);
+    },
+    [navigator],
+  );
+
+  useEffect(() => {
+    const click = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+        return;
+      const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+
+      if (
+        !(anchor instanceof HTMLAnchorElement) ||
+        anchor.hasAttribute('download') ||
+        (anchor.target && anchor.target !== '_self')
+      )
+        return;
+      const url = new URL(anchor.href);
+
+      if (
+        url.origin !== window.location.origin ||
+        !url.pathname.startsWith(codec.base) ||
+        (url.hash && !url.hash.startsWith(STATES))
+      )
+        return;
+      event.preventDefault();
+      follow(url.href);
+    };
+
+    document.addEventListener('click', click);
+
+    return () => document.removeEventListener('click', click);
+  }, [follow]);
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+  const canonical = `/${shown.href.slice(codec.base.length)}`;
+
+  const content = useMemo(
+    () => (
+      <RouterProvider navigate={follow}>
+        <I18nProvider locale={locale}>
+          <Root
+            acl={permissions}
+            client={client}
+            entity={entity}
+            env={env}
+            flags={featureFlags}
+            locale={locale}
+            navigation={navigation}
+            skin={skin}
+            sync={`stockroom:${world}`}
+            user={whoIsSignedIn}
+          >
+            <Content settings={settings} />
+          </Root>
+          {failures}
+        </I18nProvider>
+      </RouterProvider>
+    ),
+    [follow, locale, navigation, settings, skin],
+  );
+
   return (
-    <I18nProvider locale={locale}>
-      <Root
-        acl={permissions}
-        client={client}
-        entity={entity}
-        env={env}
-        flags={featureFlags}
-        locale={locale}
-        navigation={navigation}
-        route={route}
-        skin={skin}
-        sync={`stockroom:${world}`}
-        user={whoIsSignedIn}
-      >
-        {page === null ? (
-          <App navigating={navigating} />
-        ) : 'gallery' in page ? (
-          <States />
-        ) : (
-          <Frame key={`${page.path}/${page.state}`} path={page.path} state={page.state} />
-        )}
-      </Root>
-      {failures}
-    </I18nProvider>
+    <>
+      {content}
+      {`${location.pathname}${location.search}${location.hash}` !== canonical && <Navigate replace to={canonical} />}
+    </>
   );
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Shell />
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <Suspense fallback={<Pending />}>
+        <Shell />
+      </Suspense>
+    </BrowserRouter>
   </StrictMode>,
 );

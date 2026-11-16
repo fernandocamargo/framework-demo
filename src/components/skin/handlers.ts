@@ -1,5 +1,9 @@
-import { type Skin, wear } from '@/skins';
+import { SKINS, wear } from '@/skins';
 
-export const wearSkin = () => (event: React.ChangeEvent<HTMLSelectElement>) =>
-  // SAFETY: The select's options are the supported SKINS.
-  wear(event.currentTarget.value as Skin);
+export const wearSkin =
+  ({ navigation }) =>
+  (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const skin = SKINS.find((value) => value === event.currentTarget.value);
+
+    if (skin) wear(navigation, skin);
+  };

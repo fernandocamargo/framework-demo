@@ -22,6 +22,38 @@ export const selector = (path: string) => `.${CSS.escape(path)}`;
 
 export type SkinModule = { default: string };
 
+const folders = new Map<string, Record<string, () => Promise<SkinModule>>>();
+const preparations = new Map<string, Promise<void>>();
+
+/** Loaded folder types declare their sheets before any instance needs them. */
+export function registerSkins(path: string, skins: Record<string, () => Promise<SkinModule>>) {
+  if (!Object.keys(skins).length) return;
+  folders.set(path, skins);
+
+  // A new folder waits for its own active sheet; Root need not suspend the page again.
+  for (const skin of preparations.keys()) if (skin !== active) preparations.delete(skin);
+}
+
+/** A presentation change loads its sheets before the commit, without notifying the component tree. */
+export function preloadSkin(skin: string): Promise<void> {
+  let work = preparations.get(skin);
+
+  if (!work) {
+    const loading: Promise<void>[] = [];
+
+    for (const [path, skins] of folders) {
+      const load = skins[skin];
+
+      if (load) loading.push(loadSkin(path, skin, load));
+    }
+
+    work = tracked(hold(Promise.all(loading).then(() => undefined)));
+    preparations.set(skin, work);
+  }
+
+  return work;
+}
+
 const loads = new Map<string, Promise<void>>();
 const sheets = new Map<string, HTMLStyleElement>();
 let active = 'default';

@@ -105,7 +105,7 @@ const countRenders: Plugin = {
       patched = patched.replace(anchor, `${before}${anchor}`);
     }
     // Every execution of the framework's own components, counted where each starts.
-    const OWN = /function (View|Waiting|Failed)\(props: Props\) \{/g;
+    const OWN = /function (View|Waiting|Failed)\([^)]*\) \{/g;
     if (!OWN.test(patched))
       throw new Error("perf: component.tsx no longer has the framework's components; update perf/vite.config.ts");
     return patched.replace(OWN, (start, fn) => `${start}\n    globalThis.__executed?.('${fn}', spec.path);`);

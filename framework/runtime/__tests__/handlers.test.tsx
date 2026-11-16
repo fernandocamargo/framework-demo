@@ -13,6 +13,7 @@ import { type DataEvent, type Failure, type Interaction, onData, onFailure, pipe
 import { Root } from '../root';
 import { interact } from '../track';
 import { wiredOperations } from './operations.cases';
+import { routed, useTestRoute } from './routed';
 
 // No app here: the plugin's modules of clients and services are empty.
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
@@ -66,11 +67,12 @@ function folder(
   const seen: Handlers[] = [];
   const Component = component({
     path,
-    // A folder with an async.ts here has a render that reads `async`.
     reads: {
       view: [...['route', 'acl', 'flags'].filter((name) => source.includes(name)), ...(layers.async ? ['async'] : [])],
     },
     skins: {},
+    // A folder with an async.ts here has a render that reads `async`.
+    useRoute: useTestRoute,
     view: () =>
       Promise.resolve({
         ...wiredOperations({ names: Object.keys(layers.async ?? {}), status: { save: ['pending', 'data'] } }),
@@ -357,7 +359,7 @@ export const submit = ({ form, record }) => () => record(form.values.title);`,
   expect(seen.length).toBe(1);
 });
 
-test('a handler that reads a field of the route follows that field, and no other', async () => {
+test('a handler that reads a field of the route is a new function for that field, and for no other', async () => {
   const recorded: unknown[] = [];
   const record = (value: unknown) => recorded.push(value);
   const { Component, seen } = folder(
@@ -365,16 +367,39 @@ test('a handler that reads a field of the route follows that field, and no other
     'export const keep = ({ record, route }) => () => record(route.page);',
   );
   const client = createQueryClient();
-  const page = (route: Props) =>
-    createElement(Root, { client, entity, route: route as never }, createElement(Component, { record }));
-  const { rerender } = await show(page({ page: 1, query: 'a' }));
-  await rerender(page({ page: 1, query: 'b' }));
-  expect(seen.length).toBe(1);
-  await rerender(page({ page: 2, query: 'b' }));
+
+  const page = routed({ page: 0, q: '' }, { page: 1, q: 'a' }, () =>
+    createElement(Root, { client, entity }, createElement(Component, { record })),
+  );
+  await show(page.element);
+  // Another field: the folder renders with the router's new location, and the handler is the same function.
+  await page.go({ page: 1, q: 'b' });
+  expect(seen.at(-1)!.keep).toBe(seen[0]!.keep);
+  await page.go({ page: 2, q: 'b' });
   expect(seen.at(-1)!.keep).not.toBe(seen[0]!.keep);
   seen[0]!.keep!();
   seen.at(-1)!.keep!();
   expect(recorded).toEqual([1, 2]);
+});
+
+test('a handler that passes the whole route to another function receives the current address', async () => {
+  const recorded: number[] = [];
+  const record = ({ page }: { page: number }) => recorded.push(page);
+  const { Component, seen } = folder(
+    'components/handler-address',
+    'export const keep = ({ record, route }) => () => record(route);',
+  );
+
+  const client = createQueryClient();
+
+  const page = routed({ page: 0 }, { page: 1 }, () =>
+    createElement(Root, { client, entity }, createElement(Component, { record })),
+  );
+
+  await show(page.element);
+  await page.go({ page: 2 });
+  seen.at(-1)!.keep!();
+  expect(recorded).toEqual([2]);
 });
 
 test('a handler emits its interaction, and its failure is reported in the handler layer with its export as the site', async () => {
@@ -383,6 +408,7 @@ test('a handler emits its interaction, and its failure is reported in the handle
   const stop = onFailure((failure) => failures.push(failure));
   const listen = (event: Event) => interactions.push((event as CustomEvent<Interaction>).detail);
   pipeline.addEventListener('interaction', listen);
+
   const { Component, seen } = folder(
     'components/handler-failing',
     "export const fail = () => () => { throw new Error('failed'); };",

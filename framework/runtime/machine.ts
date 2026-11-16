@@ -39,6 +39,7 @@ import {
   type SnapshotFrom,
 } from 'xstate';
 
+import { addressedActor, type ChartRoute } from './chart-address';
 import { shareByIdentity } from './data';
 import { type Pin, PinContext } from './pin';
 import { report } from './pipeline';
@@ -64,6 +65,7 @@ export function buildMachine(path: string, module: StateModule, injection: Sourc
   const actions: Record<string, unknown> = {};
   const names = new Map<unknown, string>();
   const flags: { key: string; path: string }[] = [];
+  const routes: ChartRoute[] = [];
   let count = 0;
   const withSources = (args: Record<string, unknown>) => ({ ...sources.current, ...args });
 
@@ -121,6 +123,8 @@ export function buildMachine(path: string, module: StateModule, injection: Sourc
   };
   const node = (config: Config, at: string[]): Config => {
     const out: Config = { ...config };
+    const segment = isPlainObject(config['meta']) ? config['meta']['route'] : undefined;
+    if (typeof segment === 'string') routes.push({ route: segment, state: at.join('.') });
     for (const key of ['entry', 'exit']) if (out[key] !== undefined) out[key] = action(out[key]);
     if (out['always'] !== undefined) out['always'] = transition(out['always']);
     if (out['invoke'] !== undefined) out['invoke'] = invoke(out['invoke']);
@@ -167,7 +171,7 @@ export function buildMachine(path: string, module: StateModule, injection: Sourc
     config as any,
   );
   /* eslint-enable @typescript-eslint/no-explicit-any */
-  return { flags: flagNames, machine: machine as AnyStateMachine };
+  return { flags: flagNames, machine: machine as AnyStateMachine, routes };
 }
 
 /** A chart, declared from the injection and what its declaration read of the sources. */
@@ -177,6 +181,7 @@ type Declared = {
   machine: AnyStateMachine;
   module: StateModule;
   read: Map<string, Set<string>>;
+  routes: ChartRoute[];
   sources: Sources;
 };
 
@@ -198,6 +203,7 @@ function declare(
     },
     has: (target, key) => Reflect.has(target, key) || (typeof key === 'string' && Object.hasOwn(sources, key)),
   });
+
   return { ...buildMachine(path, module, given, live), injection, module, read, sources };
 }
 
@@ -305,14 +311,22 @@ function pinnedActor(machine: AnyStateMachine, pin: Pin) {
 }
 
 /** The running chart: the declared one, once the flow is at rest; the last one until then. A pinned one is never started. */
-function useChart(declared: Declared, pin: null | Pin, creating: <T>(create: () => T) => T) {
+function useChart(
+  declared: Declared,
+  pin: null | Pin,
+  creating: <T>(create: () => T) => T,
+  /** The pattern of the route being rendered, for a chart under a route: it starts in the state that names it. */
+  rendered: () => string | undefined,
+) {
   // Created in the render itself, not in useState's initializer: creating it runs the chart's first
   // reads, and the route being rendered is read from contexts, which a hook's callback may not read.
   // The ref is written once, in the instance's first render: if React throws that render away, the
   // instance goes with it, and the actor, never started, with both.
   const first = useRef<null | { actor: AnyActorRef; declared: Declared }>(null);
   first.current ??= {
-    actor: creating(() => (pin ? pinnedActor(declared.machine, pin) : (createActor(declared.machine) as AnyActorRef))),
+    actor: creating(() =>
+      pin ? pinnedActor(declared.machine, pin) : addressedActor(declared.machine, declared.routes, rendered()),
+    ),
     declared,
   };
   const [current, setCurrent] = useState(first.current);
@@ -330,8 +344,10 @@ function useChart(declared: Declared, pin: null | Pin, creating: <T>(create: () 
   useEffect(() => {
     if (pin) return;
     actor.start();
-    return () => stopRestartably(actor);
-  }, [actor, pin]);
+    return () => {
+      stopRestartably(actor);
+    };
+  }, [actor, pin, running.declared]);
   return running;
 }
 
@@ -346,19 +362,10 @@ export function useStateLayer(
   injection: Sources,
   declared: Sources,
   sources: Sources,
-  rendering?: () => unknown,
   told: Sources = {},
   /** Whether the component is rendering now (component.tsx): what the chart reads then is that render's. */
   active: { current: boolean } = ALWAYS,
 ) {
-  // The sources read the committed route. A chart is created in its component's first render,
-  // and reads the route at once: for its context, and for the input of the service its first
-  // state runs. A component mounted by a change of route is rendered before that route is
-  // committed, so until its first commit the chart reads the route being rendered. Only until
-  // then: `rendering` reads the route's contexts, and a component follows the fields its last
-  // render read. It reads them field by field, so the first change of another field after the
-  // commit does not render it again either.
-  //
   // What a guard or a change reads depends on when it runs. While the component's files run in its
   // render (the chart being created or declared, `state.can` asked by the render: `active` is up),
   // it reads this render's sources.
@@ -372,7 +379,7 @@ export function useStateLayer(
     },
     rendered: sources,
   }))[0];
-  live.rendered = committed.current || rendering === undefined ? sources : { ...sources, route: rendering() };
+  live.rendered = sources;
   useLayoutEffect(() => {
     committed.current = true;
     live.committed = sources;
@@ -387,7 +394,14 @@ export function useStateLayer(
   const reading = <T>(work: () => T) => during(active, work);
   if (!chart.current || stale(chart.current, module, injection, declared))
     chart.current = reading(() => declare(path, module, injection, declared, live));
-  const running = useChart(chart.current, pin, reading);
+
+  const running = useChart(
+    chart.current,
+    pin,
+    reading,
+    // SAFETY: A component supplies route from its generated codec.
+    () => (live.current['route'] as undefined | { pattern?: string })?.pattern,
+  );
   const { actor } = running;
   const { flags } = running.declared;
   // The last snapshot that shows something else than the one before it (sameShown).

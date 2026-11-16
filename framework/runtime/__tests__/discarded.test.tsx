@@ -1,9 +1,11 @@
 import { act, render } from '@testing-library/react';
 import { createElement, startTransition, Suspense, use, useState } from 'react';
+import { useLocation } from 'react-router';
 
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { Root } from '../root';
+import { routed, useTestRoute } from './routed';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
@@ -22,6 +24,7 @@ test('a render React throws away leaves the decision the guards read as the page
     path: 'components/gate',
     reads: { acl: ['locked'], state: ['acl'], view: ['acl'] },
     skins: {},
+    useRoute: useTestRoute,
     view: () =>
       Promise.resolve({
         // Its own rule, from a prop: decided in each render.
@@ -95,6 +98,7 @@ test('a render React throws away is not what the next render is compared with: w
     path: 'components/paged',
     reads: { view: ['route'] },
     skins: {},
+    useRoute: useTestRoute,
     view: () =>
       Promise.resolve({
         async: undefined,
@@ -120,6 +124,7 @@ test('a render React throws away is not what the next render is compared with: w
     path: 'components/keys',
     reads: { view: ['keyboard'] },
     skins: {},
+    useRoute: useTestRoute,
     view: () =>
       Promise.resolve({
         async: undefined,
@@ -138,27 +143,24 @@ test('a render React throws away is not what the next render is compared with: w
       }) as never,
   });
   const never = new Promise<never>(() => undefined);
-  const Slow = ({ wait }: { wait: boolean }) => (wait ? use(never) : null);
-  let turn: (page: number) => void = () => undefined;
+  // Page 2 has a sibling that never arrives: React renders it and commits nothing.
+
+  const Slow = () =>
+    JSON.parse(new URLSearchParams(useLocation().search).get('query') ?? '{}').page === 2 ? use(never) : null;
   const client = createQueryClient();
-  const Page = () => {
-    const [page, setPage] = useState(1);
-    turn = setPage;
-    return createElement(
+
+  const page = routed({ page: 0 }, { page: 1 }, () =>
+    createElement(
       Root,
-      { client, entity, route: { page } as never },
-      createElement(
-        Suspense,
-        { fallback: null },
-        createElement(Paged),
-        createElement(Slow, { wait: page === 2 }),
-        createElement(Keys),
-      ),
-    );
-  };
+      { client, entity },
+      createElement(Suspense, { fallback: null }, createElement(Paged), createElement(Slow), createElement(Keys)),
+    ),
+  );
+  // The router changes its location in a transition of its own.
+  const turn = (to: number) => page.go({ page: to });
   let shown: ReturnType<typeof render> | undefined;
   await act(async () => {
-    shown = render(createElement(Page));
+    shown = render(page.element);
   });
   await settle();
   // The page, then the keys on screen: the one key, labelled by the page.
@@ -167,14 +169,14 @@ test('a render React throws away is not what the next render is compared with: w
   const markedOnce = marked;
 
   // React renders page 2, waits for the sibling, and commits nothing.
-  await act(async () => startTransition(() => turn(2)));
+  await turn(2);
   await settle();
   expect(shown!.container.textContent).toBe('odd page 1page 1');
   expect(calls.slice(mounted)).toEqual([2]);
   expect(marked).toBe(markedOnce + 1);
   // The person moves on to page 3. Its render is compared with page 1, which the page shows, not
   // with page 2, which it never showed: the marker is the element React showed, and is skipped.
-  await act(async () => startTransition(() => turn(3)));
+  await turn(3);
   await settle();
   expect(shown!.container.textContent).toBe('odd page 3page 3');
   expect(calls.slice(mounted)).toEqual([2, 3]);

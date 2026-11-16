@@ -13,6 +13,8 @@ import {
 } from 'react-aria-components';
 import { createPortal } from 'react-dom';
 
+import { EditingProductContext } from '@/address';
+
 import Flags from './components/flags';
 import Network from './components/network';
 import SellOut from './components/sell-out';
@@ -147,7 +149,7 @@ export default ({
               <Button onPress={handlers.breakRefresh}>{i18n.actions.revoke}</Button>
             </li>
             <li>
-              <SellOut />
+              <EditingProductContext.Consumer>{(id) => <SellOut id={id} />}</EditingProductContext.Consumer>
             </li>
             <li>
               <Button onPress={handlers.forgetChanges}>{i18n.actions.forget}</Button>

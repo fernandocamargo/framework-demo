@@ -1,0 +1,12 @@
+{
+  "components/app/routes/orders/routes/:id/components/detail/close": "Fechar",
+  "components/app/routes/orders/routes/:id/components/detail/hidden": "A rua e o CEP são para administradores.",
+  "components/app/routes/orders/routes/:id/components/detail/items": "Itens",
+  "components/app/routes/orders/routes/:id/components/detail/loading": "Lendo o pedido",
+  "components/app/routes/orders/routes/:id/components/detail/quantity": "{quantity, number} ×",
+  "components/app/routes/orders/routes/:id/components/detail/title": "Pedido {number}",
+  "components/app/routes/orders/routes/:id/components/detail/total": "Total",
+  "components/app/routes/orders/routes/:id/components/detail/failed/title": "Não foi possível ler o pedido",
+  "components/app/routes/orders/routes/:id/components/detail/failed/close": "Fechar",
+  "components/app/routes/orders/routes/:id/components/detail/failed/retry": "Tentar de novo"
+}

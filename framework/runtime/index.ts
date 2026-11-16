@@ -16,6 +16,18 @@ export interface Entity {}
 /** The current route's parameters (a stand-in for a routing layer). */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Route {}
+/**
+ * Each pattern's route, when the app has a routes realm: the plugin declares them
+ * (`.framework-types/<root>/routes.d.ts`), each with its pattern and the parameters that pattern names.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface Routed {}
+/**
+ * The route as a file reads it. With a routes realm it is one of the patterns' routes, told apart
+ * by `pattern`: `route.pattern === '/products/:id' && route.params.id` is a number, and under a
+ * pattern that names no parameter there is none.
+ */
+export type RouteRead = [keyof Routed] extends [never] ? Route : Routed[keyof Routed];
 /** The feature flags. */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Flags {}
@@ -34,7 +46,9 @@ export type Allowed = Acl & { readonly allowed: boolean };
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Navigation {}
 
-export { whenIdle } from './activity';
+export { Pending, whenIdle } from './activity';
+export { createCodec } from './address';
+export type { AddressCodec, AddressSnapshot, Field, ParametersOf, TypedNavigation, Values } from './address';
 export { bound } from './boundaries';
 export { component, type Spec } from './component';
 export { createQueryClient, update } from './data';
@@ -57,6 +71,7 @@ export {
 } from './pipeline';
 export { Root, type RootProps } from './root';
 export type { Keyboard } from './shortcuts';
+
 export { css, selector } from './style';
 export { interact, keep, track } from './track';
 export type {

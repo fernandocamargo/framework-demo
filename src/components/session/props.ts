@@ -7,6 +7,7 @@ import { DEMOS } from './form';
 export type Props = {
   /** Whether the page asks for the sign-in dialog: the address did, or a change that needs a session. */
   asked: boolean;
+  productOpen?: boolean;
   /** Why it asks, when a change needs a session. */
   reason: null | string;
 };

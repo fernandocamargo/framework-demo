@@ -2,7 +2,7 @@ import { features, read } from './read';
 
 const item = (code: string, name: string, count: number, place?: [number, number], current = false) => `
   <li itemscope itemtype="https://schema.org/Observation">
-    <a href="#/orders?region=${code}"${current ? ' aria-current="true"' : ''}>
+    <a href="/orders?${new URLSearchParams({ query: JSON.stringify({ region: code, v: 1 }) })}"${current ? ' aria-current="true"' : ''}>
       <span itemprop="observationAbout" itemscope itemtype="https://schema.org/State">
         <abbr itemprop="alternateName" title="${name}">${code}</abbr>
         <meta content="${name}" itemprop="name" />

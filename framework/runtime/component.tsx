@@ -48,14 +48,15 @@ import { shareElements } from './elements';
 import { type FormModule, useFormLayer } from './form';
 import { HOT } from './hot';
 import { forgetMessages, intlFor, loadMessages, LocaleContext, SOURCE_LOCALE } from './i18n';
-import type { Allowed, Flags, Route } from './index';
+import type { Allowed, Flags } from './index';
+import type { Navigation, Route } from './index';
 import { type StateModule, useStateLayer } from './machine';
 import { PinContext } from './pin';
 import { report, type Scope, toError } from './pipeline';
 import { during, sameParts, tracking, untracked } from './reads';
-import { fieldContext, followRoute, renderingRoute, RouteContext, type RouteView, useFramework } from './root';
+import { useFramework } from './root';
 import { type Entry, type ShortcutSites, shortcutsOf, useKeyboard, useShortcuts } from './shortcuts';
-import { activeSkin, loadSkin, replaceSkin, type SkinModule } from './style';
+import { activeSkin, loadSkin, registerSkins, replaceSkin, type SkinModule } from './style';
 import { tracked } from './thenable';
 import { commitHandlers, withScope } from './track';
 
@@ -66,7 +67,7 @@ type ViewModule = {
   acl?: undefined | { default?: unknown };
   async: AsyncModule | undefined;
   /** The components the render shows, from the plugin: their loads start when this view has loaded. */
-  children?: readonly { preload?: (locale?: string, visited?: Set<string>) => void }[];
+  children?: readonly { around?: Around; preload?: (locale?: string, visited?: Set<string>) => Promise<void> }[];
   form: FormModule | undefined;
   /**
    * `handlers.ts`, as the plugin wrote it into a hook: one `useCallback` per export, each given
@@ -111,9 +112,13 @@ export type Spec = {
     state?: readonly string[];
     view?: readonly string[];
   };
+  routes?: ReactNode;
   skins: Record<string, () => Promise<SkinModule>>;
   /** Each translation of the messages, `i18n/<locale>.json`, loaded on demand. */
   translations?: Record<string, () => Promise<{ default: Record<string, string> }>>;
+  useNavigation?: () => Navigation;
+  /** The router hook generated only for a direct child of routes/. */
+  useRoute?: () => Route;
   view: () => Promise<ViewModule>;
 };
 
@@ -178,6 +183,7 @@ const defined = (values: object) =>
 
 const sameEach = (a: readonly unknown[], b: readonly unknown[]) =>
   a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
+const NO_ROUTE: Record<string, unknown> = {};
 const sameRoute = (a: Record<string, unknown>, b: Record<string, unknown>) => {
   const keys = Object.keys(b);
   return Object.keys(a).length === keys.length && keys.every((key) => key in a && Object.is(a[key], b[key]));
@@ -206,18 +212,6 @@ const NO_OPERATIONS = Object.freeze({ commands: NO_LAYER, status: NO_LAYER });
 const useNoOperations = () => NO_OPERATIONS;
 /** The person signed in, from Root's `user` read: `null` when nobody is, or Root has no such read. */
 const useUserRead = (): unknown => useSuspenseQuery(useFramework().user ?? NO_READ).data;
-/**
- * The route a view's files read, followed field by field (root.tsx). Each render starts from the
- * view React committed last: one a thrown-away render made is not kept.
- */
-function useFollowedRoute(fields: ReadonlySet<string>, rendering: { readonly current: boolean }, committed: Route) {
-  const shown = useRef<null | RouteView>(null);
-  const view = followRoute(shown.current, fields, rendering, committed);
-  useLayoutEffect(() => {
-    shown.current = view;
-  });
-  return view.route;
-}
 /** The answer of the component's default read. */
 const useAnswerOf = (query: null | Read): unknown => useSuspenseQuery(query ?? NO_READ).data;
 type Followed = { decided: boolean | undefined; flags: Seen | undefined; parts: Seen | undefined };
@@ -228,6 +222,8 @@ const useFollowedReads = (
 ): Followed | undefined => useSuspenseQueries({ combine, queries });
 
 export function component(spec: Spec) {
+  registerSkins(spec.path, spec.skins);
+
   // Under the dev server, a folder's module runs again when its `i18n.ts`, its placeholder or its
   // error file is edited: its messages are then built from the file as it is now.
   if (HOT && spec.i18n) forgetMessages(spec.path);
@@ -269,7 +265,10 @@ export function component(spec: Spec) {
   const useUser = readsUser ? useUserRead : useNothing;
   const useFollowed = readsAcl || readsFlags ? useFollowedReads : useNothing;
   const useKeys = readsKeyboard ? useKeyboard : useNothing;
-  const useRouteView = viewReadsRoute ? useFollowedRoute : useNothing;
+  // Only the router adapter subscribes to the address; the view follows the fields its layers read.
+  const useRouteView = anywhere('route') ? (spec.useRoute ?? useNothing) : useNothing;
+  const useNavigation = spec.useNavigation ?? useNothing;
+  const routeKeys = new Set<string>(inState.has('route') ? ['*'] : []);
   // And one chosen when the view has loaded: whether it has a default read. A view with none has
   // no query: a stand-in would cost every such component a subscription.
   let useAnswer: (query: null | Read) => unknown = useNothing;
@@ -287,10 +286,15 @@ export function component(spec: Spec) {
   const taken = (module: ViewModule) => {
     useAnswer = typeof module.async?.default === 'function' ? useAnswerOf : useNothing;
     useHandlers = module.handlers?.useHandlers ?? useNothing;
+
+    if (
+      module.handlers?.route === 'whole' ||
+      (inAsync.has('route') && Object.keys(module.async ?? NO_LAYER).some((name) => name !== 'default'))
+    )
+      routeKeys.add('*');
     useForm = module.form ? useFormLayer : useNoForm;
     useAsync = module.useOperations ?? useNoOperations;
     useChart = module.state ? useChartLayer : useNoChart;
-    for (const child of module.children ?? []) child.preload?.();
     // Other hooks than the view called before (an edit under the dev server): its instances are mounted again.
     const now = `${module.state ? 'chart' : 'none'} ${useAnswer === useAnswerOf ? 'read' : 'none'} ${module.form ? 'form' : 'none'} ${module.operationSignature ?? ''} ${module.handlers?.shape ?? ''}`;
     if (hooks !== undefined && hooks !== now) edits.hooks += 1;
@@ -298,10 +302,30 @@ export function component(spec: Spec) {
     return module;
   };
   let view: Promise<ViewModule> | undefined;
+
   // Once the view has loaded, the components it shows start loading theirs, so a child does not
   // wait to render before its own view starts, and React does not render its parent again when
   // that view arrives.
-  const loadView = () => (view ??= tracked(hold(spec.view().then(taken))));
+  const loadView = (visited = new Set([spec.path])) =>
+    (view ??= tracked(
+      hold(
+        spec
+          .view()
+          .then(taken)
+          .then(async (module) => {
+            // A child without a placeholder would discard its parent's first render while its files load.
+            await Promise.all(
+              (module.children ?? []).map((child) => {
+                const loading = child.preload?.(undefined, visited);
+
+                return child.around?.Waiting ? undefined : loading;
+              }),
+            );
+
+            return module;
+          }),
+      ),
+    ));
   // Under the dev server, an edit to one of the view's files (the render, props.ts, the chart…)
   // sends the view again (the plugin's module for the folder accepts it). Every instance on screen
   // then renders with the new files and keeps what it holds: what was typed in its fields, its
@@ -310,6 +334,7 @@ export function component(spec: Spec) {
   // calls: those instances are mounted again. Production builds have none of this.
   const useEdited = HOT ? useBound : useNothing;
   const replace = (module: ViewModule) => {
+    for (const child of module.children ?? []) child.preload?.();
     view = Object.assign(Promise.resolve(taken(module)), { status: 'fulfilled' as const, value: module });
     edits.version += 1;
     for (const listener of edits.listeners) listener();
@@ -318,25 +343,26 @@ export function component(spec: Spec) {
   const restyle = (skin: string, module: SkinModule) => replaceSkin(spec.path, skin, module.default);
 
   /** Starts loading the view, the page's skin and the messages, ahead of the first render. */
-  const preload = (locale?: string, visited = new Set<string>()) => {
-    if (visited.has(spec.path)) return;
+  const preload = (locale?: string, visited = new Set<string>()): Promise<void> => {
+    if (visited.has(spec.path)) return Promise.resolve();
     visited.add(spec.path);
-
-    const loading = loadView();
+    const view = loadView(locale ? new Set([spec.path]) : visited);
+    const loading: Promise<unknown>[] = [view];
 
     // A closed dialog's descendants need their messages before the dialog first renders.
     if (locale)
-      void loading.then(
-        (module) => {
-          for (const child of module.children ?? []) child.preload?.(locale, visited);
-        },
-        // The component reads the same rejected promise when shown, through its error boundary.
-        () => undefined,
+      loading.push(
+        view.then((module) => Promise.all((module.children ?? []).map((child) => child.preload?.(locale, visited)))),
       );
-    if (spec.i18n && locale) void loadMessages(spec, locale);
+
+    if (spec.i18n && locale) loading.push(loadMessages(spec, locale));
     const skin = activeSkin();
     const loadThisSkin = spec.skins[skin];
-    if (loadThisSkin) void loadSkin(spec.path, skin, loadThisSkin);
+
+    if (loadThisSkin) loading.push(loadSkin(spec.path, skin, loadThisSkin));
+
+    // A failed import still throws in the child, where its own error boundary can catch it.
+    return Promise.allSettled(loading).then(() => undefined);
   };
 
   /**
@@ -357,8 +383,8 @@ export function component(spec: Spec) {
   }
 
   /** Every layer of the view but the state layer, called in the same order on every render. */
-  function useLayers(props: Props, module: ViewModule) {
-    const { acl: aclRead, data, fields, flags: flagsRead, injection, skin, sources } = useFramework();
+  function useLayers(props: Props, module: ViewModule, route?: Route) {
+    const { acl: aclRead, data, flags: flagsRead, injection, sources } = useFramework();
     const language = useLanguage();
     // The person signed in, from Root's `user` read: a sign-in or a sign-out makes it stale, and
     // only the components that read it render again.
@@ -430,8 +456,7 @@ export function component(spec: Spec) {
     // Whether this instance is rendering now: what its files and its chart read during the render
     // is this render's (the route being rendered, the decision); what runs after it, the committed.
     const rendering = useRef(false);
-    // The route its files read, followed field by field (root.tsx).
-    const route = useRouteView(fields, rendering, sources.route);
+    const navigation = useNavigation() ?? sources.navigation;
     const keyboard = useKeys();
     // The decision, twice. `judged` is this render's, for what runs inside the render: the chart's
     // declaration, and its first reads when it is created. `decided` is the one React committed,
@@ -440,6 +465,8 @@ export function component(spec: Spec) {
     // guard reads the decision the page shows.
     const judged = useRef<boolean>(inherited);
     const decided = useRef<boolean>(inherited);
+
+    const skin = activeSkin();
     const loadThisSkin = spec.skins[skin];
     if (loadThisSkin) use(loadSkin(spec.path, skin, loadThisSkin));
 
@@ -447,7 +474,14 @@ export function component(spec: Spec) {
     const scope = useMemo(() => ({ parent, path: spec.path }), [parent]);
     const { locale } = language;
     const injected = useMemo(() => {
-      const all: Record<string, unknown> = { ...injection, ...sources, ...defined(language), ...defined({ user }) };
+      const all: Props = {
+        ...props,
+        ...injection,
+        ...sources,
+        ...defined(language),
+        ...defined({ route, user }),
+        navigation,
+      };
       // Getters: the chart's guards and the operations spread these when they run, and get the
       // snapshot, the decision and the flags of that moment.
       if (readsAcl)
@@ -457,32 +491,32 @@ export function component(spec: Spec) {
         });
       if (readsFlags) Object.defineProperty(all, 'flags', { enumerable: true, get: () => flagsView(latestFlags()) });
       return all;
-    }, [injection, sources, language, user, view, latest, flagsView, latestFlags]);
+    }, [props, injection, sources, language, user, route, navigation, view, latest, flagsView, latestFlags]);
 
     // The default export of async.ts, as a query: it records the services and route parameters
     // it reads, so the data layer knows when to run it again. It gets the query's signal, which
     // aborts when nothing shows the read any more, as the named exports get theirs on unmount.
-    // Until the read has run once, the component reads the whole route. After that it reads only
-    // the fields that first run read, each from its own context (root.tsx), so a change of another
-    // field (a dialog opening over the list) does not render it again. `use` may read a context
-    // behind a condition: whether the view has a default read is fixed once it has loaded, and
-    // the fields it reads, once it has run.
+    // The read's key holds the route fields its first run read, so a change of another field (a
+    // dialog opening over the list) renders the component and finds the same query.
     const exported = module.async?.default;
     const learned = typeof exported === 'function' ? data.fieldsOf(spec.path) : undefined;
     const routeShown = useRef<null | Record<string, unknown>>(null);
+    const rendered: Props | undefined = untracked(() => (route ? { ...route } : undefined));
     const readRoute = ((): null | Record<string, unknown> => {
       if (typeof exported !== 'function') return null;
-      if (!learned) return use(RouteContext) as unknown as Record<string, unknown>;
-      const values: Record<string, unknown> = {};
-      for (const key of learned)
-        values[key] = fields.has(key)
-          ? use(fieldContext(key))
-          : (use(RouteContext) as unknown as Record<string, unknown>)[key];
+      // A read that reads no route has none in its key.
+      const whole = rendered ?? NO_ROUTE;
+      const values = learned ? Object.fromEntries([...learned].map((key) => [key, whole[key]])) : whole;
       // The same fields with the same values as React committed last are the same object, so the
       // query below stays the same.
       const last = routeShown.current;
       return last && sameRoute(last, values) ? last : values;
     })();
+
+    const keyedProps = useMemo(
+      () => Object.fromEntries(Object.entries(props).filter(([key]) => inAsync.has(key) || inAsync.has('*'))),
+      [props],
+    );
     const userId = (user as null | undefined | { id?: unknown })?.id ?? null;
     const query = useMemo(
       () =>
@@ -498,24 +532,28 @@ export function component(spec: Spec) {
                     ...injected,
                     // A field the first run did not read is outside the query's key: a later run gets it as committed.
                     route: recordingRoute(
-                      learned ? { ...(sources.route as unknown as Record<string, unknown>), ...readRoute } : readRoute,
-                      record.route,
+                      untracked(() => (learned ? { ...route, ...readRoute } : readRoute)),
+                      (key, value) => {
+                        routeKeys.add(key);
+                        record.route(key, value);
+                      },
                     ),
                     services: recording(injection.services, record.service, record.peek),
                     signal,
                   },
                   [],
                 ),
-              keyedByLocale || keyedByUser || keyedByAcl || keyedByFlags
+              Object.keys(keyedProps).length || keyedByLocale || keyedByUser || keyedByAcl || keyedByFlags
                 ? defined({
                     acl: keyedByAcl ? snapshot : undefined,
                     flags: keyedByFlags ? flagged : undefined,
                     locale: keyedByLocale ? locale : undefined,
+                    props: keyedProps,
                     user: keyedByUser ? userId : undefined,
                   })
                 : undefined,
             ),
-      [data, exported, injection, injected, readRoute, learned, sources, locale, userId, snapshot, flagged],
+      [data, exported, injection, injected, readRoute, learned, route, locale, userId, snapshot, flagged, keyedProps],
     );
     // A view with no default read has no query, and `useAnswer` is then no hook at all: which of
     // the two it is was chosen when the view loaded.
@@ -558,25 +596,31 @@ export function component(spec: Spec) {
         decided: followed?.decided,
         flagged,
         flags,
-        given: defined({ flags, keyboard, route, user }),
+        given: defined({
+          flags,
+          keyboard,
+          navigation: spec.useNavigation ? navigation : undefined,
+          route: viewReadsRoute ? route : undefined,
+          user,
+        }),
         inherited,
         snapshot,
         user,
         view,
       }),
-      [user, flags, flagged, route, keyboard, inherited, followed, snapshot, view],
+      [user, flags, flagged, route, navigation, keyboard, inherited, followed, snapshot, view],
     );
     return {
       access,
       async,
       decided,
-      fields,
       form,
       injection,
       judged,
       language,
       module,
       rendering,
+      route,
       scope,
       sources,
       status,
@@ -599,6 +643,7 @@ export function component(spec: Spec) {
     const { access, async, form, language, module, status } = layers;
     return {
       ...props,
+      ...(spec.routes ? { routes: spec.routes } : {}),
       className,
       ...(async ? { async, status } : {}),
       ...(state ? { state } : {}),
@@ -672,7 +717,7 @@ export function component(spec: Spec) {
     // this render's: React keeps them with the render it commits, and drops them with one it
     // throws away. A handler gets what props.ts gets, and handles to what lives outside React: the
     // form's store (read when the handler runs), the navigation, the services and the entity. The
-    // route is the one being rendered: the fields the handlers read, each from its own context, so
+    // route is the one being rendered: the fields the handlers read become dependencies, so
     // the component follows those; or all of it, for a handler that takes it whole.
     const wiring = module.handlers;
     const first = wiring ? during(rendering, () => worked(props, layers, state, decided)) : undefined;
@@ -681,11 +726,9 @@ export function component(spec: Spec) {
         ? {
             ...first.shaping,
             ...(module.form ? { form: layers.withForm.form } : {}),
-            ...(wiring.route
-              ? { route: wiring.route === 'whole' ? use(RouteContext) : renderingRoute(layers.fields) }
-              : {}),
+            ...(wiring.route ? { route: layers.route } : {}),
             entity: layers.sources.entity,
-            navigation: layers.sources.navigation,
+            navigation: layers.withForm.navigation,
             services: layers.injection.services,
           }
         : props,
@@ -794,14 +837,12 @@ export function component(spec: Spec) {
       user: access.user,
       ...language,
     });
-    // The route being rendered, for the chart's first reads (machine.ts), read only until the
-    // component's first commit, and field by field: the commit follows only the fields the chart
-    // read, and after it a change of route does not render the component again.
     // The sources state.ts reads, each told to the chart by an event of its name when it changes.
     const told = defined({
       acl: inState.has('acl') ? access.snapshot : undefined,
       flags: inState.has('flags') ? access.flagged : undefined,
       locale: inState.has('locale') ? language.locale : undefined,
+      route: inState.has('route') ? layers.route : undefined,
       user: inState.has('user') ? access.user : undefined,
     });
     const state: unknown = useStateLayer(
@@ -810,7 +851,6 @@ export function component(spec: Spec) {
       layers.injection,
       declared,
       layers.withForm,
-      () => renderingRoute(layers.fields),
       told,
       layers.rendering,
     );
@@ -821,15 +861,35 @@ export function component(spec: Spec) {
    * The folder's one component: it waits for the view, calls every hook, and calls the render.
    * Its boundaries are composed around its element by whoever renders it (boundaries.ts).
    */
-  function View(props: Props) {
+  function View(given: Props & { address?: Route }) {
+    const props = useMemo(() => {
+      const { address: _, ...props } = given;
+
+      return props;
+    }, [given]);
+
+    // Props can be inspected outside the folder; only its files record which address fields they read.
+    const address = useMemo(() => tracking(given.address, routeKeys), [given.address]);
+
     useEdited(edits, spec.path);
     const module = use(loadView());
-    const locale = module.children?.length ? use(LocaleContext) : SOURCE_LOCALE;
-
-    for (const child of module.children ?? []) child.preload?.(locale);
-    const layers = useLayers(props, module);
+    const layers = useLayers(props, module, address);
     const { early, state } = useChart(props, layers);
-    return useShow(props, layers, state, early);
+    const element = useShow(props, layers, state, early);
+
+    return useMemo(
+      () =>
+        module.children?.length
+          ? createElement(LocaleContext.Consumer, {
+              children: (locale) => {
+                for (const child of module.children ?? []) child.preload?.(locale);
+
+                return element;
+              },
+            })
+          : element,
+      [element, module.children],
+    );
   }
   View.displayName = spec.path;
 
@@ -870,7 +930,8 @@ export function component(spec: Spec) {
       reset();
       resetBoundary();
     }, [reset, resetBoundary]);
-    const route = use(RouteContext);
+
+    const route = useRouteView();
     const [failedAt] = useState(route);
     useLayoutEffect(() => {
       if (route !== failedAt) again();
@@ -892,6 +953,7 @@ export function component(spec: Spec) {
   /** What whoever renders the folder composes around its element (boundaries.ts). */
   const around: Around = {
     path: spec.path,
+    readProps: [...inAsync],
     ...(HOT ? { edits } : {}),
     ...(ErrorFallback ? { Failed } : {}),
     ...(Placeholder ? { Waiting } : {}),
@@ -900,5 +962,29 @@ export function component(spec: Spec) {
   // A render is a pure function of what props.ts works out from the props and the layers, so a
   // parent's re-render that passes the same props (shallowly) changes nothing here. The layers'
   // own changes (state, operations, data, the framework's context) still re-render it.
-  return Object.assign(memo(View), { around, preload, ...(HOT ? { replace, restyle } : {}) });
+  const sameAddress = (before: Props & { address?: Route }, after: Props & { address?: Route }) => {
+    const { address: previous, ...previousProps } = before;
+    const { address: next, ...nextProps } = after;
+
+    return untracked(
+      () => sameProps(previousProps, nextProps) && sameParts(previous, shareByIdentity(previous, next), routeKeys),
+    );
+  };
+
+  const readsRoute = Boolean(spec.useRoute && anywhere('route'));
+  const MemoView = memo(View, readsRoute ? sameAddress : undefined);
+
+  function Routed(props: Props) {
+    const address = useRouteView();
+
+    return createElement(MemoView, { ...props, address });
+  }
+
+  Routed.displayName = `${spec.path} (route)`;
+
+  return Object.assign(
+    readsRoute ? memo(Routed) : MemoView,
+    { around, preload },
+    HOT ? { replace, restyle } : undefined,
+  );
 }

@@ -1,7 +1,6 @@
 /**
  * `Root`: composes what the framework provides: the injection, the data layer (one
- * TanStack Query client), the sources the state and async layers read (`entity`, `route`,
- * `navigation`), the reads every layer may follow (`user`, `acl`, `flags`), the page's skin, and the app's global error listeners, the
+ * TanStack Query client), the entity and fallback navigation the state and async layers read, the reads every layer may follow (`user`, `acl`, `flags`), the page's skin, and the app's global error listeners, the
  * last resort of the error pipeline. A `Suspense` at the top catches components with no
  * placeholder. The folders it is given get their own boundaries where the shell writes them, from
  * the plugin, as a folder's children do; an element given to it directly by other code (a test)
@@ -10,9 +9,7 @@
 
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
-  type Context,
   createContext,
-  createElement,
   type ReactNode,
   Suspense,
   use,
@@ -28,24 +25,20 @@ import { Pending, useCommitted, watch } from './activity';
 import { boundEach } from './boundaries';
 import { createDataLayer, type DataLayer, recording } from './data';
 import { LocaleContext, SOURCE_LOCALE } from './i18n';
-import type { Acl, Entity, Env, Flags, Navigation, Route, User } from './index';
+import type { Acl, Entity, Env, Flags, Navigation, User } from './index';
 import { createInjection, type Injection } from './injection';
 import { report, setLocation } from './pipeline';
-import { isTracking } from './reads';
 import { listenToKeys } from './shortcuts';
-import { activateSkin } from './style';
+import { activateSkin, preloadSkin } from './style';
 
-type Sources = { entity: Entity; navigation: Navigation; route: Route };
+type Sources = { entity: Entity; navigation: Navigation };
 /** The query of one of Root's reads (`user`, `acl`, `flags`), which the components that read it share. */
 type Read = ReturnType<DataLayer['component']>;
 type Framework = {
   acl: null | Read;
   data: DataLayer;
-  /** The fields of the route that have a context of their own: those of the first route this Root rendered. */
-  fields: ReadonlySet<string>;
   flags: null | Read;
   injection: Injection;
-  skin: string;
   sources: Sources;
   user: null | Read;
 };
@@ -61,135 +54,6 @@ export function useFramework() {
 
 // With no keys declared by the app, empty objects are valid.
 const NONE = {} as never;
-
-/**
- * The route as the render sees it, whole: for a view that reads the route, a field that has no
- * context of its own, and a default read before its first run says which fields it reads.
- */
-export const RouteContext = createContext<Route>(NONE);
-RouteContext.displayName = 'Route';
-
-/**
- * Each field of the route in a context of its own. A default read follows the fields its first run
- * read (`route.q`, `route.page`), so a change of another field (a dialog opening) does not render
- * it again. React has no selector for a context: a component that reads one renders again whenever
- * its value changes, so each field gets its own.
- */
-const fieldContexts = new Map<string, Context<unknown>>();
-export function fieldContext(key: string): Context<unknown> {
-  let found = fieldContexts.get(key);
-  if (!found) {
-    fieldContexts.set(key, (found = createContext<unknown>(undefined)));
-    found.displayName = `Route.${key}`;
-  }
-  return found;
-}
-
-/**
- * A field of the route being rendered, from its own context when it has one, and from the whole
- * route when it has none; `*` is the whole route. This is the one place the framework reads a
- * context on demand: a component follows the fields its files read, and which those are is known
- * only as they read them, through a Proxy, while it renders. `use` is the hook React lets a render
- * call behind a condition, but a lint cannot see that this function runs only during a render:
- * `followRoute` guards it with `rendering`, and a chart reads `renderingRoute` only while its
- * component's first render creates it.
- */
-function reading(fields: ReadonlySet<string>, key: string): unknown {
-  const own = key !== '*' && fields.has(key);
-  const value = use(own ? fieldContext(key) : (RouteContext as unknown as Context<unknown>));
-  return own || key === '*' ? value : (value as Record<string, unknown>)[key];
-}
-
-/**
- * The route being rendered, read field by field as it is read: the component follows the fields it
- * read, and no other, until it renders again. Read it during a render only (`use` reads contexts).
- * Its keys, and spreading it, read the whole route.
- */
-export function renderingRoute(fields: ReadonlySet<string>): Route {
-  const whole = () => reading(fields, '*') as object;
-  const field = (key: string | symbol) =>
-    typeof key === 'string' && fields.has(key) ? { value: reading(fields, key) } : null;
-  return new Proxy({} as Route, {
-    get: (_, key) => (field(key) ?? { value: Reflect.get(whole(), key) }).value,
-    getOwnPropertyDescriptor: (_, key) => {
-      const own = field(key);
-      if (own) return { configurable: true, enumerable: true, value: own.value, writable: false };
-      const descriptor = Reflect.getOwnPropertyDescriptor(whole(), key);
-      return descriptor && { ...descriptor, configurable: true };
-    },
-    has: (_, key) => (typeof key === 'string' && fields.has(key)) || Reflect.has(whole(), key),
-    ownKeys: () => Reflect.ownKeys(whole()),
-  });
-}
-
-/**
- * What a route view stands on. Not a plain object, so nothing takes a view apart to compare it
- * with the one before (data.ts's sharing would read both through the route being rendered, and
- * find them equal): another view is another route, and the render that reads it is called.
- */
-class Followed {}
-
-/** The route a component's files read, and the fields they read through it, with their values. */
-export type RouteView = { read: Map<string, unknown>; route: Route };
-
-/**
- * The route for a component's files (`props.ts`, the render, `acl.ts`), followed field by field.
- * Each render reads again, from its context, every field the files read through the last view:
- * that keeps the component following them while its render is skipped, and when one of them
- * changed it gets a new view, so its files run again and read what they need. A field nobody read
- * renders nothing. Read during a render, the view reads the route being rendered; read after it
- * (a handler, a key), the committed route. Its keys, and spreading it, read the whole route.
- */
-export function followRoute(
-  last: null | RouteView,
-  fields: ReadonlySet<string>,
-  rendering: { readonly current: boolean },
-  committed: Route,
-): RouteView {
-  const whole = () => reading(fields, '*') as Record<string, unknown>;
-  const field = (key: string) => reading(fields, key);
-  if (last) {
-    let same = true;
-    // Every field is read, not only up to the first that changed, so the component keeps following all of them.
-    for (const [key, value] of last.read) if (!Object.is(field(key), value)) same = false;
-    if (same) return last;
-  }
-  const read = new Map<string, unknown>();
-  const now = (key: string) => {
-    if (!rendering.current) return (committed as unknown as Record<string, unknown>)[key];
-    const value = field(key);
-    if (isTracking()) read.set(key, value);
-    return value;
-  };
-  const route = new Proxy(new Followed() as Route, {
-    get: (_, key) => (typeof key === 'string' ? now(key) : undefined),
-    getOwnPropertyDescriptor: (_, key) =>
-      typeof key === 'string' && Reflect.has(committed, key)
-        ? { configurable: true, enumerable: true, value: now(key), writable: false }
-        : undefined,
-    has: (_, key) => Reflect.has(committed, key),
-    ownKeys: () => {
-      if (!rendering.current) return Reflect.ownKeys(committed);
-      const all = whole();
-      if (isTracking()) read.set('*', all);
-      return Reflect.ownKeys(all);
-    },
-  });
-  return { read, route };
-}
-
-/** A view of `ref.current` as if it were the object itself: reading, `in`, keys and spreading. */
-function liveView<T extends object>(ref: { readonly current: T }): T {
-  return new Proxy({} as T, {
-    get: (_, key) => Reflect.get(ref.current, key),
-    getOwnPropertyDescriptor: (_, key) => {
-      const descriptor = Reflect.getOwnPropertyDescriptor(ref.current, key);
-      return descriptor && { ...descriptor, configurable: true };
-    },
-    has: (_, key) => Reflect.has(ref.current, key),
-    ownKeys: () => Reflect.ownKeys(ref.current),
-  });
-}
 
 export type RootProps = {
   /**
@@ -232,10 +96,8 @@ export type RootProps = {
    * interactions carry it. Leave it out when the address's hash holds the route.
    */
   location?: string;
-  /** How components move between routes. A stand-in until the routing layer is designed. */
+  /** How components move between routes: the address's own navigation, unless another is given. */
   navigation?: Navigation;
-  /** The current route's parameters. A stand-in until the routing layer is designed. */
-  route?: Route;
   /** The skin of the whole page. */
   skin?: string;
   /**
@@ -264,11 +126,12 @@ export function Root({
   locale = SOURCE_LOCALE,
   location,
   navigation = NONE,
-  route = NONE,
   skin = 'default',
   sync,
   user,
 }: RootProps) {
+  use(preloadSkin(skin));
+  const content = useMemo(() => boundEach(children), [children]);
   // Services were created once and read the entity when they run: the entity on screen, the one
   // React committed. A render React throws away (an entity selected in a transition the person
   // leaves before it arrives) hands nothing to a service that runs meanwhile. So a new entity is
@@ -293,21 +156,8 @@ export function Root({
   // After the commit and before the paint, so a render React throws away changes nothing. The
   // sheets added before it are set again here, before anyone sees them.
   useLayoutEffect(() => activateSkin(skin), [skin]);
-  // Operations and state charts read the route when they run: the route on screen, committed. So
-  // the sources the framework's context carries stay the same object when the route changes.
-  const committedRoute = useRef(route);
-  useLayoutEffect(() => {
-    committedRoute.current = route;
-  }, [route]);
-  const liveRoute = useMemo(() => liveView(committedRoute), []);
-  const sources = useMemo(
-    () => ({ entity: selected, navigation, route: liveRoute }),
-    [selected, liveRoute, navigation],
-  );
-  // A new route counts as pending for `whenIdle()` until React commits it: a navigation in a
-  // transition keeps the old page on screen with no placeholder while React renders the new one.
-  useCommitted(route);
-  useCommitted(locale);
+  const sources = useMemo(() => ({ entity: selected, navigation }), [selected, navigation]);
+  useCommitted(location ?? locale);
   // Root's reads are keyed by the entity, as every read is: another entity is another person's
   // answer, so each is made again for the entity selected.
   const userRead = useMemo(
@@ -341,13 +191,16 @@ export function Root({
         : null,
     [data, injection, user, flags, selected],
   );
-  // The fields of the first route rendered each get a context, in the same order for Root's life,
-  // so the tree around the page keeps its shape. A field that appears later is read from the whole
-  // route (`RouteContext`).
-  const fields = useState(() => new Set(Object.keys(route)))[0];
   const framework = useMemo(
-    () => ({ acl: aclRead, data, fields, flags: flagsRead, injection, skin, sources, user: userRead }),
-    [injection, skin, sources, data, userRead, aclRead, flagsRead, fields],
+    () => ({
+      acl: aclRead,
+      data,
+      flags: flagsRead,
+      injection,
+      sources,
+      user: userRead,
+    }),
+    [injection, sources, data, userRead, aclRead, flagsRead],
   );
   // Root's reads start side by side as Root mounts, not each when the first component that reads it
   // renders: a read first needed deep in the tree (the rows' flags) would suspend it there, and
@@ -374,17 +227,12 @@ export function Root({
     };
   }, []);
 
-  let page: ReactNode = (
-    <LocaleContext value={locale}>
-      <Suspense fallback={<Pending />}>{boundEach(children)}</Suspense>
-    </LocaleContext>
-  );
-  for (const key of [...fields].reverse())
-    page = createElement(fieldContext(key), { value: (route as unknown as Record<string, unknown>)[key] }, page);
   return (
     <QueryClientProvider client={client}>
       <FrameworkContext value={framework}>
-        <RouteContext value={route}>{page}</RouteContext>
+        <LocaleContext value={locale}>
+          <Suspense fallback={<Pending />}>{content}</Suspense>
+        </LocaleContext>
       </FrameworkContext>
     </QueryClientProvider>
   );

@@ -3,6 +3,9 @@
 
 import { expect, type Page, test } from '@playwright/test';
 
+import { arrive } from '../perf/address.mjs';
+import { markupWithoutLinkSkin } from './markup';
+
 const act = async (page: Page, action: () => Promise<unknown>) => {
   await action();
   await page.evaluate(() => window.__framework.idle());
@@ -18,17 +21,17 @@ test.beforeEach(({ page }) => {
 // render in, which a reload may change.
 const markup = async (page: Page, selector = 'main') => {
   await page.mouse.move(0, 0);
-  const html = await page.locator(selector).evaluate((main) => main.outerHTML);
+  const html = await page.locator(selector).evaluate(markupWithoutLinkSkin);
   return html.replace(/react-aria\d+-/g, 'react-aria-').replace(/_r_[a-z0-9]+_/g, '_r_');
 };
 const pseudo = (locator: ReturnType<Page['locator']>, which: '::after' | '::before') =>
   locator.evaluate((element, part) => getComputedStyle(element, part).content, which);
 
 test('Blueprint names the catalogue and a product, and changes no element of either', async ({ page }) => {
-  await act(page, () => page.goto('./?world=memory#/products'));
+  await act(page, () => arrive(page, '/products'));
   const plain = await markup(page);
 
-  await act(page, () => page.goto('./?world=memory&skin=blueprint#/products'));
+  await act(page, () => arrive(page, '/products', { skin: 'blueprint' }));
   expect(await page.evaluate(() => document.documentElement.dataset['skin'])).toBe('blueprint');
   expect(await markup(page)).toBe(plain);
 
@@ -37,10 +40,10 @@ test('Blueprint names the catalogue and a product, and changes no element of eit
 });
 
 test('Blueprint names a product dialog the same way, and shows the hidden price data', async ({ page }) => {
-  await act(page, () => page.goto('./?world=memory#/products?view=22'));
+  await act(page, () => arrive(page, '/products/22'));
   const plain = await markup(page, '[role="dialog"]');
 
-  await act(page, () => page.goto('./?world=memory&skin=blueprint#/products?view=22'));
+  await act(page, () => arrive(page, '/products/22', { skin: 'blueprint' }));
   expect(await markup(page, '[role="dialog"]')).toBe(plain);
 
   const article = page.getByRole('dialog').locator('article[itemtype$="/Product"]');

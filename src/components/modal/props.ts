@@ -8,11 +8,13 @@ import { Dialog, Heading } from 'react-aria-components';
 export type Props = {
   /** The dialog, which renders its own `Dialog`. */
   children: ReactNode;
+  /** Whether another dialog is open over this one (a route's dialog under its child route's). */
+  covered?: boolean;
   /** What closing it does: a click outside, Escape. */
   onClose: () => void;
 };
 
-export default ({ children }) => ({ children });
+export default ({ children, covered = false }) => ({ children, covered });
 
 /** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
 export const examples = {

@@ -24,7 +24,7 @@ What this does not do: it does not decide what to build, and it does not judge w
 
 | Word             | Meaning                                                                                                                                                                                                                                                                                                |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Component folder | The module. A folder under `components/` with a `render.tsx`. Importing the folder gives the component. Its path (`components/product/editor`) is its identity and its CSS class.                                                                                                                      |
+| Component folder | The module. A folder under `components/` with a `render.tsx`. Importing the folder gives the component. Its path (`components/app/routes/products/components/editor`) is its identity and its CSS class.                                                                                               |
 | Layer file       | A file with a fixed name and job inside a component folder: `render.tsx`, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `i18n.ts`, `acl.ts`, `shortcuts.ts`, `placeholder.tsx`, `error.tsx`.                                                                                                          |
 | `shortcuts.ts`   | The keys a component answers while it is on screen, translated, each sending a chart's event, focusing an element or running a function, and working only while the chart takes the event or its `when` holds. `?` lists them; the command palette (⌘K) runs them.                                     |
 | `acl.ts`         | Whether what a component offers may be done, as a boolean. The component and everything below it get `acl.allowed`, until a folder below says otherwise.                                                                                                                                               |
@@ -38,7 +38,7 @@ What this does not do: it does not decide what to build, and it does not judge w
 
 ## One component, toured
 
-The product editor, [`src/components/product/editor/`](src/components/product/editor):
+The product editor, [`src/components/app/routes/products/components/editor/`](src/components/app/routes/products/components/editor):
 
 ```
 editor/
@@ -54,13 +54,13 @@ editor/
   style/skins/<name>/index.ts   Plain CSS, one sheet per skin: default, broadsheet, blueprint.
 ```
 
-The flow reads as the requirement does ([`state.ts`](src/components/product/editor/state.ts), shortened):
+The flow reads as the requirement does ([`state.ts`](src/components/app/routes/products/components/editor/state.ts), shortened):
 
 ```ts
 export const unsaved = ({ form }) => form.unsaved;
 export const isConflict = ({ event }) => event.error instanceof Error && event.error.name === 'ConflictError';
 export const changesToSave = ({ form, context, route }) => ({
-  id: route.edit ?? 0,
+  id: route.params.id ?? 0,
   changes: form.payload(),
   version: context.version,
 });
@@ -93,7 +93,7 @@ export default ({ services }) => ({
 
 There are no type annotations in that file, and none are missing. The TypeScript plugin types `form`, `context`, `route`, `event` and `services` from the folder's other files and from the app's clients and services. The render receives `state` with one boolean per state and a `send` that accepts only this chart's events.
 
-The same folder shape holds a wizard ([`bulk-price/`](src/components/bulk-price)), a session with token refresh ([`session/`](src/components/session)), and a list row with no flow at all ([`product-row/`](src/components/catalogue/components/product-row)).
+The same folder shape holds a wizard ([`routes/products/routes/bulk/`](src/components/app/routes/products/routes/bulk)), a session with token refresh ([`session/`](src/components/session)), and a list row with no flow at all ([`product-row/`](src/components/app/routes/products/components/catalogue/components/product-row)).
 
 ## Rules in different places
 
@@ -101,16 +101,16 @@ The app does not own its permissions. A backend sends a snapshot of them (a role
 
 Each consumer tests the snapshot against what else it knows:
 
-| Where                                                                                                                                      | Test                                                                                                                                                                                       |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`app/acl.ts`](src/components/app/acl.ts)                                                                                                  | Changing the catalogue needs the grant to update products. Every component below inherits the decision: the catalogue hides its actions, a row its edit link, the editor locks its fields. |
-| [`product/remove-link/acl.ts`](src/components/product/remove-link/acl.ts)                                                                  | One link, inside every row and the product dialog, narrower: it needs the grant to delete.                                                                                                 |
-| [`product/remove/acl.ts`](src/components/product/remove/acl.ts)                                                                            | The same for the dialog, which an address (`?remove=4`) can open for anyone.                                                                                                               |
-| [`bulk-price/acl.ts`](src/components/bulk-price/acl.ts)                                                                                    | The backend's limit on a price change, against the percentage in the form: the decision changes as it is typed.                                                                            |
-| [`product/editor/state.ts`](src/components/product/editor/state.ts)                                                                        | The chart's declaration: a read-only editor has no `save` at all. Declared again when the decision changes, it keeps its place.                                                            |
-| [`bulk-price/state.ts`](src/components/bulk-price/state.ts)                                                                                | Declared with `apply` only under the grant to update prices; a guard reads the limit's decision when `apply` arrives.                                                                      |
-| [`session/props.ts`](src/components/session/props.ts)                                                                                      | The role in the header is the snapshot's.                                                                                                                                                  |
-| [`product/remove-link/acl.ts`](src/components/product/remove-link/acl.ts), [`product/remove/acl.ts`](src/components/product/remove/acl.ts) | The `deletions` flag, a kill switch, read inside the rule: paused deletions are not allowed, and the dialog says why.                                                                      |
+| Where                                                                                                                                                                                                                          | Test                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`app/acl.ts`](src/components/app/acl.ts)                                                                                                                                                                                      | Changing the catalogue needs the grant to update products. Every component below inherits the decision: the catalogue hides its actions, a row its edit link, the editor locks its fields. |
+| [`products/components/remove-link/acl.ts`](src/components/app/routes/products/components/remove-link/acl.ts)                                                                                                                   | One link, inside every row and the product dialog, narrower: it needs the grant to delete.                                                                                                 |
+| [`products/routes/:id/routes/remove/acl.ts`](src/components/app/routes/products/routes/:id/routes/remove/acl.ts)                                                                                                               | The same for the dialog, which an address (`/products/4/remove`) can open for anyone.                                                                                                      |
+| [`products/routes/bulk/acl.ts`](src/components/app/routes/products/routes/bulk/acl.ts)                                                                                                                                         | The backend's limit on a price change, against the percentage in the form: the decision changes as it is typed.                                                                            |
+| [`products/components/editor/state.ts`](src/components/app/routes/products/components/editor/state.ts)                                                                                                                         | The chart's declaration: a read-only editor has no `save` at all. Declared again when the decision changes, it keeps its place.                                                            |
+| [`products/routes/bulk/state.ts`](src/components/app/routes/products/routes/bulk/state.ts)                                                                                                                                     | Declared with `apply` only under the grant to update prices; a guard reads the limit's decision when `apply` arrives.                                                                      |
+| [`session/props.ts`](src/components/session/props.ts)                                                                                                                                                                          | The role in the header is the snapshot's.                                                                                                                                                  |
+| [`products/components/remove-link/acl.ts`](src/components/app/routes/products/components/remove-link/acl.ts), [`products/routes/:id/routes/remove/acl.ts`](src/components/app/routes/products/routes/:id/routes/remove/acl.ts) | The `deletions` flag, a kill switch, read inside the rule: paused deletions are not allowed, and the dialog says why.                                                                      |
 
 Each component follows only the parts of the snapshot it reads, so a sign-in renders again only the components whose answer changed.
 
@@ -173,22 +173,24 @@ Clients are injected, never imported by components or by each other's callers. T
 | [`tracker`](src/clients/tracker)     | A destination for the framework's pipelines: interactions and failures, for the network lab to show.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | [`flags`](src/clients/flags)         | OpenFeature. In the DummyJSON world, with GrowthBook's client key in the build (`VITE_GROWTHBOOK_CLIENT_KEY`), GrowthBook serves the flags and streams every change made in its dashboard to every tab, through a small provider on its SDK ([`growthbook.ts`](src/clients/flags/growthbook.ts)), loaded only then. Otherwise OpenFeature's in-memory provider serves the flags of [`definitions.ts`](src/clients/flags/definitions.ts), each with the ways it can be served: stock counting to admins first, deletions on or paused, and the bulk change asking again above 10% for moderators. In memory, the way each is served is kept in localStorage, so every tab's provider hears a change, as each would hear GrowthBook's stream. |
 
-Add `?world=memory` to the address and the app runs with no network: same services, same flows, same components. The unit tests and the end-to-end tests use that world, so CI does not depend on DummyJSON being up.
+Set `world: "memory"` in the address's JSON `query` and the app runs with no network: same services, same flows, same components. The unit tests and the end-to-end tests use that world, so CI does not depend on DummyJSON being up.
 
 ## Pages, and what a feature costs
 
-The hash's path names the page ([`d53b9c5`](https://github.com/fernandocamargo/framework-demo/commit/d53b9c5)): `#/products`, the catalogue; `#/report`, the stock report; `#/orders`, where the orders go; `#/states`, the gallery. Filters and dialogs stay in its query, so a link to a product, a state or an order opens the same view for anyone who may see it ([`address.ts`](src/address.ts)).
+Routing is a folder layer on React Router: [`components/app/routes/`](src/components/app/routes) contains `/products`, `/report` and `/orders`, with entity and action routes nested inside them. The plugin gives each parent one React Router `<Routes>` element containing its direct children, plus the address codec and navigation types. The app mounts one `<BrowserRouter>`; the router matches and keeps History. Each parent places its `routes` prop where its matched child belongs, so a dialog keeps the page below it mounted. Only route folders read the address; their components receive filters, IDs and links as plain props. A route folder is the component itself: the report, the orders page, the bulk change and a product's removal hold their own layers. A route whose page reads on its own (the products' catalogue, a product's or an order's detail) keeps that read in a folder of its own `components/`, so the routes below it do not wait for it; the editor, which two routes show, is in the `components/` of the route above both.
+
+The address has one optional `query` parameter containing versioned JSON. Filters, paging, region, sign-in and shell settings (`world`, `lang`, `skin`) live there; defaults are omitted. `navigation.go('/products/:id/edit', { id: 4 })` opens an editor; `navigation.query('/products', { page: 2 })` changes only paging on the current path. `#/states` remains the shell's development gallery. An address from before the routes (`/?world=memory#/products?edit=4`) is replaced by its new one as the document starts ([`legacy.ts`](src/legacy.ts)). The detail stays under a product's editor and removal; a dialog under another leaves the page to the one above ([`modal/render.tsx`](src/components/modal/render.tsx)). Static paths get build copies of `index.html`; dynamic paths need a hosting rewrite or the separately emitted `routing-fallback/404.html`, which is not installed automatically.
 
 Five features came after the layers, to see what one costs here; the last, orders on a map, came in two steps. They landed in [twelve commits](https://github.com/fernandocamargo/framework-demo/compare/1b5fc43...a313dbc), each with a message that argues for it: what it shows, what that proves and, for most, what it cost and how it was checked. The framework's plugin, which wires a folder, did not change; its runtime grew twice, as told below the table.
 
-| Feature                                                                                                                                                                                | Try                                                                      | What it cost                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A third skin, Blueprint ([`47c3c85`](https://github.com/fernandocamargo/framework-demo/commit/47c3c85), [`cfe4cda`](https://github.com/fernandocamargo/framework-demo/commit/cfe4cda)) | `?skin=blueprint`, or the header's switch                                | A sheet for the page and one per folder, most of them a line that re-exports the default. Beyond the sheets, only its name in `skins.ts` and in the switch, two imports of its page sheet, and tests: the markup already said what each piece is ([Three skins](#three-skins-one-markup)).                                                                                                                                                                                                                                                                |
-| The stock report ([`2482683`](https://github.com/fernandocamargo/framework-demo/commit/2482683))                                                                                       | `#/report` in each skin; count a unit in another tab                     | A folder, one word in `SECTIONS` and one read in the products service. Its headline and figures are a pure function ([`summary.ts`](src/components/report/summary.ts)), tested without React. It follows the other tabs' counts with no wiring in its folder: the new read is named in `meta.ts`, once to follow the other tabs' changes and once in each of the six writes that make it stale.                                                                                                                                                           |
-| A guided tour ([`4ae0b89`](https://github.com/fernandocamargo/framework-demo/commit/4ae0b89))                                                                                          | "Take the tour", in the header                                           | One folder, and the fix in the framework it led to (below). Its chart of eleven states calls the services the rest of the app calls (`lab.change`, `auth.signIn`, `flags.serve`) and moves the same address, so it drives the network, the session, the flags, the skin and the locale with no special access to any of them. Leaving puts the page back as it was.                                                                                                                                                                                       |
-| A command palette ([`297a5d6`](https://github.com/fernandocamargo/framework-demo/commit/297a5d6))                                                                                      | ⌘K (Ctrl K elsewhere), over anything, a dialog included                  | One folder. Its first group, what can be done on this page, is not written for it: those are the keys the folders' `shortcuts.ts` already declare, each run through `run()`, which the framework gained for it in a commit of its own ([`fa593c7`](https://github.com/fernandocamargo/framework-demo/commit/fa593c7)). The other groups (the pages, the skins and languages, signing in, the products that match what is typed) its `props.ts` lists itself. Over the editor it offers "Save the product ⌘S", and only while the editor's chart can save. |
-| Orders ([`e1f7c79`](https://github.com/fernandocamargo/framework-demo/commit/e1f7c79), [`9ef72e0`](https://github.com/fernandocamargo/framework-demo/commit/9ef72e0))                  | `#/orders` as Emily, Olivia and Avery; then `?region=TX`, and `?cart=12` | A service that joins DummyJSON's carts with their customers, with fixtures for the memory world; three folders under a page folder; two address fields and one word in `SECTIONS`. The map is 51 tiles in markup, each a schema.org Observation whose count is a `<meter>` the skin turns into a fill. Orders are for admins and moderators, and a customer's name and street for the grant to read customers, so Olivia sees "Amara A.". A plain user who types `?cart=12` gets nothing: the app does not mount the order's reader.                      |
-| A live map ([`a313dbc`](https://github.com/fernandocamargo/framework-demo/commit/a313dbc))                                                                                             | The network lab's Flags tab: "Live map" on, then off                     | A flag, one dependency (MapLibre, loaded the first time the map shows), and a React ref callback ([`src/widgets/live-map/`](src/widgets/live-map)) that is given no data: it reads the figure's schema.org items, as a search engine would, and draws a circle per state. The tiles stay, as its legend and as what a keyboard and a screen reader use.                                                                                                                                                                                                   |
+| Feature                                                                                                                                                                                | Try                                                                              | What it cost                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A third skin, Blueprint ([`47c3c85`](https://github.com/fernandocamargo/framework-demo/commit/47c3c85), [`cfe4cda`](https://github.com/fernandocamargo/framework-demo/commit/cfe4cda)) | `?skin=blueprint`, or the header's switch                                        | A sheet for the page and one per folder, most of them a line that re-exports the default. Beyond the sheets, only its name in `skins.ts` and in the switch, two imports of its page sheet, and tests: the markup already said what each piece is ([Three skins](#three-skins-one-markup)).                                                                                                                                                                                                                                                                |
+| The stock report ([`2482683`](https://github.com/fernandocamargo/framework-demo/commit/2482683))                                                                                       | `/report` in each skin; count a unit in another tab                              | A folder, one word in `SECTIONS` and one read in the products service. Its headline and figures are a pure function ([`summary.ts`](src/components/app/routes/report/summary.ts)), tested without React. It follows the other tabs' counts with no wiring in its folder: the new read is named in `meta.ts`, once to follow the other tabs' changes and once in each of the six writes that make it stale.                                                                                                                                                |
+| A guided tour ([`4ae0b89`](https://github.com/fernandocamargo/framework-demo/commit/4ae0b89))                                                                                          | "Take the tour", in the header                                                   | One folder, and the fix in the framework it led to (below). Its chart of eleven states calls the services the rest of the app calls (`lab.change`, `auth.signIn`, `flags.serve`) and moves the same address, so it drives the network, the session, the flags, the skin and the locale with no special access to any of them. Leaving puts the page back as it was.                                                                                                                                                                                       |
+| A command palette ([`297a5d6`](https://github.com/fernandocamargo/framework-demo/commit/297a5d6))                                                                                      | ⌘K (Ctrl K elsewhere), over anything, a dialog included                          | One folder. Its first group, what can be done on this page, is not written for it: those are the keys the folders' `shortcuts.ts` already declare, each run through `run()`, which the framework gained for it in a commit of its own ([`fa593c7`](https://github.com/fernandocamargo/framework-demo/commit/fa593c7)). The other groups (the pages, the skins and languages, signing in, the products that match what is typed) its `props.ts` lists itself. Over the editor it offers "Save the product ⌘S", and only while the editor's chart can save. |
+| Orders ([`e1f7c79`](https://github.com/fernandocamargo/framework-demo/commit/e1f7c79), [`9ef72e0`](https://github.com/fernandocamargo/framework-demo/commit/9ef72e0))                  | `/orders` as Emily, Olivia and Avery; then `query.region="TX"`, and `/orders/12` | A service that joins DummyJSON's carts with their customers, with fixtures for the memory world; three folders under a page folder; two address fields and one word in `SECTIONS`. The map is 51 tiles in markup, each a schema.org Observation whose count is a `<meter>` the skin turns into a fill. Orders are for admins and moderators, and a customer's name and street for the grant to read customers, so Olivia sees "Amara A.". A plain user who types `/orders/12` gets nothing: the app does not mount the order's reader.                    |
+| A live map ([`a313dbc`](https://github.com/fernandocamargo/framework-demo/commit/a313dbc))                                                                                             | The network lab's Flags tab: "Live map" on, then off                             | A flag, one dependency (MapLibre, loaded the first time the map shows), and a React ref callback ([`src/widgets/live-map/`](src/widgets/live-map)) that is given no data: it reads the figure's schema.org items, as a search engine would, and draws a circle per state. The tiles stay, as its legend and as what a keyboard and a screen reader use.                                                                                                                                                                                                   |
 
 The tour found one thing the framework lacked, fixed in a commit of its own ([`ea1a3f6`](https://github.com/fernandocamargo/framework-demo/commit/ea1a3f6)): a folder showing its error stayed failed after the address moved on. It now tries again when the route changes, as "Try again" would.
 
@@ -225,16 +227,16 @@ These are real messages from `npm run typecheck`, each from a one-line mistake.
 An event the statechart does not have, sent from a render:
 
 ```
-src/components/product/editor/render.tsx:98:70 - error TS2820: Type '"keepMein"' is not assignable to type
+src/components/app/routes/products/components/editor/render.tsx:98:70 - error TS2820: Type '"keepMein"' is not assignable to type
 '"close" | "retry" | "edit" | "save" | "discard" | "keepEditing" | "keepMine" | "takeTheirs"'. Did you mean '"keepMine"'?
 ```
 
 A parent that does not pass what the child's `props.ts` declares:
 
 ```
-src/components/catalogue/render.tsx:34:12 - error TS2769: No overload matches this call.
+src/components/app/routes/products/components/catalogue/render.tsx:34:12 - error TS2769: No overload matches this call.
     Property 'filters' is missing in type '{ key: number; product: Listed; }' but required in type 'Props'.
-  src/components/catalogue/components/product-row/props.ts:7:40
+  src/components/app/routes/products/components/catalogue/components/product-row/props.ts:7:40
     7 export type Props = { product: Listed; filters: Filters }
 ```
 
@@ -248,7 +250,7 @@ in type 'ServiceMeta<typeof import(".../src/services/products/index")>'. Did you
 A helper component declared inside a render file, where its handlers would not be tracked:
 
 ```
-src/components/product/remove/render.tsx:3: holds a second component, JSX outside the default export (Spinner):
+src/components/app/routes/products/routes/:id/routes/remove/render.tsx:3: holds a second component, JSX outside the default export (Spinner):
 one component per file, so give it a folder of its own, with a render.tsx
 ```
 
@@ -257,11 +259,11 @@ The last one is not a type error. It is a convention check, and it fails the sam
 A message called without a value its ICU needs, and a translation that drops it:
 
 ```
-src/components/catalogue/props.ts:21:30 - error TS2345: Argument of type '{ page: number; }' is not assignable to parameter of
+src/components/app/routes/products/components/catalogue/props.ts:21:30 - error TS2345: Argument of type '{ page: number; }' is not assignable to parameter of
 type '{ page: number; pages: number; }'.
   Property 'pages' is missing in type '{ page: number; }' but required in type '{ page: number; pages: number; }'.
 
-src/components/catalogue/i18n/pt-BR.json: "components/catalogue/paging/page" loses {pages}
+src/components/app/routes/products/components/catalogue/i18n/pt-BR.json: "components/app/routes/products/components/catalogue/paging/page" loses {pages}
 ```
 
 Nobody wrote the type `{ page: number; pages: number }`: it is read from `'Page {page, number} of {pages, number}'` in the folder's `i18n.ts`.
@@ -270,10 +272,10 @@ Nobody wrote the type `{ page: number; pages: number }`: it is read from `'Page 
 
 `npm test` runs about 190 tests in a few seconds: over 160 in Vitest, and 20 for the plugin in Node. A few of them, by what they pin down:
 
-- [`editor/state.test.ts`](src/components/product/editor/state.test.ts): "closing with unsaved changes asks first", "a save refused as a conflict keeps the changes". The flow runs as the framework runs it, with services the test passes in.
-- [`app/props.test.ts`](src/components/app/props.test.ts): "changing the catalogue needs a session", and "an order does not open for someone who may not read orders, however the address names it", as tables over one pure function.
+- [`editor/state.test.ts`](src/components/app/routes/products/components/editor/state.test.ts): "closing with unsaved changes asks first", "a save refused as a conflict keeps the changes". The flow runs as the framework runs it, with services the test passes in.
+- [`app/props.test.ts`](src/components/app/props.test.ts): "changing the catalogue needs a session", with the order route's read grant checked in [`app/route-permissions.test.ts`](src/components/app/route-permissions.test.ts).
 - [`products.test.ts`](src/services/products/products.test.ts): the services against the memory client: "a save from an older version is refused as a conflict".
-- [`report/summary.test.ts`](src/components/report/summary.test.ts): the front page's headline, "anything out of stock leads the headline, counted".
+- [`report/summary.test.ts`](src/components/app/routes/report/summary.test.ts): the front page's headline, "anything out of stock leads the headline, counted".
 - [`tour/state.test.ts`](src/components/tour/state.test.ts): "leaving puts back the locale and the skin the page had when the tour started".
 - [`http.test.ts`](src/clients/dummyjson/http.test.ts): the client on a bad network: "requests that meet a 401 at the same time share one refresh".
 - [`framework/runtime/__tests__/`](framework/runtime/__tests__): the framework's own guarantees.
@@ -300,7 +302,7 @@ The end-to-end tests ([`e2e/`](e2e)) drive the production build: the main flows 
 | The "Flags" tab: stock count served to "Nobody"   | The rows' − and + go, in every tab, and nothing else renders. "Admins only" brings them back for Emily; sign in as Olivia and they are not hers.                                                                                                                                                                                                             |
 | The "Flags" tab: deletions "Paused"               | The delete links go, and a delete dialog opened from its address says deletions are paused. The rule is in `acl.ts`, so everything below follows `acl.allowed` without reading the flag.                                                                                                                                                                     |
 | Bulk change by 15%, as Olivia                     | Moderators are asked a second time above 10%, others above 50% (the `largeChangeAt` flag, read by the chart's guard).                                                                                                                                                                                                                                        |
-| The "Flags" tab: live map "On", on `#/orders`     | A map of the states appears over the tiles, a circle for each state with orders. A click on Texas's circle is a click on Texas's tile. "Off" takes the map away, with no reload.                                                                                                                                                                             |
+| The "Flags" tab: live map "On", on `/orders`      | A map of the states appears over the tiles, a circle for each state with orders. A click on Texas's circle is a click on Texas's tile. "Off" takes the map away, with no reload.                                                                                                                                                                             |
 
 DummyJSON allows about 100 requests in a window it does not state, so sustained stress can earn a real 429. The client retries those too.
 
@@ -314,7 +316,7 @@ A component renders again only for what its files read. The plugin reads what ea
 
 - **The locale.** Only components with an `i18n.ts`, or that read `intl` or `locale`. The page switches in one commit, once every component on screen has its messages.
 - **The person, the backend's snapshot and the flags.** Only the parts each component reads. A folder's `acl.ts` that reads only `acl` and `flags` is decided once per change, and an instance renders again only when its decision changes.
-- **The route.** Each field has a context of its own. The catalogue follows its filters and its page; a dialog opening over it does not render it. A view follows the fields its files read too: the lab's sell-out button follows `edit`, and the lab around it none.
+- **The route.** A folder that reads the route reads React Router's location itself, and renders at every change of address; the catalogue's read is keyed by its filters and its page, so a dialog opening over it renders the catalogue and reads nothing. A folder that reads none of the route is not rendered by a change of address.
 - **The form.** Only the values a component's files read. The editor's fields hold what is typed, as native fields do, so a key renders the field alone. The catalogue's search shows its form's text, which follows the address: a key renders the filter bar, and a search keeps the field and its focus.
 - **The chart.** Only when it shows something else: other states, or another context. A state entered again, or a service starting, renders nothing.
 
@@ -357,7 +359,7 @@ Node 20.19 or later. The unit tests need a newer one: CI runs everything on Node
 ```sh
 npm ci
 npm run dev        # http://localhost:5180, on DummyJSON
-                   # http://localhost:5180/?world=memory, with no network
+                   # http://localhost:5180/products?query=%7B%22v%22%3A1%2C%22world%22%3A%22memory%22%7D
 ```
 
 GrowthBook serves the DummyJSON world's flags when `.env.local` holds its client key, `VITE_GROWTHBOOK_CLIENT_KEY=sdk-…` (GrowthBook's wizard, `npx @growthbook/wizard --language react`, writes it). Without it, the in-memory provider serves them.
@@ -414,7 +416,7 @@ The mechanism differs. The idea carries: give each kind of decision one place, t
 
 ## What is not here
 
-- The `Route` and the hash router in [`src/main.tsx`](src/main.tsx) stand in for a routing layer: the hash's path names a page, and its query the rest. `form.ts` stands in for a form manager.
+- `form.ts` stands in for a form manager. Dynamic History addresses on GitHub Pages still need the separate fallback to be chosen at deployment.
 - The live map is the app's one imperative widget, a React ref callback in `src/widgets/`, outside the component folders. Where such widgets belong is open.
 - Services receive no `AbortSignal` from the data layer yet. The client honours one; a stale answer is ignored by its cache key instead.
 - The local overlay keeps the API's paging, so a page that lost a product is one short.
@@ -427,16 +429,16 @@ The mechanism differs. The idea carries: give each kind of decision one place, t
 ```
 framework/          The framework: plugin/, runtime/, typescript/, shared/, storybook/, microdata/. See its README.
 src/
-  main.tsx          The shell: which world and locale, the router's stand-in, Root, failures as toasts.
-  locales.ts        The locales the app speaks, and `?lang=` in the address.
+  main.tsx          The shell: which world and locale, the address snapshot, Root, failures as toasts.
+  locales.ts        The locales the app speaks, and query.lang in the address.
   env.d.ts          What this app injects: Env, Route, Flags, Navigation.
-  address.ts        The address, as the route and back: the page in the hash's path, the rest in its query.
+  address.ts        The router, the generated address and typed navigation, with convenient list links.
   format.ts         How values read across components: the currency, what counts as low stock, availability.
   reads.ts          What Root reads for the app: who is signed in, what they may do, their flags.
   base.css          Design tokens and the look of the controls, for the default skin.
   broadsheet.css    The same, for the Broadsheet skin.
   blueprint.css     The same, for the Blueprint skin.
-  skins.ts          The skins, and `?skin=` in the address.
+  skins.ts          The skins, and query.skin in the address.
   clients/          Transports.
   services/         Operations, and what makes what stale.
   components/       Component folders.

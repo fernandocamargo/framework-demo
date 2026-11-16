@@ -97,6 +97,8 @@ export type Around = {
   /** The folder's error file while it shows, for a folder with one. It gets what the folder was given. */
   Failed?: ComponentType<Props>;
   path: string;
+  /** A changed input of the default read retries a failed read. */
+  readProps?: readonly string[];
   /** The folder's placeholder while it shows, for a folder with one. It gets what the folder was given. */
   Waiting?: ComponentType<Props>;
 };
@@ -175,7 +177,19 @@ export function bound<T>(element: T): ReactElement | T {
   let tree: ReactElement = element;
   if (HOT && edits) tree = createElement(Edited, { edits, folder, given, ...keyed });
   if (Waiting) tree = createElement(Suspense, { fallback: createElement(Waiting, given), ...keyed }, tree);
-  if (Failed) tree = createElement(Boundary, { fallback: createElement(Failed, given), folder, given, ...keyed }, tree);
+
+  if (Failed)
+    tree = createElement(
+      Boundary,
+      {
+        fallback: createElement(Failed, given),
+        folder,
+        given,
+        resetKeys: folder.around.readProps?.map((key) => given[key]),
+        ...keyed,
+      },
+      tree,
+    );
   return tree;
 }
 

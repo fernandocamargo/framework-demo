@@ -1,6 +1,7 @@
 import { act, fireEvent, render } from '@testing-library/react';
 import { createElement, Suspense } from 'react';
 import { I18nProvider } from 'react-aria-components';
+import { MemoryRouter } from 'react-router';
 
 import type { Page } from '@/services/products/types';
 import { createQueryClient, Root, whenIdle } from 'framework';
@@ -54,19 +55,24 @@ vi.mock('react-aria-components', async (original) => {
 
 import Palette from '@/components/palette';
 
+import { preloadSkin } from '../../../framework/runtime/style';
+
 const page = (
-  <I18nProvider locale="en-US">
-    <Root client={createQueryClient()} entity={{ id: 'memory' }} env={{ apiUrl: '', world: 'memory' }}>
-      <Suspense fallback={<Waiting />}>
-        <Palette />
-      </Suspense>
-    </Root>
-  </I18nProvider>
+  <MemoryRouter>
+    <I18nProvider locale="en-US">
+      <Root client={createQueryClient()} entity={{ id: 'memory' }} env={{ apiUrl: '', world: 'memory' }}>
+        <Suspense fallback={<Waiting />}>
+          <Palette />
+        </Suspense>
+      </Root>
+    </I18nProvider>
+  </MemoryRouter>
 );
 
 test('opening the palette makes nothing wait: its search has loaded with the page', async () => {
   let shown!: ReturnType<typeof render>;
   await act(async () => {
+    await preloadSkin('default');
     shown = render(page);
   });
   const button = await shown.findByRole('button', { name: 'Command palette' });
@@ -83,6 +89,7 @@ test('opening the palette makes nothing wait: its search has loaded with the pag
 test('the palette shell stays still while six search outputs change', async () => {
   let shown!: ReturnType<typeof render>;
   await act(async () => {
+    await preloadSkin('default');
     shown = render(page);
   });
   const button = await shown.findByRole('button', { name: 'Command palette' });

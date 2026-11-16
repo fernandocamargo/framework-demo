@@ -6,6 +6,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
 import { checkMicrodata, type Vocabulary } from '../framework/microdata/check';
+import { arrive } from '../perf/address.mjs';
 
 const vocabulary = JSON.parse(
   readFileSync(new URL('../framework/microdata/vocabulary.json', import.meta.url), 'utf8'),
@@ -21,7 +22,7 @@ const act = async (page: Page, action: () => Promise<unknown>) => {
   await action();
   await page.evaluate(() => window.__framework.idle());
 };
-const open = (page: Page, hash: string) => act(page, () => page.goto(`./?world=memory${hash}`));
+const open = (page: Page, path: string, query = {}) => act(page, () => arrive(page, path, query));
 const problems = (page: Page) => page.evaluate(checkMicrodata, vocabulary);
 
 test.beforeEach(({ page }) => {
@@ -31,21 +32,21 @@ test.beforeEach(({ page }) => {
 });
 
 test('the catalogue, a product, the editor and the dialogs name their pieces as schema.org does', async ({ page }) => {
-  await open(page, '#/products');
+  await open(page, '/products');
   expect(await problems(page)).toEqual([]);
 
-  await open(page, '#/products?signin=1');
+  await open(page, '/products', { signin: true });
   const signIn = page.getByRole('dialog', { name: 'Sign in' });
   await act(page, () => signIn.getByRole('button', { name: /^Emily,/ }).click());
   await act(page, () => signIn.getByRole('button', { name: 'Sign in' }).click());
   expect(await problems(page)).toEqual([]);
 
-  for (const hash of ['#/products?view=22', '#/products?edit=22', '#/products?create=1', '#/products?remove=22']) {
-    await open(page, hash);
-    expect(await problems(page), hash).toEqual([]);
+  for (const path of ['/products/22', '/products/22/edit', '/products/new', '/products/22/remove']) {
+    await open(page, path);
+    expect(await problems(page), path).toEqual([]);
   }
 
-  await open(page, '#/products?bulk=1');
+  await open(page, '/products/bulk');
   const wizard = page.getByRole('dialog', { name: 'Bulk price change' });
   await act(page, () => wizard.getByRole('button', { name: /Category/ }).click());
   await act(page, () =>
@@ -60,7 +61,7 @@ test('the catalogue, a product, the editor and the dialogs name their pieces as 
 });
 
 test('the network lab and its logs name their pieces as schema.org does', async ({ page }) => {
-  await open(page, '#/products');
+  await open(page, '/products');
   await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
   const lab = page.getByRole('complementary', { name: 'Network lab' });
   await act(page, () => page.getByRole('link', { exact: true, name: 'Arc Floor Lamp' }).click());

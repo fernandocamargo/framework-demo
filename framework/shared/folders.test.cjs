@@ -350,12 +350,16 @@ test('a handler whose dependencies cannot be read is named, with what to write',
   const found = about('components/handler-reads-all');
   assert.deepEqual(
     found.map((problem) => problem.file),
-    [1, 2, 3, 4].map((line) => `components/handler-reads-all/handlers.ts:${line}`),
+    [
+      ...[1, 2, 3, 4].map((line) => `components/handler-reads-all/handlers.ts:${line}`),
+      'components/handler-reads-all/handlers.ts',
+    ],
   );
   assert.match(found[0].message, /handler passOn takes a parameter that is not destructured/);
   assert.match(found[1].message, /handler rest takes the rest of what it is given/);
   assert.match(found[2].message, /handler made is not a function written in this file/);
-  assert.ok(found.every((problem) => problem.message.includes('destructuring what it uses')));
+  assert.ok(found.slice(0, 4).every((problem) => problem.message.includes('destructuring what it uses')));
+  assert.match(found[4].message, /route is read only/);
 });
 
 test("a folder's element gets its boundaries only as a JSX tag of a default import: any other use is named", () => {
@@ -424,4 +428,31 @@ test("a folder's element gets its boundaries only as a JSX tag of a default impo
     ['components/shaped/props.ts:1'],
   );
   assert.match(shaped[0].message, /a component is written in a render, placeholder or error file, as a JSX tag/);
+});
+
+test('only direct children of routes read the address, including charts and async exports', () => {
+  write('components/app/routes/products/render.tsx', 'export default ({ routes }) => routes;');
+  write(
+    'components/app/routes/products/props.ts',
+    'export default ({ route, routes }) => ({ page: route.page, routes });',
+  );
+  write('components/app/routes/products/components/row/render.tsx', 'export default () => null;');
+  write(
+    'components/app/routes/products/components/row/async.ts',
+    'export const read = ({ route }) => Promise.resolve(route.page);',
+  );
+  write(
+    'components/app/routes/products/components/row/state.ts',
+    'export const context = ({ route }) => ({ id: route.params.id }); export default { editing: {} };',
+  );
+  assert.deepEqual(about('components/app/routes/products/props.ts'), []);
+  const found = about('components/app/routes/products/components/row');
+  assert.deepEqual(
+    found.map(({ file }) => file),
+    [
+      'components/app/routes/products/components/row/async.ts',
+      'components/app/routes/products/components/row/state.ts',
+    ],
+  );
+  assert.ok(found.every(({ message }) => message.includes('pass its values to components as props')));
 });

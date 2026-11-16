@@ -7,6 +7,7 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
 import { checkMicrodata, type Vocabulary } from '../framework/microdata/check';
+import { arrive, visit } from '../perf/address.mjs';
 
 const vocabulary = JSON.parse(
   readFileSync(new URL('../framework/microdata/vocabulary.json', import.meta.url), 'utf8'),
@@ -24,7 +25,7 @@ const act = async (page: Page, action: () => Promise<unknown>) => {
   await action();
   await page.evaluate(() => window.__framework.idle());
 };
-const open = (page: Page, hash = '#/products') => act(page, () => page.goto(`./?world=memory${hash}`));
+const open = (page: Page, path = '/products', query = {}) => act(page, () => arrive(page, path, query));
 const dialog = (page: Page, name: RegExp | string) =>
   page.getByRole('dialog', { name }).or(page.getByRole('alertdialog', { name }));
 const palette = (page: Page) => dialog(page, 'Commands');
@@ -71,12 +72,12 @@ test('the key opens the palette, which lists what can be done here and searches 
 
   // The menu focuses its first command when the text changes: Enter runs Arc Floor Lamp.
   await act(page, () => page.keyboard.press('Enter'));
-  expect(page.url()).toContain('view=22');
+  expect(new URL(page.url()).pathname).toBe('/products/22');
   expect(await palette(page).count()).toBe(0);
 });
 
 test('a command the permissions refuse is listed and not now', async ({ page }) => {
-  await open(page, '#/products?signin=1');
+  await open(page, '/products', { signin: true });
   await signIn(page, 'Avery');
   await act(page, () => page.keyboard.press('ControlOrMeta+k'));
   const create = items(palette(page)).filter({ hasText: 'New product' });
@@ -84,16 +85,16 @@ test('a command the permissions refuse is listed and not now', async ({ page }) 
 });
 
 test('over the editor, Save is listed; the palette names its pieces as schema.org does', async ({ page }) => {
-  await open(page, '#/products?signin=1');
+  await open(page, '/products', { signin: true });
   await signIn(page, 'Emily');
-  await open(page, '#/products?edit=22');
+  await open(page, '/products/22/edit');
   await act(page, () => page.keyboard.press('ControlOrMeta+k'));
   expect(await items(palette(page)).filter({ hasText: 'Save the product' }).count()).toBe(1);
   expect(await page.evaluate(checkMicrodata, vocabulary)).toEqual([]);
 });
 
 test('the gallery holds the search states in their own styled folder', async ({ page }) => {
-  await act(page, () => page.goto('./?world=memory#/states'));
+  await act(page, () => page.goto(`${visit('/products')}#/states`));
   const search = page.getByRole('region', { name: 'components/palette/components/search' });
   expect(await search.locator('iframe').count()).toBe(3);
   expect(await search.innerText()).toContain('The products are searched for the last text');
@@ -103,7 +104,7 @@ test('the gallery holds the search states in their own styled folder', async ({ 
   for (const skin of ['default', 'broadsheet', 'blueprint']) {
     for (const state of ['idle', 'waiting', 'searching']) {
       await act(page, () =>
-        page.goto(`./?world=memory&skin=${skin}#/states/components%2Fpalette%2Fcomponents%2Fsearch/${state}`),
+        page.goto(`${visit('/products', { skin })}#/states/components%2Fpalette%2Fcomponents%2Fsearch/${state}`),
       );
       const field = page.getByRole('searchbox', { name: 'Command or product' });
       expect(await field.inputValue()).toBe('lamp');

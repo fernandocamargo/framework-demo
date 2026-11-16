@@ -22,11 +22,11 @@ test('only a refused refresh ends the session', () => {
 
 test('signing in remembers who and until when, clears the form and closes the dialog', async () => {
   const fields = formOf(form);
-  const go = vi.fn();
+  const query = vi.fn();
   const signIn = vi.fn(async () => ({ expiresAt: Date.now() + 60_000, user }));
   const flow = startFlow(session, {
     form: fields,
-    navigation: { go },
+    navigation: { query },
     services: { auth: { refresh: vi.fn(), session: async () => null, signIn, signOut: vi.fn(async () => undefined) } },
   });
   await flow.settled();
@@ -40,14 +40,14 @@ test('signing in remembers who and until when, clears the form and closes the di
   expect(flow.states).toEqual(['signedIn']);
   expect(flow.context['user']).toEqual(user);
   expect(fields.values).toEqual({ password: '', username: '' });
-  expect(go).toHaveBeenCalledWith({ signin: false });
+  expect(query).toHaveBeenCalledWith({ signin: false });
   flow.stop();
 });
 
 test('wrong credentials stay signed out, with the reason', async () => {
   const flow = startFlow(session, {
     form: formOf(form),
-    navigation: { go: vi.fn() },
+    navigation: { query: vi.fn() },
     services: {
       auth: { session: async () => null, signIn: async () => Promise.reject(new Error('Invalid credentials')) },
     },
@@ -57,4 +57,15 @@ test('wrong credentials stay signed out, with the reason', async () => {
   await flow.settled();
   expect(flow.states).toEqual(['signedOut']);
   expect(flow.context['error']).toBe('Invalid credentials');
+});
+
+test('cancelling a sign-in over a product closes it; on another page only sign-in closes', () => {
+  const go = vi.fn();
+  const query = vi.fn();
+  // SAFETY: The action reads only these navigation functions and the shell's productOpen prop.
+  session.closeEverything({ navigation: { go, query }, productOpen: true } as never);
+  expect(go).toHaveBeenCalledWith('/products', {}, { signin: false });
+  // SAFETY: The same action on a page with no product changes only the global sign-in field.
+  session.closeEverything({ navigation: { go, query }, productOpen: false } as never);
+  expect(query).toHaveBeenCalledWith({ signin: false });
 });

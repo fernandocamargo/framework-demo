@@ -649,8 +649,8 @@ progress {
   padding: 1rem;
   background: rgb(8 10 16 / 0.5);
   overflow: auto;
-  /* A dialog closed while it enters stops entering: nothing is left for its exit to wait for. */
-  &[data-entering]:not([data-exiting]) {
+  /* A dialog closed while it enters stops entering; one under another counts as entering while it is covered. */
+  &[data-entering]:not([data-exiting]):not([data-covered]) {
     animation: fade 160ms var(--ease);
   }
   &[data-react-aria-top-layer] {

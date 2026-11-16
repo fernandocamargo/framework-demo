@@ -23,3 +23,5 @@ export default ({ async: { default: answer }, i18n, state }) => {
     tokenMinutes: String(settings.tokenMinutes),
   };
 };
+
+export const examples = { 'The lab': {} };

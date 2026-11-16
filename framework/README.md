@@ -7,7 +7,7 @@ A small React framework in which a component is a folder, each file of the folde
 - `typescript/`: the TypeScript language-service plugin that types those injected arguments, and `check.cjs`, the same thing for the command line.
 - `shared/folders.cjs`: the folder rules both plugins follow, and the convention checks.
 
-It is built on React 19, TanStack Query 5 (the data layer) and XState 5 (the state layer). Neither shows in an app's code: an app writes plain functions and plain objects in fixed places.
+It is built on React 19, TanStack Query 5 (the data layer), XState 5 (the state layer) and React Router 8 (the routes layer). Neither shows in an app's code: an app writes plain functions and plain objects in fixed places.
 
 ## What it does
 
@@ -66,14 +66,14 @@ What the framework guarantees about them:
 - **A component renders only when what it shows changes.** Every component is wrapped in `React.memo`. When a re-render leaves the props, `async`, `status`, `state` and `form` as they were, the framework returns the render's last output instead of calling it, and React skips everything inside. A new answer keeps every part equal to the last answer the component showed, so a child given an unchanged part of it gets the same object. What the render gets (what `props.ts` returns, or the props and layers) is shared the same way with what it got last time: when nothing in it changed, the render is not called, and a part that did not change keeps its identity, so react-aria's collections and memoized children skip it.
 - **A component follows only what its files read.** The plugin reads what the first parameter of each function the framework calls destructures (`({ intl, async }) => …`), file by file: each file's default export, and the named exports of `async.ts` (operations) and `state.ts` (checks and changes). A helper a file exports for itself or its tests (`sorting(id)` beside a `props.ts`) is not called with what the framework gives, so it reads nothing. A component re-renders for a change of locale only when one of its files reads `intl`, `locale` or `i18n` (or the folder has an `i18n.ts`), for a change of person only when one reads `user`, for a change of what it may do only when one reads `acl`, and for a change of the keys on screen only when one reads `keyboard`; a parameter that is not destructured reads everything. A default read that reads the locale or the user is keyed by it, so one person never sees another's cached answer.
 - **What did not change is what React showed.** When the render is called, its output shares with the last output every element equal to the one at the same place (same type and key, and every prop the same value, or an equal element, list or plain object; keyed items match by key). React skips an element it showed before, and everything inside it. A handler is not a value that changes: the plugin passes every `on…` handler of a render that is not one of its folder's `handlers.<name>` through `track`, which gives it one wrapper per site, key and place among the rows, for the instance's life, calling the handler of the last render React committed. So an element whose only new props are its handlers' closures is the element shown before, and a row's button still calls that row's closure after the rows change order. A function written in the JSX that is not a handler (a list's `{(item) => <ListBoxItem … />}`, a `className={({ isSelected }) => …}`) is moved out of the render by the plugin when it uses nothing of the render: only its own parameters, what the module imports or declares, and globals. It is then one function for the module's life, the element it is given to is equal to the one before, and react-aria does not render the list again because its parent rendered. One that reads values of the render, each a parameter or a `const` declared before it (a slider's output that calls the render's formatter), is passed through `keep` with those values: inside an instance it is the function of the last render that read the same values, at the same site, key and place. One that reads a `let`, binds one of the render's names again, or holds a handler stays as written, and is a new function at each render. When the render is called and returns what it returned before, the component returns the element React showed.
-- **A component follows only the route fields it reads.** `Root` gives each field of the route a context of its own (React has no selector for a context), so a component renders again for a field it read and for no other. A default read follows the fields its first run read: the list follows `q`, `category`, `sort`, `order` and `page`, and a dialog opening over it does not render it at all. A component with a `state.ts` reads the route being rendered until its first commit, field by field as its chart reads it, and not after. A view whose `props.ts`, render or `acl.ts` reads `route` follows the fields they read: each render reads those fields again from their contexts, so a change of one runs the files again, and a change of another renders nothing (the lab's sell-out button follows `edit` alone). Spreading the route, or listing its keys, follows all of it. Read after the render (in a handler, a key), the route is the committed one. Fields that appear after `Root`'s first route are read from the whole route. Operations and statecharts read the committed route when they run.
-- **Every render of a component calls the same hooks.** Which hooks a component needs depends on its folder: whether a file reads the person, the snapshot, the flags or the keys, whether the view has a default read, a chart, a form or named operations. Each of those is a choice between two hooks made once, when the component's type is created or its view has loaded, so no hook sits behind a condition and `eslint-plugin-react-hooks`' `rules-of-hooks` can check the runtime. One call remains that it cannot check: the route is read from its contexts on demand, as a file reads a field (`reading` in `runtime/root.tsx`), with `use`, the one hook React lets a render call behind a condition.
+- **A route folder follows the fields its files read.** A small router adapter reads React Router's location and gives the memoized view its validated route. The framework records the route fields read by the view and its default read, and compares those fields before executing the view again. Equal nested values, such as parameters and filters, keep their identity. The adapter still follows every address change; the view and its children skip changes outside their inputs. A chart that handles `route` events, or a named operation that may first read the route after rendering, follows the whole address. Navigation reads the router's current history when it runs, without subscribing the folder to location changes. No framework route provider or address store is involved.
+- **Every render of a component calls the same hooks.** Which hooks a component needs depends on its folder: whether a file reads the person, the snapshot, the flags or the keys, whether the view has a default read, a chart, a form or named operations. Each of those is a choice between two hooks made once, when the component's type is created or its view has loaded, so no hook sits behind a condition and `eslint-plugin-react-hooks`' `rules-of-hooks` can check the runtime. A route adapter calls `useLocation()`; the view itself calls no location hook.
 - **An edit keeps the page, under the dev server.** Authors write `export default (props) => …`, which React's Fast Refresh does not take for a component, and a render is not one: it is called as a function. So the folder's module takes the edit itself. An edit to a file of the view (the render, `props.ts`, `async.ts`, `state.ts`, `form.ts`, `acl.ts`, `shortcuts.ts`) shows in every instance on screen, which keeps what it holds: what was typed in its fields, its open dialog, its chart's state when the edited chart still has it. An edit to a skin changes its sheet. An edit that changes the hooks an instance calls (a default read, chart or form added or removed, or the ordered operation exports or selected status fields changed) mounts those instances again. An edit to `i18n.ts`, the placeholder or the error file mounts the folder's components again, with the page around them as it was. An edit that changes what the folder's files read, a file added or removed, and an edit outside the component folders reload the page.
 - **What a parent passes is checked** when the child's `props.ts` exports a type named `Props`: the plugin writes the folder's declaration from it. A folder without one takes any props.
 
 ### One component per folder
 
-A folder is one React component: it waits for its view, calls every hook, and calls the render as a plain function. In a build, a folder with neither a `placeholder.tsx` nor an `error.tsx` has nothing around it. A placeholder adds React's `Suspense`; an error file adds the error boundary, react-error-boundary's class in a subclass of the framework's.
+A folder's view is one React component: it waits for its files, calls its hooks, and calls the render as a plain function. A folder that reads the route has a memoized router adapter before that view. In a build, a folder with neither a `placeholder.tsx` nor an `error.tsx` has nothing around it. A placeholder adds React's `Suspense`; an error file adds the error boundary, react-error-boundary's class in a subclass of the framework's.
 
 - **Boundaries are composed where the folder is written.** A component's own `Suspense` cannot catch what its own hooks wait for, and its own error boundary cannot catch what it throws. So the folder's `Suspense` (with `placeholder.tsx`) and its error boundary (with `error.tsx`) go around its element. The plugin rewrites every file that writes a folder's element as a JSX tag: `<Row … />` becomes `bound(<Row … />)`, in a folder's render, placeholder and error files and in the app's own files (the shell, where `Root` is given its folders, however deep). `Root` also does it for the elements it is given directly. A folder with neither file gets nothing around it.
 - **The error boundary is react-error-boundary's.** The framework composes the library and adds two things to it, in a subclass: the failure is reported with the chain of instances above it, which the class reads from context (`runtime/boundaries.ts` says why a subclass); and the boundary renders again only for another folder or other props (`shouldComponentUpdate`, the comparison `memo` makes for the folder). "Try again" reaches the folder's error file through the library's `useErrorBoundary()`.
@@ -142,7 +142,7 @@ export default {
 
 - The component gets `i18n`, the same shape. A message with no arguments is a string. One with arguments or tags is a function of their values, typed from the ICU: `i18n.summary({ count, filter, q })` takes `{ count: number; filter: string; q: string | number }`, and a missing value is a type error. A tag (`<b>…</b>`) takes a function that says what it becomes, and gives React nodes. A function leaf `(values, intl) => …` is called with its values.
 - `intl` is react-intl's, for the locale on screen: `formatNumber`, `formatDate`, `formatList`, `formatRelativeTime`. `locale` is the locale itself.
-- Translations live beside the messages, in `i18n/<locale>.json`, as flat objects keyed by path (`"components/catalogue/empty/title": "Nada encontrado"`), the shape translation tools exchange. Each loads on demand, the first time a component of the folder shows in that locale. A region falls back to its language's file (`pt-PT` reads `pt.json`), and a locale with none shows the source.
+- Translations live beside the messages, in `i18n/<locale>.json`, as flat objects keyed by path (`"components/app/routes/products/components/catalogue/empty/title": "Nada encontrado"`), the shape translation tools exchange. Each loads on demand, the first time a component of the folder shows in that locale. A region falls back to its language's file (`pt-PT` reads `pt.json`), and a locale with none shows the source.
 - `Root`'s `locale` says which locale shows. Change it in a transition: each component waits for its new messages during render, so the old locale stays on screen until the new one can show in one commit. A change of `locale` given to Root outside a transition can show a mixed page, as any urgent update that suspends. A component that reads none of `i18n`, `intl` and `locale` does not render again.
 - A translation file that fails to load shows the source words and reports the failure once through the `i18n` failure layer.
 - `virtual:framework/messages` default-exports `preload(locale)`, which loads every folder's translations in a locale. Awaited before the change, as the demo's shell does, no component waits at the switch and React throws no render away; the first switch to a locale then fetches every folder's file, on screen or not.
@@ -160,9 +160,9 @@ The app does not own its permissions: the backend sends a snapshot of them, and 
   ```ts
   // components/app/acl.ts: everything below inherits it
   export default ({ acl }) => acl.role === 'guest' || acl.grants.products.includes('update');
-  // components/product/remove-link/acl.ts: one link, deep in a row, narrower
+  // components/app/routes/products/components/remove-link/acl.ts: one link, deep in a row, narrower
   export default ({ acl }) => acl.allowed && (acl.role === 'guest' || acl.grants.products.includes('delete'));
-  // components/bulk-price/acl.ts: the backend's limit against what the form says
+  // components/app/routes/products/routes/bulk/acl.ts: the backend's limit against what the form says
   export default ({ acl, form }) =>
     acl.role === 'guest' ||
     (acl.grants.prices.includes('update') &&
@@ -200,7 +200,7 @@ The app does not own its permissions: the backend sends a snapshot of them, and 
 A component folder's `shortcuts.ts` says which keys the component answers while it is on screen. It gets what `props.ts` gets, so a key can follow the locale, what may be done, the chart's state and the component's read:
 
 ```ts
-// components/catalogue/shortcuts.ts
+// components/app/routes/products/components/catalogue/shortcuts.ts
 export default ({ i18n, acl, async: { default: answer } }) => ({
   '/': { label: i18n.keys.search, focus: 'input[type=search]' },
   n: { label: i18n.keys.create, run: () => go({ create: true }), when: acl.allowed },
@@ -210,7 +210,7 @@ export default ({ i18n, acl, async: { default: answer } }) => ({
     when: answer.page.page < answer.page.pages,
   },
 });
-// components/product/editor/shortcuts.ts
+// components/app/routes/products/components/editor/shortcuts.ts
 export default ({ i18n }) => ({
   'mod+s': { label: i18n.keys.save, send: 'save' },
 });
@@ -220,7 +220,7 @@ export default ({ i18n }) => ({
 - `focus` focuses the first element of the component that matches a selector; `run` calls a function; `when`, true when left out, says whether the key may be used now.
 - `mod` is ⌘ on Apple devices and Ctrl elsewhere. A symbol (`?`, `/`, `[`) matches with or without shift, as keyboard layouts need.
 - One listener on the document. A key reaches a component that can be reached: an element with its class on screen, and nothing hiding it (`inert`, or the `aria-hidden` a modal dialog sets on everything outside it), so the catalogue's keys stop while a dialog is open over it. A key without a modifier is left to the field that has the focus: `/` and `n` type in a search. When two components answer the same key, the one holding the focus wins, then the one shown last. A key some component on screen declares is the app's, even when it does nothing now: `mod+s` never opens the browser's "save page".
-- A key that runs is an interaction, tracked like a handler, with its place in `shortcuts.ts` (`components/product/editor#shortcuts.mod+s`).
+- A key that runs is an interaction, tracked like a handler, with its place in `shortcuts.ts` (`components/app/routes/products/components/editor#shortcuts.mod+s`).
 - A component that reads `keyboard` gets the keys on screen, by component, each with its label, the keys as the platform writes them (`⌘ S`, `Ctrl S`) and whether it does something now. The app's `?` list reads it, and is a component of its own, shown only while open, so nothing renders again when the keys change while it is closed. Each listed key also has `run()`, which does what pressing it does (the chart's event only while the chart takes it, the last instance shown, tracked as an interaction), so a palette or a menu can offer the keys as commands. It works while the palette's own dialog hides the page, except for a `focus` key, which needs its element reachable.
 
 ### The data layer
@@ -353,7 +353,7 @@ One `EventTarget` carries three kinds of event.
 
 ### Skins
 
-- `style/skins/<name>/index.ts` default-exports plain CSS through `css` (`String.raw`). The runtime nests it under the component's escaped class, in one `<style>`, the first time the component renders with that skin. Each skin is its own lazy chunk.
+- `style/skins/<name>/index.ts` default-exports plain CSS through `css` (`String.raw`). The runtime nests it under the component's escaped class, in one `<style>`. Each skin is its own lazy chunk. Loaded folder types register their sheets; Root waits for the requested skin's sheets before committing the change. Skin selection stays outside the shared framework context, so changing presentation executes no folder view.
 - `Root`'s `skin` picks the page's skin; the other skins' sheets stop applying. The page says which it wears (`<html data-skin>`), for what no component owns: a skin's page-level sheet, and what react-aria renders in portals.
 - A component with no sheet for the page's skin shows unstyled, so a skin has a sheet for every component folder.
 - In `style/` files, the default import of another component folder becomes its escaped selector, so `${Lab} { … }` targets it.
@@ -421,7 +421,7 @@ Every convention mistake that would otherwise fail silently, or far from its cau
 - a `handlers.ts` export named for an event (`onPress`, `handleClick`): name it for what it does.
 - a `handlers.ts` export whose dependencies cannot be read: a parameter that is not destructured or has a rest element, or an export that is not a function written in the file. Write `({ state }) => (event) => …`.
 - an `i18n.ts` whose default export is not an object literal of strings, functions and objects of them, so its messages cannot be read without running it, and a message that is not valid ICU;
-- a translation that misses a message, names one `i18n.ts` does not have, translates a function, or loses or adds an argument or a tag (`"components/catalogue/paging/page" loses {pages}`), and translations in a folder with no `i18n.ts`.
+- a translation that misses a message, names one `i18n.ts` does not have, translates a function, or loses or adds an argument or a tag (`"components/app/routes/products/components/catalogue/paging/page" loses {pages}`), and translations in a folder with no `i18n.ts`.
 
 A service `meta.ts` is also typed by what it returns, so a mistyped operation name reports "Did you mean to write 'search'?" instead of leaving a read uncached. Skins are read with the same parser as renders, so `import X, { y }` from a component is an error that says why, not a function inside CSS.
 
@@ -449,12 +449,53 @@ After a change to the plugin's own files (`framework/typescript/`), run "TypeScr
 - to take one off the list, fix it, then run `npx eslint . --prune-suppressions` and commit the smaller file with the fix. Until it is pruned, the lint fails and says so, so the file never holds more than the code does;
 - nothing is added to it. `--suppress-all` wrote it once; a violation that cannot be avoided gets an `eslint-disable` comment where it is, with its reason.
 
-The app's code has none. What is left in the runtime: `refs` 34 and `immutability` 15 (in `component.tsx`, `machine.ts`, `form.ts`, `activity.ts`, `root.tsx`), and in `root.tsx` three `exhaustive-deps`, one `rules-of-hooks` (the route read on demand, above) and one `set-state-in-effect`.
+The app's code has none. What is left in the runtime: `refs` 30 and `immutability` 15 (in `component.tsx`, `machine.ts`, `form.ts`, `activity.ts`, `root.tsx`), and in `root.tsx` three `exhaustive-deps` and one `set-state-in-effect`.
+
+## Routes as a layer
+
+A component owns `routes/`. Each direct child is a component folder with `render.tsx`.
+The plugin gives the owner one React Router `<Routes>` element, with a `<Route element={<Child />}>`
+for each child. The folder name is its segment; `:id` names a parameter. A child with its own
+`routes/` owns another `<Routes>`; its parent's path ends in `/*`. The parent's render places
+`{routes}`, and its `props.ts` forwards it. There is no central route tree or outlet.
+
+`meta.ts` can set a relative `path`, refine parameters (`params: { id: { type: 'integer', min: 1 } }`),
+or declare query fields. `{ index: true }` marks an index child: it has no segment or descendants.
+The owner's `routes/meta.ts` names a static `home` and the global query fields. Metadata is literal
+data, read without executing it. The plugin writes the address codec and the pattern, parameter
+and query types in `.framework-types/src/routes.d.ts`.
+
+The app mounts one `<BrowserRouter basename={BASE_PATH}>` around its shell. Only direct children
+of `routes/` read the injected `route`: their adapter reads React Router's location
+and the codec validates its parameters and query. `problems()` rejects route reads in other component folders,
+including components nested inside a route. Route folders pass filters, IDs and link destinations
+as plain props. An async default receives the declared props too; only props its `async.ts`
+destructures enter its query key. Changing one also retries a failed read.
+
+`navigation.go('/products/:id/edit', { id: 4 })` stays typed. Handlers, shortcuts and charts receive
+the router's stable history navigator behind the codec. `navigation.query('/products', { page: 2 })`
+patches the active route's fields; `navigation.query({ signin: true })` patches global fields.
+`navigation.replace` replaces a path, and global query changes accept `{ replace: true }` for
+skin and language switches. Links use the same codec. Unknown paths and refused parameters go
+home; invalid query fields fall back to defaults. The versioned JSON `query` stays canonical.
+The navigation hook uses React Router's navigation context and the history supplied by BrowserRouter
+or MemoryRouter; a custom navigator must expose that history's current location. There is no document
+address store, framework route context, participant registry or blocker.
+
+A chart may name a child segment with `meta: { route: 'confirm' }` to resolve a direct bookmark
+into that state. The segment has a real child folder. The bulk chart writes its confirmation's
+address in an action and follows changes through its existing `route` event. Back leaves the
+confirmation and keeps the draft; it is never refused. Returning by a button replaces the
+confirmation entry with the wizard's address.
+
+Static paths get copies of the built page, respecting Vite's base. The optional
+`routing-fallback/404.html` is emitted separately for an explicit hosting choice. Tests and
+Storybook use React Router's `<MemoryRouter>`.
 
 ## Not in it, or open
 
 - **Typing:** ESLint and Vitest do not load the TypeScript plugin, so a test file gets the injected types only through `check.cjs`. The language-service requests the plugin does not map (outlines, formatting, refactors) see the file as written.
-- **Routing:** `Root` takes a `route` object and a `navigation` object from the app. A routing layer would own both.
+- **Routing:** static and named path segments, flat primitive query fields, and one serial routed chart. Catch-all paths, arbitrary query structures and parallel chart routing remain open. A folder's default read starts when the folder renders. Handlers and charts receive the route and props of their rendered folder.
 - **Forms:** `form.ts` is a stand-in for a form manager.
 - **The data layer:** services get no `signal`. Component queries stay fresh until a read they used is made stale, or their key changes; changes made by someone else are not seen until then, unless the read follows its source.
 - **Flags:** a component follows every flag it has ever read, not only those its last render read: a row that read `acl.role` while counting was on still renders when the role changes with counting off, to the same output.

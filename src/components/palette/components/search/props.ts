@@ -1,6 +1,6 @@
 // The search shapes commands from current permissions, shortcuts, text and product results.
 
-import { go, sectionHref, SECTIONS } from '@/address';
+import { openSection, SECTIONS } from '@/address';
 import { endonym, LOCALES, speak } from '@/locales';
 import { SKINS, wear } from '@/skins';
 
@@ -14,7 +14,7 @@ export type Props = {
 export const matches = (textValue: string, inputValue: string) =>
   textValue.toLocaleLowerCase().includes(inputValue.trim().toLocaleLowerCase());
 
-export default ({ i18n, keyboard, onClose, standalone, state, title, user }) => {
+export default ({ i18n, keyboard, navigation, onClose, standalone, state, title, user }) => {
   const { results, text } = state.context;
   const searching = state.searching;
 
@@ -53,9 +53,7 @@ export default ({ i18n, keyboard, onClose, standalone, state, title, user }) => 
       id: 'go',
       items: [
         ...SECTIONS.map((section) =>
-          command(`section:${section}`, i18n.go[section], () => {
-            window.location.hash = sectionHref(section);
-          }),
+          command(`section:${section}`, i18n.go[section], () => openSection(navigation, section)),
         ),
         command('states', i18n.go.states, () => {
           window.location.hash = '#/states';
@@ -66,14 +64,14 @@ export default ({ i18n, keyboard, onClose, standalone, state, title, user }) => 
       heading: i18n.sections.appearance,
       id: 'appearance',
       items: [
-        ...SKINS.map((skin) => command(`skin:${skin}`, i18n.skins[skin], () => wear(skin))),
-        ...LOCALES.map((locale) => command(`locale:${locale}`, endonym(locale), () => speak(locale))),
+        ...SKINS.map((skin) => command(`skin:${skin}`, i18n.skins[skin], () => wear(navigation, skin))),
+        ...LOCALES.map((locale) => command(`locale:${locale}`, endonym(locale), () => speak(navigation, locale))),
       ],
     },
     {
       heading: i18n.sections.session,
       id: 'session',
-      items: user ? [] : [command('signin', i18n.signIn, () => go({ signin: true }))],
+      items: user ? [] : [command('signin', i18n.signIn, () => navigation.query({ signin: true }))],
     },
     {
       heading: i18n.sections.products,
@@ -84,7 +82,7 @@ export default ({ i18n, keyboard, onClose, standalone, state, title, user }) => 
         keys: [],
         kind: 'product' as const,
         label: product.title,
-        perform: perform(() => go({ view: product.id })),
+        perform: perform(() => navigation.go('/products/:id', { id: product.id })),
       })),
     },
   ];

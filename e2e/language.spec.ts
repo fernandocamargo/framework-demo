@@ -1,5 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 
+import { queryOf, visit } from '../perf/address.mjs';
+
 const idle = (page: Page) => page.evaluate(() => window.__framework.idle());
 const language = (page: Page) => page.getByRole('combobox', { name: /^(Language|Idioma)$/ });
 const translations = /\/pt-BR(?:-[^/]+\.js|\.json(?:\?.*)?)$/;
@@ -9,7 +11,7 @@ for (const skin of ['default', 'broadsheet', 'blueprint']) {
     test(`the native language select keeps its identity, focus and history in ${skin}, starting in ${locale}`, async ({
       page,
     }) => {
-      await page.goto(`./?world=memory&skin=${skin}&lang=${locale}#/products`);
+      await page.goto(visit('/products', { lang: locale, skin }));
       await idle(page);
       const select = language(page);
       const node = await select.elementHandle();
@@ -33,8 +35,8 @@ for (const skin of ['default', 'broadsheet', 'blueprint']) {
       expect(await select.evaluate((element) => element === document.activeElement)).toBe(true);
       expect(await page.locator('html').getAttribute('lang')).toBe(next);
       expect(await page.locator('[itemtype="https://schema.org/Language"] meta').getAttribute('content')).toBe(next);
-      expect(new URL(page.url()).searchParams.get('lang')).toBe(next);
-      expect(new URL(page.url()).hash).toBe(new URL(before).hash);
+      expect(queryOf(page.url())['lang']).toBe(next);
+      expect(new URL(page.url()).pathname).toBe(new URL(before).pathname);
 
       // Locale changes replace the current entry; navigating away and back keeps that choice.
       await page.getByRole('link', { exact: true, name: next === 'en' ? 'Report' : 'Relatório' }).click();
@@ -42,7 +44,7 @@ for (const skin of ['default', 'broadsheet', 'blueprint']) {
       await page.goBack();
       await idle(page);
       expect(await select.inputValue()).toBe(next);
-      expect(new URL(page.url()).hash).toBe(new URL(before).hash);
+      expect(new URL(page.url()).pathname).toBe(new URL(before).pathname);
       await page.goForward();
       await idle(page);
       expect(await select.inputValue()).toBe(next);
@@ -52,7 +54,7 @@ for (const skin of ['default', 'broadsheet', 'blueprint']) {
 }
 
 test('a delayed Portuguese selection followed by English keeps the last choice', async ({ page }) => {
-  await page.goto('./?world=memory&lang=en#/products');
+  await page.goto(visit('/products', { lang: 'en' }));
   await idle(page);
   let release!: () => void;
   let requested!: () => void;
@@ -80,11 +82,11 @@ test('a delayed Portuguese selection followed by English keeps the last choice',
   await idle(page);
   expect(await language(page).inputValue()).toBe('en');
   expect(await page.locator('html').getAttribute('lang')).toBe('en');
-  expect(new URL(page.url()).searchParams.get('lang')).toBe('en');
+  expect(queryOf(page.url())['lang']).toBe('en');
 });
 
 test('unavailable translations keep the language options and source label usable', async ({ page }) => {
-  await page.goto('./?world=memory&lang=en#/products');
+  await page.goto(visit('/products', { lang: 'en' }));
   await idle(page);
   await page.context().route(translations, (route) => route.abort());
   await language(page).selectOption('pt-BR');

@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+import { visit } from '../perf/address.mjs';
+
 test('the lab shows existing activity on each first frame and keeps it across tab and panel closes', async ({
   page,
 }) => {
-  await page.goto('./?world=memory#/products');
+  await page.goto(visit('/products'));
   await page.evaluate(() => window.__framework.idle());
 
   await page.getByRole('button', { name: /Network lab/ }).click();
@@ -38,7 +40,7 @@ test('the lab shows existing activity on each first frame and keeps it across ta
 });
 
 test('the gallery lists the two child charts under their own folders', async ({ page }) => {
-  await page.goto('./?world=memory#/states');
+  await page.goto(`${visit('/products')}#/states`);
   await page.evaluate(() => window.__framework.idle());
 
   expect(await page.getByRole('region', { name: 'components/lab/components/network' }).locator('iframe').count()).toBe(
@@ -54,7 +56,7 @@ test('the gallery lists the two child charts under their own folders', async ({ 
 // or may have it already, as the page's loading goes. Either way it is never a list with nothing in
 // it: it waits, marked busy, or it shows its entries; and once the page is at rest it shows them.
 test('the API client tab never shows an empty list after the skin changed', async ({ page }) => {
-  await page.goto('./?world=memory#/products');
+  await page.goto(visit('/products'));
   await page.evaluate(() => window.__framework.idle());
   await page.getByRole('combobox', { name: 'Skin' }).selectOption('broadsheet');
   await page.evaluate(() => window.__framework.idle());
@@ -78,7 +80,7 @@ test('the API client tab never shows an empty list after the skin changed', asyn
 // The lab loads both lists' files when it opens, so the Inspector tab asks for nothing more when it
 // shows: it shows its entries at once, never waiting and never empty.
 test('the Inspector tab shows at once, its files loaded with the lab', async ({ page }) => {
-  await page.goto('./?world=memory#/products');
+  await page.goto(visit('/products'));
   await page.evaluate(() => window.__framework.idle());
   await page.getByRole('combobox', { name: 'Skin' }).selectOption('broadsheet');
   await page.evaluate(() => window.__framework.idle());
@@ -104,7 +106,7 @@ test('the Inspector tab shows at once, its files loaded with the lab', async ({ 
 for (const skin of ['default', 'broadsheet', 'blueprint']) {
   for (const locale of ['en', 'pt-BR']) {
     test(`native lab choices keep values, names and focus in ${skin}, ${locale}`, async ({ page }) => {
-      await page.goto(`./?world=memory&skin=${skin}&lang=${locale}#/products`);
+      await page.goto(visit('/products', { lang: locale, skin }));
       await page.evaluate(() => window.__framework.idle());
       const title = locale === 'en' ? 'Network lab' : 'Laboratório de rede';
       await page.getByRole('button', { name: title }).click();
