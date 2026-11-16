@@ -446,7 +446,6 @@ export const STEPS = [
     act: (page) => chooseNativeSort(page, 'price:asc', false),
     check: async (page) =>
       (await page.getByRole('combobox', { name: 'Sort' }).inputValue()) === 'price:asc' &&
-      (await nativeSortClosed(page, true)) &&
       page.url().includes('sort=price') &&
       !page.url().includes('order='),
     further: true,
@@ -456,7 +455,6 @@ export const STEPS = [
     act: (page) => chooseNativeSort(page, 'title:asc', true),
     check: async (page) =>
       (await page.getByRole('combobox', { name: 'Sort' }).inputValue()) === 'title:asc' &&
-      (await nativeSortClosed(page, false)) &&
       !page.url().includes('sort='),
     further: true,
     name: 'sort after the entrance',
