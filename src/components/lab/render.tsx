@@ -16,7 +16,9 @@ import {
 import { createPortal } from 'react-dom';
 
 import Flags from './components/flags';
+import Network from './components/network';
 import SellOut from './components/sell-out';
+import Tracked from './components/tracked';
 
 // The lab is a tool of its own, as schema.org names a piece of software; each entry of its logs is
 // an action, with what became of it.
@@ -31,12 +33,10 @@ export default ({
   latency,
   latencyText,
   minutes,
-  network,
   offline,
   open,
   toggleLabel,
   tokenMinutes,
-  tracked,
 }) => (
   <div className={className}>
     <Button aria-controls="network-lab" aria-expanded={open} aria-label={toggleLabel} onPress={handlers.toggleLab}>
@@ -116,6 +116,7 @@ export default ({
               <Button onPress={handlers.forgetChanges}>{i18n.actions.forget}</Button>
             </li>
           </menu>
+          {/* TabPanel unmounts the hidden child, stopping that list's chart and timer. */}
           <Tabs>
             <TabList aria-label={i18n.tabs.label}>
               <Tab id="network">{i18n.tabs.network}</Tab>
@@ -123,33 +124,10 @@ export default ({
               <Tab id="flags">{i18n.tabs.flags}</Tab>
             </TabList>
             <TabPanel id="network">
-              <ol aria-label={i18n.network.label}>
-                {network.length === 0 && <li>{i18n.network.none}</li>}
-                {network.map((entry) => (
-                  <li itemScope itemType="https://schema.org/Action" key={entry.id}>
-                    <link href={entry.status} itemProp="actionStatus" />
-                    <time itemProp="startTime">{entry.when}</time>
-                    <span itemProp="name">{entry.kind}</span>
-                    <span itemProp="description">{entry.text}</span>
-                  </li>
-                ))}
-              </ol>
+              <Network />
             </TabPanel>
             <TabPanel id="tracked">
-              <ol aria-label={i18n.tracked.label}>
-                {tracked.length === 0 && <li>{i18n.tracked.none}</li>}
-                {tracked.map((entry) => (
-                  <li itemScope itemType="https://schema.org/Action" key={entry.id}>
-                    <link href={entry.status} itemProp="actionStatus" />
-                    {entry.byPerson && <span hidden itemProp="agent" itemScope itemType="https://schema.org/Person" />}
-                    <time itemProp="startTime">{entry.when}</time>
-                    <span itemProp="name">{entry.kind}</span>
-                    <span itemProp="description">
-                      {entry.text && <code>{entry.text}</code>} <small>{entry.where}</small>
-                    </span>
-                  </li>
-                ))}
-              </ol>
+              <Tracked />
             </TabPanel>
             <TabPanel id="flags">
               <Flags />
