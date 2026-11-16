@@ -25,7 +25,7 @@ export const STEP = {
 } as const;
 
 /** What the events carry beside their type. */
-export type Events = { address: { route: null | string }; categoryChanged: { category: string } };
+export type Events = { categoryChanged: { category: string } };
 
 export const context = () => ({
   error: null as null | string,
@@ -45,10 +45,17 @@ export const isLargeChange = ({ flags, form }) => form.payload().percent > flags
 /** The folder's acl.ts decides, as the percentage is typed, whether this change may be applied. */
 export const refused = ({ acl }) => !acl.allowed;
 /** Forward may reopen a confirmation only while this form still describes a valid change. */
-export const askedForConfirmation = ({ acl, event, form }) =>
-  event.route === 'confirm' && acl.allowed && form.values.selected.length > 0 && ruleProblem(form.payload()) === null;
-export const leavingConfirmation = ({ event }) => event.route === null;
-export const leavingEmptyConfirmation = ({ event, form }) => event.route === null && form.values.selected.length === 0;
+
+export const askedForConfirmation = ({ acl, form, route }) =>
+  route.pattern === '/products/bulk/confirm' &&
+  acl.allowed &&
+  form.values.selected.length > 0 &&
+  ruleProblem(form.payload()) === null;
+
+export const leavingConfirmation = ({ route }) => route.pattern === '/products/bulk';
+
+export const leavingEmptyConfirmation = ({ form, route }) =>
+  route.pattern === '/products/bulk' && form.values.selected.length === 0;
 export const queueLeft = ({ context }) => context.queue.length > 0;
 export const hasFailures = ({ context }) => context.results.some((result) => result.error !== null);
 
@@ -96,6 +103,14 @@ export const recordFailed = ({ context, event, form }) => ({
   ],
 });
 export const close = ({ navigation }) => navigation.go('/products');
+
+export const openConfirmation = ({ navigation, route }) => {
+  if (route.pattern !== '/products/bulk/confirm') navigation.go('/products/bulk/confirm');
+};
+
+export const closeConfirmation = ({ navigation, route }) => {
+  if (route.pattern === '/products/bulk/confirm') navigation.replace('/products/bulk');
+};
 
 // ---- What the services are given ---------------------------------------------------------------
 
@@ -146,8 +161,8 @@ export default ({ acl, services }) => ({
   previewing: {
     description: 'Step 3: each old price beside its new one.',
     on: {
-      address: { guard: askedForConfirmation, target: 'confirmingLargeChange' },
       back: 'settingRule',
+      route: { guard: askedForConfirmation, target: 'confirmingLargeChange' },
       ...(acl.grants.prices.includes('update') && {
         apply: [
           { guard: refused },
@@ -161,18 +176,22 @@ export default ({ acl, services }) => ({
   confirmingLargeChange: {
     description:
       'The rule moves prices by more than the largeChangeAt flag says. The person confirms it a second time, or goes back to the preview.',
+    entry: openConfirmation,
     meta: { route: 'confirm' },
     on: {
-      address: [
-        { guard: leavingEmptyConfirmation, target: 'loadingProducts' },
-        { guard: leavingConfirmation, target: 'previewing' },
+      back: [
+        { actions: closeConfirmation, guard: nothingSelected, target: 'loadingProducts' },
+        { actions: closeConfirmation, target: 'previewing' },
       ],
-      back: [{ guard: nothingSelected, target: 'loadingProducts' }, { target: 'previewing' }],
       confirm: [
         { guard: nothingSelected },
         { guard: invalidRule },
         { guard: refused },
-        { actions: queueSelected, target: 'applying' },
+        { actions: [closeConfirmation, queueSelected], target: 'applying' },
+      ],
+      route: [
+        { guard: leavingEmptyConfirmation, target: 'loadingProducts' },
+        { guard: leavingConfirmation, target: 'previewing' },
       ],
     },
   },

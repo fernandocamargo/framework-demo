@@ -2,7 +2,7 @@
 // What is on screen follows what can be done now: a key the chart or the permissions refuse is
 // listed as not now. A command closes the palette first: the page under a modal is inert until then.
 
-import { go, openSection, query, SECTIONS } from '@/address';
+import { openSection, SECTIONS } from '@/address';
 import { endonym, LOCALES, speak } from '@/locales';
 import type { Listed } from '@/services/products/types';
 import { SKINS, wear } from '@/skins';
@@ -19,7 +19,7 @@ export type Props = {
 export const matches = (textValue: string, inputValue: string) =>
   textValue.toLocaleLowerCase().includes(inputValue.trim().toLocaleLowerCase());
 
-export default ({ i18n, keyboard, onClose, results, searching, text, user }) => {
+export default ({ i18n, keyboard, navigation, onClose, results, searching, text, user }) => {
   // The palette is a modal: its command runs once it has closed, so the page under it is live again.
   const perform = (act: () => void) => () => {
     onClose();
@@ -53,7 +53,9 @@ export default ({ i18n, keyboard, onClose, results, searching, text, user }) => 
       heading: i18n.sections.goTo,
       id: 'go',
       items: [
-        ...SECTIONS.map((section) => command(`section:${section}`, i18n.go[section], () => openSection(section))),
+        ...SECTIONS.map((section) =>
+          command(`section:${section}`, i18n.go[section], () => openSection(navigation, section)),
+        ),
         command('states', i18n.go.states, () => {
           window.location.hash = '#/states';
         }),
@@ -63,14 +65,14 @@ export default ({ i18n, keyboard, onClose, results, searching, text, user }) => 
       heading: i18n.sections.appearance,
       id: 'appearance',
       items: [
-        ...SKINS.map((skin) => command(`skin:${skin}`, i18n.skins[skin], () => wear(skin))),
-        ...LOCALES.map((locale) => command(`locale:${locale}`, endonym(locale), () => speak(locale))),
+        ...SKINS.map((skin) => command(`skin:${skin}`, i18n.skins[skin], () => wear(navigation, skin))),
+        ...LOCALES.map((locale) => command(`locale:${locale}`, endonym(locale), () => speak(navigation, locale))),
       ],
     },
     {
       heading: i18n.sections.session,
       id: 'session',
-      items: user ? [] : [command('signin', i18n.signIn, () => query({ signin: true }))],
+      items: user ? [] : [command('signin', i18n.signIn, () => navigation.query({ signin: true }))],
     },
     {
       heading: i18n.sections.products,
@@ -81,7 +83,7 @@ export default ({ i18n, keyboard, onClose, results, searching, text, user }) => 
         keys: [],
         kind: 'product' as const,
         label: product.title,
-        perform: perform(() => go('/products/:id', { id: product.id })),
+        perform: perform(() => navigation.go('/products/:id', { id: product.id })),
       })),
     },
   ];

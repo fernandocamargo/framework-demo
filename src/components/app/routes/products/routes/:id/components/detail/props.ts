@@ -1,8 +1,7 @@
-import { links } from '@/address';
+export type Props = { closeHref: string; id: number; removeHref: string };
 import { AVAILABILITY, CURRENCY, stockLevel } from '@/format';
 
-export default ({ acl, async: { default: product }, i18n, intl, route }) => {
-  const { href } = links(route);
+export default ({ acl, async: { default: product }, i18n, intl, removeHref }) => {
   const level = stockLevel(product.stock);
   const images: string[] = product.images.length ? product.images : product.thumbnail ? [product.thumbnail] : [];
   return {
@@ -13,13 +12,14 @@ export default ({ acl, async: { default: product }, i18n, intl, route }) => {
     currency: CURRENCY,
     description: product.description,
     i18n,
+    id: product.id,
     images: images.map((src, index) => ({
       alt: i18n.pictures.picture({ index: index + 1, title: product.title }),
       src,
     })),
     price: { text: intl.formatNumber(product.price, { currency: CURRENCY, style: 'currency' }), value: product.price },
     // The same address, with this dialog closed and the deletion asked for.
-    removeHref: href('/products/:id/remove', { id: product.id }),
+    removeHref,
     stock: {
       availability: AVAILABILITY[level],
       count: product.stock,
@@ -31,6 +31,6 @@ export default ({ acl, async: { default: product }, i18n, intl, route }) => {
 
 /** The address each story Storybook shows of this folder needs (framework/storybook). */
 export const examples = {
-  'A product': { route: { params: { id: 22 }, pattern: '/products/:id' } },
-  'One that does not exist': { route: { params: { id: 999 }, pattern: '/products/:id' } },
+  'A product': { props: { closeHref: '/products', id: 22, removeHref: '/products/22/remove' } },
+  'One that does not exist': { props: { closeHref: '/products', id: 999, removeHref: '/products/999/remove' } },
 };

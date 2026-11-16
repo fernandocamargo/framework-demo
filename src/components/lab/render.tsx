@@ -22,6 +22,7 @@ import SellOut from './components/sell-out';
 // an action, with what became of it.
 export default ({
   className,
+  editingId,
   failurePercent,
   failureText,
   faults,
@@ -110,7 +111,7 @@ export default ({
               <Button onPress={handlers.breakRefresh}>{i18n.actions.revoke}</Button>
             </li>
             <li>
-              <SellOut />
+              <SellOut id={editingId} />
             </li>
             <li>
               <Button onPress={handlers.forgetChanges}>{i18n.actions.forget}</Button>

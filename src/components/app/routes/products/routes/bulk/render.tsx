@@ -38,6 +38,7 @@ export default ({
   progress,
   results,
   retryText,
+  routes,
   ruleProblem,
   selectedIds,
   selectionText,
@@ -299,5 +300,6 @@ export default ({
         </Dialog>
       </Modal>
     </ModalOverlay>
+    {routes}
   </>
 );

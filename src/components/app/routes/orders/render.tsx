@@ -6,7 +6,7 @@ import Regions from './components/regions';
 // The orders page, as schema.org names one: a collection, a map of the states on top and the ledger
 // of their orders under it. Someone who may not read orders is told so, and sees neither. An order
 // opens over the page, as the route below this one.
-export default ({ allowed, className, guest, i18n, routes, signInHref }) => (
+export default ({ allowed, className, guest, i18n, page, region, routes, settings, signInHref }) => (
   <>
     <section
       aria-labelledby="orders-title"
@@ -23,8 +23,8 @@ export default ({ allowed, className, guest, i18n, routes, signInHref }) => (
       </header>
       {allowed ? (
         <>
-          <Regions />
-          <Ledger />
+          <Regions region={region} settings={settings} />
+          <Ledger page={page} region={region} settings={settings} />
         </>
       ) : (
         <p role="note">

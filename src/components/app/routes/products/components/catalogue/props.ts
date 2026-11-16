@@ -1,11 +1,12 @@
+export type Props = { filters: Filters; settings: Settings };
 // What the catalogue's render shows, worked out from what its read answered, in the page's words.
 
 import type { ReactNode } from 'react';
 
-import { HOME, links } from '@/address';
+import { type Filters, HOME, links, type Settings } from '@/address';
 
-export default ({ acl, async: { default: answer }, i18n, route }) => {
-  const { filtered, href } = links(route);
+export default ({ acl, async: { default: answer }, i18n, settings }) => {
+  const { filtered, href } = links(settings);
   const { categories, filters, page } = answer;
   const category = categories.find(({ slug }) => slug === filters.category)?.name ?? '';
   const narrowed = Boolean(filters.q || filters.category);
@@ -19,7 +20,12 @@ export default ({ acl, async: { default: answer }, i18n, route }) => {
     emptyText: narrowed ? i18n.empty.narrowed : i18n.empty.none,
     filters,
     i18n,
-    items: page.items,
+    items: page.items.map((product) => ({
+      editHref: href('/products/:id/edit', { id: product.id }, filters),
+      product,
+      removeHref: href('/products/:id/remove', { id: product.id }, filters),
+      viewHref: href('/products/:id', { id: product.id }, filters),
+    })),
     paging: {
       nextHref: page.page < page.pages ? filtered(filters, { page: page.page + 1 }) : null,
       previousHref: page.page > 1 ? filtered(filters, { page: page.page - 1 }) : null,
@@ -37,4 +43,10 @@ export default ({ acl, async: { default: answer }, i18n, route }) => {
       }),
     total: page.total,
   };
+};
+
+export const examples = {
+  'The catalogue': {
+    props: { filters: HOME, settings: { lang: '', signin: false, skin: 'default', world: 'memory' } },
+  },
 };

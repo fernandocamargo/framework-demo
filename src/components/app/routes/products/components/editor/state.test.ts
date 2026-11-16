@@ -34,12 +34,10 @@ function editing(
   const save = vi.fn(overrides.save ?? (async () => ({ id: 4, version: 4 })));
   const create = vi.fn(overrides.create ?? (async () => ({ id: 10_001 })));
   const flow = startFlow(editor, {
+    creating: Boolean(overrides.creating),
     form: fields,
+    id: overrides.creating ? 0 : 4,
     navigation: { go },
-    route: {
-      params: overrides.creating ? {} : { id: 4 },
-      pattern: overrides.creating ? '/products/new' : '/products/:id/edit',
-    },
     services: { products: { create, get: async () => product, save } },
   });
   return { create, fields, flow, go, save };

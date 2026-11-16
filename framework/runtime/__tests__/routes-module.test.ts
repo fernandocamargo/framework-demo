@@ -53,6 +53,7 @@ afterEach(() => {
 test('direct children are components, paths concatenate, and each realm keeps its own metadata', () => {
   write('services/products/index.ts', 'export const get = () => () => 4;');
   write('services/products/meta.ts', 'export default () => ({ get: { reads: true } });');
+  // SAFETY: The generator reads the literal fixture above.
   const scan = scanRoutes(root) as Scan;
   expect(scan.routes.find(({ path }) => path === '/products/:id/edit')).toMatchObject({
     folder: 'components/app/routes/products/routes/:id/routes/editor',
@@ -65,23 +66,14 @@ test('direct children are components, paths concatenate, and each realm keeps it
   expect(scan.routes).toHaveLength(4);
 });
 
-test('a routed chart state adds an address from XState meta, without another chart', () => {
-  route('components/bulk');
-  write('components/bulk/state.ts', "export default () => ({ editing: {}, confirm: { meta: { route: 'confirm' } } });");
-  route('components/app/routes/products/routes/bulk', "{ chart: 'components/bulk' }");
-  expect((scanRoutes(root) as Scan).routes.find(({ path }) => path === '/products/bulk/confirm')).toMatchObject({
-    chart: { component: 'components/bulk', state: 'confirm' },
-  });
-});
-
-test('a route reads its own chart without a pointer to another component', () => {
-  write(
-    'components/app/routes/products/routes/new/state.ts',
-    "export default { editing: {}, confirming: { meta: { route: 'confirm' } } };",
-  );
-  expect((scanRoutes(root) as Scan).routes.find(({ path }) => path === '/products/new/confirm')).toMatchObject({
-    chart: { component: 'components/app/routes/products/routes/new', state: 'confirming' },
-  });
+test('an index child has an explicit marker and no path segment', () => {
+  route('components/app/routes/products/routes/overview', '{ index: true }');
+  // SAFETY: The generator reads the literal fixture above.
+  const scan = scanRoutes(root) as Scan;
+  // SAFETY: The generator reads the literal fixture above.
+  const generated = routesModule(scan, root, 'components/app/routes/products') as { element: string };
+  expect(generated.element).toContain('index: true');
+  expect(scan.routes.find((route) => route.folder.endsWith('/overview'))?.path).toBe('/products');
 });
 
 test('the generated codec validates params and honors the base', () => {
@@ -90,7 +82,7 @@ test('the generated codec validates params and honors the base', () => {
     'createCodec',
     code
       .replace(/^import .*\n/gm, '')
-      .replace(/^export const createAddress.*\n/m, '')
+      .replace(/^export \{.*\n/gm, '')
       .replace('export const codec', 'const codec')
       .replace('export default codec;', 'return codec;'),
   )(createCodec) as AddressCodec;
@@ -105,37 +97,32 @@ test('the generated codec validates params and honors the base', () => {
   expect(() => codec.pathOf('/products/:id', { extra: 2, id: 4 })).toThrow('Extra parameter');
 });
 
-test("the route objects nest as the folders do: each loads its folder, a refined parameter has a loader, and a chart's state is a child", () => {
-  const code = routesModule(scanRoutes(root), root, '"framework/index.ts"') as string;
-  expect(code).toContain('export const home = "/products";');
-  const products = code.slice(code.indexOf('id: "components/app/routes/products"'));
-  expect(products).toMatch(/path: "products", handle: \{ pattern: "\/products" \}, lazy: folder\(/);
-  expect(products).toMatch(
-    /path: ":id", handle: \{ pattern: "\/products\/:id" \}, lazy: folder\(.*\), loader: guarded\(codec, "\/products\/:id"\)/,
-  );
-  expect(products).toMatch(/path: "edit", handle: \{ pattern: "\/products\/:id\/edit" \}, lazy: folder\(/);
-  // A state of a chart that names a segment: a child route with nothing to render.
-  write(
-    'components/app/routes/products/routes/new/state.ts',
-    "export default { editing: {}, confirming: { meta: { route: 'confirm' } } };",
-  );
-  expect(routesModule(scanRoutes(root), root, '"framework/index.ts"')).toMatch(
-    /path: "confirm", handle: \{ pattern: "\/products\/new\/confirm" \} \}/,
-  );
+test('a folder generates only its direct routes, and descendants own their own Routes', () => {
+  const scan = scanRoutes(root);
+  // SAFETY: The generator reads the literal fixture above.
+  const parent = routesModule(scan, root, 'components/app') as { element: string; imports: string[] };
+  expect(parent.imports).toHaveLength(1);
+  expect(parent.element).toContain('path: "products/*"');
+  expect(parent.element).not.toContain(':id');
+  // SAFETY: The generator reads the literal fixture above.
+  const products = routesModule(scan, root, 'components/app/routes/products') as { element: string; imports: string[] };
+  expect(products.element).toContain('path: ":id/*"');
+  expect(products.element).toContain('path: "new"');
+  expect(products.element).not.toContain('path: "edit"');
 });
 
-test("the folder module places React Router's outlet as its routes, and its declarations include every pattern and query slice", () => {
+test("the folder's routes prop is React Router's Routes element, and its declarations include every pattern", () => {
   const options = resolveOptions({ cwd: root, root: '.', runtime: 'runtime.ts' });
   writeTypes(options);
   const code = framework(options).load('\0framework-component:' + path.join(root, 'components/app')) as string;
-  expect(code).toContain("import { Outlet } from 'react-router';");
-  expect(code).toContain('routes: createElement(Outlet),');
+  expect(code).toContain("import { Route, Routes } from 'react-router';");
+  expect(code).toContain('routes: createElement(Routes, null,');
+  expect(code).not.toMatch(/Outlet|lazy:|loader:/);
   const types = readFileSync(path.join(root, '.framework-types/routes.d.ts'), 'utf8');
   expect(types).toBe(routeTypes(scanRoutes(root)));
   expect(types).toContain(
     '"/products/:id/edit": { params: { "id": number }; query: { "signin": boolean; "page": number } }',
   );
-  expect(types).toContain('ParametersOf<Path');
 });
 
 test('a route without render, an ambiguous pattern, and executable metadata fail before the app runs', () => {

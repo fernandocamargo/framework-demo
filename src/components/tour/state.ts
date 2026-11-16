@@ -5,8 +5,8 @@
 
 import { HOME } from '@/address';
 import { DEMO } from '@/components/session/form';
-import { currentLocale, type Locale, speak } from '@/locales';
-import { currentSkin, type Skin, wear } from '@/skins';
+import { type Locale, speak } from '@/locales';
+import { type Skin, wear } from '@/skins';
 
 /** The steps, in order. `closed` is not one of them. */
 export const STEPS = [
@@ -45,8 +45,8 @@ export const breakRequests = () => ({ force: 500 as const, latency: 0 });
 export const healRequests = () => ({ force: 0 as const });
 export const demoAdmin = () => DEMO;
 export const stockCount = () => ({ name: 'stockCount' as const, way: 'everyone' as const });
-export const wearBroadsheet = () => wear('broadsheet');
-export const speakPortuguese = () => speak('pt-BR');
+export const wearBroadsheet = ({ navigation }) => wear(navigation, 'broadsheet');
+export const speakPortuguese = ({ navigation }) => speak(navigation, 'pt-BR');
 
 export const rememberError = ({ event }) => ({
   error: event.error instanceof Error ? event.error.message : String(event.error),
@@ -56,16 +56,17 @@ export const forgetError = () => ({ error: null });
 export const rememberRemote = () => ({ remote: true });
 
 /** Starting the tour: remember the locale and the skin, to put them back when it is left. */
-export const remember = () => ({ before: { locale: currentLocale(), skin: currentSkin() } });
+// SAFETY: The shell passes one of the declared skins and locales.
+export const remember = ({ locale, skin }) => ({ before: { locale: locale as Locale, skin: skin as Skin } });
 
 /** Leaving the tour: the lab's faults off, the list plain, and the locale and skin the page had. */
 export const tidy = ({ context, navigation, services }) => {
   services.lab.change({ failureRate: 0, force: 0, latency: 0 });
-  navigation.go('/products', {}, { signin: false });
-  if (context.before) {
-    wear(context.before.skin);
-    speak(context.before.locale);
-  }
+  navigation.go(
+    '/products',
+    {},
+    context.before ? { lang: context.before.locale, signin: false, skin: context.before.skin } : { signin: false },
+  );
   return { before: null };
 };
 

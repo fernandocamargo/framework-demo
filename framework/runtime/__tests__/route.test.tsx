@@ -43,7 +43,7 @@ const rendered = vi.hoisted(() => {
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { Root } from '../root';
-import { routed } from './routed';
+import { routed, useTestRoute } from './routed';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
@@ -83,7 +83,8 @@ const SAMPLE = { edit: 0, page: 0, q: '', view: 0 };
 /** `tree` under a Root at `start`, in a memory router; `go` moves the address and lets the page settle. */
 async function at(start: Props, tree: ReactNode) {
   const client = createQueryClient();
-  const page = routed(SAMPLE, start as never, (address) => createElement(Root, { address, client, entity }, tree));
+  // SAFETY: These synthetic route values are the primitive fields declared by the test.
+  const page = routed(SAMPLE, start as never, () => createElement(Root, { client, entity }, tree));
   const { container } = await show(page.element);
   return {
     container,
@@ -100,6 +101,7 @@ test('a component with a default read renders at each change of address, and rea
     path: 'components/list',
     reads: { async: ['route'] },
     skins: {},
+    useRoute: useTestRoute,
     view: module({
       async: {
         default: ({ route }: { route: Props }) => {
@@ -127,11 +129,12 @@ test('a component with a default read renders at each change of address, and rea
   expect(reads).toEqual([1, 2]);
 });
 
-test('a folder whose chart alone reads the route calls no hook of the router: a change of address does not render it', async () => {
+test('a route folder whose chart reads the route follows the router', async () => {
   const Editor = component({
     path: 'components/editor',
     reads: { state: ['route'] },
     skins: {},
+    useRoute: useTestRoute,
     view: module({
       render: (props: Props) =>
         createElement('p', null, String((props['state'] as { context: { id: unknown } }).context.id)),
@@ -143,7 +146,7 @@ test('a folder whose chart alone reads the route calls no hook of the router: a 
   rendered.clear();
 
   await go({ edit: 4, q: 'desk' });
-  expect(rendered.get('components/editor')).toBeUndefined();
+  expect(rendered.get('components/editor')).toBeGreaterThan(0);
 });
 
 test('a view whose files read the route renders at each change of address, and what it wires reads the route of its render', async () => {
@@ -153,6 +156,7 @@ test('a view whose files read the route renders at each change of address, and w
     path: 'components/sell',
     reads: { view: ['route'] },
     skins: {},
+    useRoute: useTestRoute,
     view: module({
       props: {
         default: ({ route }: { route: Props }) => ({
@@ -187,6 +191,7 @@ test('a view that spreads the route gets all of it', async () => {
     path: 'components/address',
     reads: { view: ['route'] },
     skins: {},
+    useRoute: useTestRoute,
     view: module({
       props: { default: ({ route }: { route: Props }) => ({ text: JSON.stringify({ ...route }) }) },
       render: (props: Props) => createElement('a', null, props['text'] as string),
@@ -205,6 +210,7 @@ test('a failed read shows the error file until the address moves on: a new value
     path: 'components/failing',
     reads: { async: ['route'] },
     skins: {},
+    useRoute: useTestRoute,
     view: module({
       async: {
         default: ({ route }: { route: Props }) =>
@@ -228,6 +234,7 @@ test('a render that reads the route itself, with no props.ts, gets the route Rea
     path: 'components/crumb',
     reads: { view: ['route'] },
     skins: {},
+    useRoute: useTestRoute,
     view: module({
       render: ({ route }: { route: Props }) => createElement('i', null, `page ${String(route['page'])}`),
     }),
@@ -237,4 +244,44 @@ test('a render that reads the route itself, with no props.ts, gets the route Rea
 
   await go({ edit: 4, page: 2 });
   expect(container.textContent).toBe('page 2');
+});
+
+test('a route passes only its filter to a child: opening a dialog renders no row and makes no read', async () => {
+  const reads: number[] = [];
+
+  const List = component({
+    path: 'components/catalogue',
+    reads: { async: ['page'] },
+    skins: {},
+    view: module({
+      async: {
+        default: ({ page }: { page: number }) => {
+          reads.push(page);
+
+          return Promise.resolve(page);
+        },
+      },
+      render: ({ async }: { async: { default: number } }) => createElement('p', null, `page ${async.default}`),
+    }),
+  });
+
+  const Products = component({
+    path: 'components/app/routes/products',
+    reads: { view: ['route'] },
+    skins: {},
+    useRoute: useTestRoute,
+    view: module({
+      props: { default: ({ route }: { route: { page: number } }) => ({ page: route.page }) },
+      render: ({ page }: { page: number }) => createElement(List, { page }),
+    }),
+  });
+
+  const { container, go } = await at({ page: 1 }, createElement(Products));
+  rendered.clear();
+  await go({ page: 1, view: 4 });
+  expect(reads).toEqual([1]);
+  expect(rendered.get('components/catalogue')).toBeUndefined();
+  await go({ page: 2, view: 4 });
+  expect(container.textContent).toBe('page 2');
+  expect(reads).toEqual([1, 2]);
 });

@@ -35,18 +35,8 @@ declare module 'virtual:framework/charts' {
 }
 
 declare module 'virtual:framework/address' {
-  /** The address of a document, on the React Router router given (router.tsx). */
-  export const createAddress: (
-    router: import('react-router').DataRouter,
-    options?: import('./address').AddressOptions,
-  ) => import('./router').RouterAddress;
   export const codec: import('./address').AddressCodec;
+  export const useRoute: typeof import('./routing').useRoute;
+  export const useNavigation: typeof import('./routing').useNavigation;
   export default codec;
-}
-declare module 'virtual:framework/routes' {
-  /** The app's home address, as `routes/meta.ts` names it. */
-  export const home: string;
-  /** React Router's route objects, one per route folder, nested as the folders are. */
-  const routes: import('react-router').RouteObject[];
-  export default routes;
 }

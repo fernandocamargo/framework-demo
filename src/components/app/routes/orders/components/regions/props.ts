@@ -1,6 +1,8 @@
+export type Props = { region: string; settings: Settings };
 // The map's tiles: one per state, with how many orders go there, its place, and the address that
 // selects it (selecting the selected state again clears the choice).
-import { links } from '@/address';
+
+import { links, type Settings } from '@/address';
 import { byRegion } from '@/services/orders/regions';
 import { liveMap } from '@/widgets/live-map';
 
@@ -10,9 +12,10 @@ export default ({
   },
   flags,
   i18n,
-  route,
+  region,
+  settings,
 }) => {
-  const { href } = links(route);
+  const { href } = links(settings);
   const tallies = byRegion(orders);
   return {
     caption: i18n.caption,
@@ -20,7 +23,7 @@ export default ({
     map: flags.liveMap ? liveMap(style) : undefined,
     max: Math.max(0, ...tallies.map((tally) => tally.orders)),
     tiles: tallies.map((tally) => {
-      const current = route.region === tally.code;
+      const current = region === tally.code;
       return {
         code: tally.code,
         count: tally.orders,
@@ -37,6 +40,10 @@ export default ({
 
 /** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
 export const examples = {
-  'Nothing selected': { route: { pattern: '/orders' } },
-  'Texas selected': { route: { pattern: '/orders', region: 'TX' } },
+  'Nothing selected': {
+    props: { region: '', settings: { lang: '', signin: false, skin: 'default', world: 'memory' } },
+  },
+  'Texas selected': {
+    props: { region: 'TX', settings: { lang: '', signin: false, skin: 'default', world: 'memory' } },
+  },
 };

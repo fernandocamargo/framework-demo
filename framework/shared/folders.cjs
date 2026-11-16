@@ -734,7 +734,21 @@ function problems(root) {
           file: `${relative(handlers)}:${line}`,
           message: `handler ${name} ${why}, so what it reads cannot be told and it is a new function at every render: write it as \`({ state }) => (event) => …\`, destructuring what it uses`,
         });
-    if (isComponentFolder(root, dir)) found.push(...i18nProblems(root, dir));
+
+    if (isComponentFolder(root, dir)) {
+      if (path.basename(path.dirname(dir)) !== 'routes') {
+        const reads = readsOf(root, dir);
+
+        for (const [layer, sources] of Object.entries(reads.byLayer))
+          if (sources.includes('route'))
+            found.push({
+              file: relative(findLayer(dir, layer)),
+              message: 'route is read only by a direct child of routes/: pass its values to components as props',
+            });
+      }
+
+      found.push(...i18nProblems(root, dir));
+    }
   });
 
   visit(path.join(root, 'services'), (dir) => {

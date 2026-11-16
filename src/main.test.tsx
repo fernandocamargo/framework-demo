@@ -5,7 +5,6 @@ const rendered = vi.hoisted(() => ({ preload: (_locale: string): Promise<void> =
 
 vi.mock('framework', async () => ({
   // The address is the real one, on React Router; the shell's folders and `Root` are stand-ins.
-  ...(await import('../framework/runtime/router')),
   bound: <T,>(element: T) => element,
   chartAt: () => Promise.resolve(null),
   createQueryClient: () => ({}),
@@ -35,20 +34,6 @@ vi.mock('./components/app', () => ({ default: () => null }));
 vi.mock('./components/states', () => ({ default: () => null }));
 vi.mock('virtual:framework/messages', () => ({ default: (locale: string) => rendered.preload(locale) }));
 
-// The route folders are not loaded here: the app's routes, matched and not rendered.
-vi.mock('virtual:framework/routes', async (original) => {
-  type Routes = import('react-router').RouteObject[];
-  const bare = (routes: Routes): Routes =>
-    routes.map(({ children, handle, id, path }) => ({
-      ...(children ? { children: bare(children) } : {}),
-      handle,
-      ...(id === undefined ? {} : { id }),
-      ...(path === undefined ? {} : { path }),
-    }));
-  const actual = await original<{ default: Routes; home: string }>();
-  return { default: bare(actual.default), home: actual.home };
-});
-
 const visit = (query: object) => `/products?${new URLSearchParams({ query: JSON.stringify({ v: 1, ...query }) })}`;
 /** An address entered in place, and the router's answer to it. */
 const move = async (href: string) => {
@@ -68,24 +53,19 @@ test('the shell renders for an address, shows a locale when its messages are rea
   });
   expect(document.querySelector('main')?.getAttribute('data-locale')).toBe('en');
 
+  // A new language waits for its messages. Moving back while they load leaves English on screen.
+  let finishPortuguese!: () => void;
+  rendered.preload = () =>
+    new Promise<void>((resolve) => {
+      finishPortuguese = resolve;
+    });
+  await move(visit({ lang: 'pt-BR', skin: 'blueprint', world: 'memory' }));
+  expect(document.querySelector('main')?.getAttribute('data-locale')).toBe('en');
+  await move(visit({ lang: 'en', world: 'memory' }));
+  await act(async () => finishPortuguese());
+  expect(document.querySelector('main')?.getAttribute('data-locale')).toBe('en');
   await move(visit({ lang: 'pt-BR', skin: 'blueprint', world: 'memory' }));
   expect(document.querySelector('main')?.getAttribute('data-locale')).toBe('pt-BR');
   expect(document.querySelector('main')?.getAttribute('data-skin')).toBe('blueprint');
   expect(document.documentElement.lang).toBe('pt-BR');
-
-  // English is asked for and its messages do not arrive; then Portuguese again. The router drops
-  // the first navigation, so English never shows, whenever its messages land.
-  let finishEnglish!: () => void;
-  rendered.preload = (locale) =>
-    locale === 'en'
-      ? new Promise<void>((resolve) => {
-          finishEnglish = resolve;
-        })
-      : Promise.resolve();
-  await move(visit({ lang: 'en', skin: 'blueprint', world: 'memory' }));
-  expect(document.querySelector('main')?.getAttribute('data-locale')).toBe('pt-BR');
-  await move(visit({ lang: 'pt-BR', skin: 'blueprint', world: 'memory' }));
-  expect(document.querySelector('main')?.getAttribute('data-locale')).toBe('pt-BR');
-  await act(async () => finishEnglish());
-  expect(document.querySelector('main')?.getAttribute('data-locale')).toBe('pt-BR');
 });

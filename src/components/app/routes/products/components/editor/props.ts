@@ -1,3 +1,4 @@
+export type Props = { creating: boolean; id: number };
 // What the editor's render shows in each state of the flow, in the locale on screen. The fields
 // start from the seeded values and hold what is typed, so a key renders its field alone; the
 // values are read only to say what is wrong with them, once a save was tried.
@@ -41,6 +42,6 @@ export default ({ acl, async: { default: categories }, form, i18n, state }) => {
 
 /** The address each story Storybook shows of this folder needs (framework/storybook). */
 export const examples = {
-  'A new product': { route: { pattern: '/products/new' } },
-  'Editing a product': { route: { params: { id: 22 }, pattern: '/products/:id/edit' } },
+  'A new product': { props: { creating: true, id: 0 } },
+  'Editing a product': { props: { creating: false, id: 22 } },
 };

@@ -1,7 +1,6 @@
 /**
  * `Root`: composes what the framework provides: the injection, the data layer (one
- * TanStack Query client), the sources the state and async layers read (`entity`, `route`,
- * `navigation`), the reads every layer may follow (`user`, `acl`, `flags`), the page's skin, and the app's global error listeners, the
+ * TanStack Query client), the entity and fallback navigation the state and async layers read, the reads every layer may follow (`user`, `acl`, `flags`), the page's skin, and the app's global error listeners, the
  * last resort of the error pipeline. A `Suspense` at the top catches components with no
  * placeholder. The folders it is given get their own boundaries where the shell writes them, from
  * the plugin, as a folder's children do; an element given to it directly by other code (a test)
@@ -20,26 +19,22 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useLocation } from 'react-router';
 
 import { Pending, useCommitted, watch } from './activity';
 import { boundEach } from './boundaries';
 import { createDataLayer, type DataLayer, recording } from './data';
 import { LocaleContext, SOURCE_LOCALE } from './i18n';
-import type { Acl, Entity, Env, Flags, Navigation, Route, User } from './index';
+import type { Acl, Entity, Env, Flags, Navigation, User } from './index';
 import { createInjection, type Injection } from './injection';
 import { report, setLocation } from './pipeline';
-import { Navigating, type RouterAddress } from './router';
 import { listenToKeys } from './shortcuts';
 import { activateSkin } from './style';
 
-type Sources = { entity: Entity; navigation: Navigation; route: Route };
+type Sources = { entity: Entity; navigation: Navigation };
 /** The query of one of Root's reads (`user`, `acl`, `flags`), which the components that read it share. */
 type Read = ReturnType<DataLayer['component']>;
 type Framework = {
   acl: null | Read;
-  /** The document's address, on React Router: what navigates, and what a chart has its say through. */
-  address: null | RouterAddress;
   data: DataLayer;
   flags: null | Read;
   injection: Injection;
@@ -60,45 +55,6 @@ export function useFramework() {
 // With no keys declared by the app, empty objects are valid.
 const NONE = {} as never;
 
-/**
- * The route a folder's files read while the folder renders: the location React Router is showing,
- * read by the folder itself, with the router's own hook. So a folder that reads the route renders
- * at every change of address, and one that reads none of it calls no hook of the router's. The
- * typed parameters and the query's fields are the address store's reading of that location.
- * Without an address (a `Root` given none: a test, a frame), there is no route to read.
- */
-export function useRoute(): Route {
-  const { address } = useFramework();
-  // One of two hooks, the same for a Root's life: its address does not come and go.
-  const useAt = address ? useLocation : useNowhere;
-  const location = useAt();
-  return useMemo(
-    () => (address && location ? (address.shown(location).route as unknown as Route) : NONE),
-    [address, location],
-  );
-}
-const useNowhere = () => undefined;
-
-/** Where React Router is, for what only needs to know that the address moved; undefined without an address. */
-export function useMoved(): unknown {
-  const { address } = useFramework();
-  const useAt = address ? useLocation : useNowhere;
-  return useAt();
-}
-
-/** A view of `ref.current` as if it were the object itself: reading, `in`, keys and spreading. */
-function liveView<T extends object>(ref: { readonly current: T }): T {
-  return new Proxy({} as T, {
-    get: (_, key) => Reflect.get(ref.current, key),
-    getOwnPropertyDescriptor: (_, key) => {
-      const descriptor = Reflect.getOwnPropertyDescriptor(ref.current, key);
-      return descriptor && { ...descriptor, configurable: true };
-    },
-    has: (_, key) => Reflect.has(ref.current, key),
-    ownKeys: () => Reflect.ownKeys(ref.current),
-  });
-}
-
 export type RootProps = {
   /**
    * What the backend says may be done: a snapshot the app does not own (roles, grants, limits),
@@ -109,12 +65,6 @@ export type RootProps = {
    * again. Keep the function stable.
    */
   acl?: (injection: Injection & { signal: AbortSignal }) => Promise<Acl>;
-  /**
-   * The app's address, on React Router (`createRouterAddress`). `Root` is rendered inside the
-   * router, as its root route or below it. The folders read the route from the router themselves;
-   * `Root` only hands on what navigates and what a chart asks, and holds no route.
-   */
-  address?: RouterAddress;
   children?: ReactNode;
   /**
    * The query client the framework's data lives in, made with `createQueryClient()`. The app makes
@@ -168,7 +118,6 @@ export type RootProps = {
 
 export function Root({
   acl,
-  address,
   children,
   client,
   entity = NONE,
@@ -176,7 +125,7 @@ export function Root({
   flags,
   locale = SOURCE_LOCALE,
   location,
-  navigation = (address?.navigation ?? NONE) as Navigation,
+  navigation = NONE,
   skin = 'default',
   sync,
   user,
@@ -205,22 +154,8 @@ export function Root({
   // After the commit and before the paint, so a render React throws away changes nothing. The
   // sheets added before it are set again here, before anyone sees them.
   useLayoutEffect(() => activateSkin(skin), [skin]);
-  // Operations and state charts read the route when they run, from the router: the address it is
-  // at then. The sources the framework's context carries stay the same object when it changes.
-  const liveRoute = useMemo(
-    () =>
-      liveView<Route>({
-        get current() {
-          return (address ? address.getSnapshot().route : NONE) as unknown as Route;
-        },
-      }),
-    [address],
-  );
-  const sources = useMemo(
-    () => ({ entity: selected, navigation, route: liveRoute }),
-    [selected, liveRoute, navigation],
-  );
-  useCommitted(locale);
+  const sources = useMemo(() => ({ entity: selected, navigation }), [selected, navigation]);
+  useCommitted(location ?? locale);
   // Root's reads are keyed by the entity, as every read is: another entity is another person's
   // answer, so each is made again for the entity selected.
   const userRead = useMemo(
@@ -257,7 +192,6 @@ export function Root({
   const framework = useMemo(
     () => ({
       acl: aclRead,
-      address: address ?? null,
       data,
       flags: flagsRead,
       injection,
@@ -265,7 +199,7 @@ export function Root({
       sources,
       user: userRead,
     }),
-    [injection, skin, sources, data, userRead, aclRead, flagsRead, address],
+    [injection, skin, sources, data, userRead, aclRead, flagsRead],
   );
   // Root's reads start side by side as Root mounts, not each when the first component that reads it
   // renders: a read first needed deep in the tree (the rows' flags) would suspend it there, and
@@ -296,7 +230,6 @@ export function Root({
     <QueryClientProvider client={client}>
       <FrameworkContext value={framework}>
         <LocaleContext value={locale}>
-          {address && <Navigating address={address} />}
           <Suspense fallback={<Pending />}>{boundEach(children)}</Suspense>
         </LocaleContext>
       </FrameworkContext>

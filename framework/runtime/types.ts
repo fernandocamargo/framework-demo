@@ -344,6 +344,7 @@ export type RenderProps<Folder extends Layers = Layers> = ('async' extends keyof
   Language<'i18n' extends keyof Folder ? Folder['i18n'] : undefined> & { className: string } & {
     flags: Flags;
     keyboard: Keyboard;
+    navigation: Navigation;
     route: RouteRead;
   };
 

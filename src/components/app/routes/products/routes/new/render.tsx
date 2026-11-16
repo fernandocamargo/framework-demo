@@ -1,3 +1,3 @@
 import Editor from '@/components/app/routes/products/components/editor';
 
-export default () => <Editor />;
+export default ({ id }) => <Editor creating id={id} />;

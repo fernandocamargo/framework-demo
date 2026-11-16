@@ -37,7 +37,8 @@ async function atPreview(save: (input: { id: number }) => Promise<unknown>, acl 
     acl,
     flags,
     form: fields,
-    navigation: { go },
+    navigation: { go, replace: go },
+    route: { pattern: '/products/bulk' },
     services: { products: { save, search } },
   });
   await flow.settled();

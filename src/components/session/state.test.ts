@@ -58,3 +58,14 @@ test('wrong credentials stay signed out, with the reason', async () => {
   expect(flow.states).toEqual(['signedOut']);
   expect(flow.context['error']).toBe('Invalid credentials');
 });
+
+test('cancelling a sign-in over a product closes it; on another page only sign-in closes', () => {
+  const go = vi.fn();
+  const query = vi.fn();
+  // SAFETY: The action reads only these navigation functions and the shell's productOpen prop.
+  session.closeEverything({ navigation: { go, query }, productOpen: true } as never);
+  expect(go).toHaveBeenCalledWith('/products', {}, { signin: false });
+  // SAFETY: The same action on a page with no product changes only the global sign-in field.
+  session.closeEverything({ navigation: { go, query }, productOpen: false } as never);
+  expect(query).toHaveBeenCalledWith({ signin: false });
+});

@@ -1,5 +1,11 @@
 import type { Key } from 'react-aria-components';
 
-import { type Skin, wear } from '@/skins';
+import { SKINS, wear } from '@/skins';
 
-export const wearSkin = () => (key: Key | null) => wear(key as Skin);
+export const wearSkin =
+  ({ navigation }) =>
+  (key: Key | null) => {
+    const skin = SKINS.find((value) => value === key);
+
+    if (skin) wear(navigation, skin);
+  };

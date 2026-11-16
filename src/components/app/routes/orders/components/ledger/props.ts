@@ -1,14 +1,16 @@
+export type Props = { page: number; region: string; settings: Settings };
 // The ledger: the orders of one state (all of them for none), twelve to a page, each with its
 // customer, where it ships and what it costs. A customer's name is in full only for a grant to
 // read customers; otherwise its first name and initial.
-import { links } from '@/address';
+
+import { links, type Settings } from '@/address';
 import { CURRENCY } from '@/format';
 import { inRegion, REGIONS } from '@/services/orders/regions';
 
 const PER_PAGE = 12;
 
-export default ({ acl, async: { default: answer }, i18n, intl, route }) => {
-  const { href } = links(route);
+export default ({ acl, async: { default: answer }, i18n, intl, settings }) => {
+  const { href } = links(settings);
   const { orders, page, region } = answer;
   const matching = inRegion(orders, region);
   const pages = Math.max(1, Math.ceil(matching.length / PER_PAGE));
@@ -46,6 +48,10 @@ export default ({ acl, async: { default: answer }, i18n, intl, route }) => {
 
 /** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
 export const examples = {
-  'Every order, the second page': { route: { page: 2, pattern: '/orders' } },
-  'Texas, the first page': { route: { page: 1, pattern: '/orders', region: 'TX' } },
+  'Every order, the second page': {
+    props: { page: 2, region: '', settings: { lang: '', signin: false, skin: 'default', world: 'memory' } },
+  },
+  'Texas, the first page': {
+    props: { page: 1, region: 'TX', settings: { lang: '', signin: false, skin: 'default', world: 'memory' } },
+  },
 };

@@ -34,7 +34,7 @@ import path from 'node:path';
 import { parseAst } from 'vite';
 
 import folders from '../shared/folders.cjs';
-import { addressModule, routedBy, routesModule, routeTypes, scanRoutes, staticPages } from './routes.mjs';
+import { addressModule, routesModule, routeTypes, scanRoutes, staticPages } from './routes.mjs';
 
 const {
   CODE,
@@ -58,7 +58,7 @@ const SERVICES = 'virtual:framework/services';
 const CHARTS = 'virtual:framework/charts';
 const MESSAGES = 'virtual:framework/messages';
 const ADDRESS = 'virtual:framework/address';
-const ROUTES = 'virtual:framework/routes';
+
 const COMPONENT = '\0framework-component:';
 const VIEW = 'framework-view:';
 const HANDLERS = 'framework-handlers:';
@@ -915,8 +915,7 @@ export default function framework(userOptions) {
               id === `\0${SERVICES}` ||
               id === `\0${CHARTS}` ||
               id === `\0${MESSAGES}` ||
-              id === `\0${ADDRESS}` ||
-              id === `\0${ROUTES}`
+              id === `\0${ADDRESS}`
             ) {
               graph.invalidateModule(mod);
             }
@@ -977,7 +976,7 @@ export default function framework(userOptions) {
         return readFileSync(id, 'utf8');
       }
       if (id === `\0${ADDRESS}`) return addressModule(scanRoutes(options.root), runtime, base);
-      if (id === `\0${ROUTES}`) return routesModule(scanRoutes(options.root), options.root, runtime);
+
       if (id === `\0${CLIENTS}`) {
         const clients = listClients(options.root);
         return [
@@ -1078,21 +1077,33 @@ export default function framework(userOptions) {
         const i18n = findLayer(dir, 'i18n');
         const skins = listSkins(dir);
         const reads = readsOf(options.root, dir);
+        const scan = scanRoutes(options.root);
+
+        const owned = isDirectory(path.join(dir, 'routes'))
+          ? routesModule(scan, options.root, componentPath(options.root, dir))
+          : undefined;
+
+        const isRoute = path.basename(path.dirname(dir)) === 'routes';
+
+        const navigates =
+          scan.routes.length > 0 && Object.values(reads.names).some((names) => names.includes('navigation'));
+
         readsSeen.set(dir, JSON.stringify(reads));
         return [
-          `import { component } from ${runtime};`,
-          ...(isDirectory(path.join(dir, 'routes')) ? ["import { Outlet } from 'react-router';"] : []),
+          `import { ${owned ? 'bound, ' : ''}component } from ${runtime};`,
+          ...(owned ? ["import { Route, Routes } from 'react-router';", ...owned.imports] : []),
+          ...(isRoute || navigates
+            ? ["import codec, { useNavigation, useRoute } from 'virtual:framework/address';"]
+            : []),
           "import { createElement } from 'react';",
           ...(placeholder ? [`import placeholder from ${JSON.stringify(placeholder)};`] : []),
           ...(error ? [`import error from ${JSON.stringify(error)};`] : []),
           ...(i18n ? [`import * as i18n from ${JSON.stringify(i18n)};`] : []),
           'const folder = component({',
           `  path: ${JSON.stringify(componentPath(options.root, dir))},`,
-          // Where the folder's render places its matched child route: React Router's own outlet.
-          ...(isDirectory(path.join(dir, 'routes')) ? ['  routes: createElement(Outlet),'] : []),
-          ...(routedBy(scanRoutes(options.root), componentPath(options.root, dir))
-            ? [`  routed: ${JSON.stringify(routedBy(scanRoutes(options.root), componentPath(options.root, dir)))},`]
-            : []),
+          ...(owned ? [`  routes: ${owned.element},`] : []),
+          ...(isRoute ? ['  useRoute: () => useRoute(codec),'] : []),
+          ...(navigates ? ['  useNavigation: () => useNavigation(codec),'] : []),
           `  view: () => import(${JSON.stringify(VIEW + dir)}),`,
           `  skins: { ${skins.map((skin) => `${JSON.stringify(skin.name)}: () => import(${JSON.stringify(skin.file)})`).join(', ')} },`,
           ...(placeholder ? ['  placeholder,'] : []),
@@ -1108,7 +1119,7 @@ export default function framework(userOptions) {
           `  reads: ${JSON.stringify({
             // Every name acl.ts destructures: a rule that reads only `user` and `acl` is the folder's.
             acl: reads.names.acl ?? [],
-            async: reads.byLayer.async ?? [],
+            async: reads.names.async ?? [],
             // What the chart's declaration destructures: it is declared again when those change.
             chart: reads.names.chart ?? [],
             state: reads.byLayer.state ?? [],
@@ -1192,7 +1203,6 @@ export default function framework(userOptions) {
     async resolveId(source, importer) {
       if (
         source === ADDRESS ||
-        source === ROUTES ||
         source === CLIENTS ||
         source === SERVICES ||
         source === CHARTS ||

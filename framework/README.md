@@ -450,33 +450,47 @@ The app's code has none. What is left in the runtime: `refs` 32 and `immutabilit
 
 ## Routes as a layer
 
-A component can own `routes/`. Each direct child is a component folder with `render.tsx`; a child's own `routes/` holds its descendants. The plugin concatenates paths and injects the matched child element as `routes`. The parent's render places it; a `props.ts` must forward it. A folder named `:id` makes a parameter. Its route-realm `meta.ts` may declare `params: { id: { type: 'integer', min: 1 } }`, an alternative relative `path`, and a `query` slice. Service metadata stays beside its service.
+A component owns `routes/`. Each direct child is a component folder with `render.tsx`.
+The plugin gives the owner one React Router `<Routes>` element, with a `<Route element={<Child />}>`
+for each child. The folder name is its segment; `:id` names a parameter. A child with its own
+`routes/` owns another `<Routes>`; its parent's path ends in `/*`. The parent's render places
+`{routes}`, and its `props.ts` forwards it. There is no central route tree or outlet.
 
-The owning `routes/meta.ts` declares a static `home` and global query fields. Route metadata is literal data, read without executing it. Query fields declare a primitive type and default, with optional enum, minimum, length or pattern checks. Child routes inherit their parents' fields. `.framework-types/src/routes.d.ts` declares every pattern, parameters and query slice, augmenting `Route` and `Navigation`.
+`meta.ts` can set a relative `path`, refine parameters (`params: { id: { type: 'integer', min: 1 } }`),
+or declare query fields. `{ index: true }` marks an index child: it has no segment or descendants.
+The owner's `routes/meta.ts` names a static `home` and the global query fields. Metadata is literal
+data, read without executing it. The plugin writes the address codec and the pattern, parameter
+and query types in `.framework-types/src/routes.d.ts`.
 
-**Routing is React Router's** (its data router, `createBrowserRouter`). The framework does not match addresses, keep History or restore an entry: it generates what the router is given, and reads what the router says.
+The app mounts one `<BrowserRouter basename={BASE_PATH}>` around its shell. Only direct children
+of `routes/` read the injected `route`: their View reads React Router's `useParams`,
+`useSearchParams` and location. `problems()` rejects route reads in other component folders,
+including components nested inside a route. Route folders pass filters, IDs and link destinations
+as plain props. An async default receives the declared props too; only props its `async.ts`
+destructures enter its query key. Changing one also retries a failed read.
 
-- `virtual:framework/routes` exports the router's route objects, one per route folder, nested as the folders are. Each has the folder's relative `path`, its pattern as `handle`, and a `lazy` that imports the folder when an address first matches it and starts its view and skin with it. The router loads the folders of a matched chain together, before it shows the address. A route whose `meta.ts` refines a parameter has a `loader` that sends an address the meta refuses home (`/products/abc`). A state of a chart that names a segment is a child route with nothing to render.
-- A folder's `routes` prop is React Router's `<Outlet />`, written into the folder's module: where the render places it, the matched child shows. The child is the folder's own component with its boundaries (`bound`), keyed by its path on screen, so another product is another instance.
-- The app creates the router with its shell as the root route, and renders `RouterProvider`. `virtual:framework/address` exports the generated codec and `createAddress(router, { hashes })`, the document's address: the router's location read through the codec (`getSnapshot`, `subscribe`, `at(href)`), the typed `navigation`, and what a chart asks. `Root` is given it as `address`, hands `navigation` on, and holds no route. `useShown(address)` is the address React Router is rendering, for the shell; `useAddress(address)` the one in the bar.
-- The codec is the framework's: typed parameters from the text the router matched, and the one canonical JSON `query`. An address the codec would write otherwise (a default spelled out, an unknown path) is replaced by its own.
+`navigation.go('/products/:id/edit', { id: 4 })` stays typed. Handlers, shortcuts and charts receive
+React Router's `useNavigate()` behind the codec. `navigation.query('/products', { page: 2 })`
+patches the active route's fields; `navigation.query({ signin: true })` patches global fields.
+`navigation.replace` replaces a path, and global query changes accept `{ replace: true }` for
+skin and language switches. Links use the same codec. Unknown paths and refused parameters go
+home; invalid query fields fall back to defaults. The versioned JSON `query` stays canonical.
+There is no document address store, framework route context, participant registry or blocker.
 
-`navigation.go('/products/:id/edit', { id: 4 })` requires exactly that pattern's parameters, formats the address with the codec and calls `router.navigate`. `navigation.query('/products', { page: 2 })` patches its active query slice without changing the path; `navigation.query({ signin: true })` patches global fields. `href` has the same pattern and parameter types, and both check their query argument against the destination's fields exactly. `route` is one of the patterns' routes, told apart by `pattern`: after `route.pattern === '/products/:id'`, `route.params.id` is a number. A path change keeps the shell's query fields and those of the routes both addresses are under, and no other. The demo's `links(route)` also reads the shell fields, so rendered links update and opening a new tab retains them.
+A chart may name a child segment with `meta: { route: 'confirm' }` to resolve a direct bookmark
+into that state. The segment has a real child folder. The bulk chart writes its confirmation's
+address in an action and follows changes through its existing `route` event. Back leaves the
+confirmation and keeps the draft; it is never refused. Returning by a button replaces the
+confirmation entry with the wizard's address.
 
-A link is followed in place when its path is a route; a link to a hash only when the shell's `hashes` says the hash is its own. React Router follows its own `Link` only, so the address listens for plain links (`address.listen`), and `address.open(href)` does the same for a component library that keeps its links' clicks to itself (the demo gives it to react-aria's `RouterProvider`).
-
-A change of address has participants (`address.permit({ agrees, follows })`): each is asked first, and being asked changes nothing; when all agree the router navigates, and then each is told. The asking is the router's blocker (`useBlocker`, which a router has one of), so a refused Back or Forward is restored by the router, which keeps each entry's place in History's state: this holds after a reload.
-
-A route's `state.ts` may name an address with XState `meta: { route: 'confirm' }`. A route whose chart is in another folder can instead point `meta.chart` at it. A chart created under such an address starts in that state (`machine.resolveState`). Its states say on entry which address they are: entering a state that names one adds an entry, and coming back to the route's own address replaces it, so Back never returns to a state the chart has left. Nothing is written while the address is not one of the chart's. Back, Forward or a link among the chart's addresses asks it with `can` for an `address` event, and sends it once everyone agreed. The chart refuses only a change that would take it out of a state that names an address; from a state that names none, Back or Forward to an address it cannot enter passes, and that entry takes the chart's address. One serial chart binds to a route. The bulk route's confirmation demonstrates it without moving its form or serialising an unsaved draft.
-
-Static route paths get copies of the built page, respecting Vite's base, which is the router's `basename`; `routing-fallback/404.html` is emitted separately for the hosting decision. There is no automatic root `404.html`.
-
-A test renders a folder that reads the route inside a router (`createMemoryRouter`); `framework/testing` has `memoryAddress(codec, routes, href)` and `bare(routes)`, the app's routes matched with no folder loaded.
+Static paths get copies of the built page, respecting Vite's base. The optional
+`routing-fallback/404.html` is emitted separately for an explicit hosting choice. Tests and
+Storybook use React Router's `<MemoryRouter>`.
 
 ## Not in it, or open
 
 - **Typing:** ESLint and Vitest do not load the TypeScript plugin, so a test file gets the injected types only through `check.cjs`. The language-service requests the plugin does not map (outlines, formatting, refactors) see the file as written.
-- **Routing:** static and named path segments, flat primitive query fields, and one serial routed chart. Catch-all paths, arbitrary query structures and parallel chart routing remain open. Reads do not start in the router's loaders yet: a folder's default read starts when the folder renders. After a render, `route` is the router's address at that moment, which is ahead of the page while the next one is being read.
+- **Routing:** static and named path segments, flat primitive query fields, and one serial routed chart. Catch-all paths, arbitrary query structures and parallel chart routing remain open. A folder's default read starts when the folder renders. Handlers and charts receive the route and props of their rendered folder.
 - **Forms:** `form.ts` is a stand-in for a form manager.
 - **The data layer:** services get no `signal`. Component queries stay fresh until a read they used is made stale, or their key changes; changes made by someone else are not seen until then, unless the read follows its source.
 - **Flags:** a component follows every flag it has ever read, not only those its last render read: a row that read `acl.role` while counting was on still renders when the role changes with counting off, to the same output.

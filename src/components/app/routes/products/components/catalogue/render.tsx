@@ -69,8 +69,14 @@ export default ({
       </p>
     ) : (
       <ul aria-label={i18n.list}>
-        {items.map((product) => (
-          <ProductRow filters={filters} key={product.id} product={product} />
+        {items.map((item) => (
+          <ProductRow
+            editHref={item.editHref}
+            key={item.product.id}
+            product={item.product}
+            removeHref={item.removeHref}
+            viewHref={item.viewHref}
+          />
         ))}
       </ul>
     )}

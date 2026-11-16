@@ -1,3 +1,4 @@
+export type Props = { editingId: null | number };
 // The network lab's controls, from the API client's settings, and its two activity lists, in the
 // locale on screen: the API client's requests, and the inspector, which shows what the pipelines
 // carried: interactions with the place they were written, failures with their layer, and what the
@@ -72,13 +73,14 @@ function describe(entry: Tracked, i18n: I18n<typeof messages>, intl: Intl, cause
   return { kind: event.action, text: event.action === 'stale' ? '' : event.path, where };
 }
 
-export default ({ async: { default: answer }, i18n, intl, state }) => {
+export default ({ async: { default: answer }, editingId, i18n, intl, state }) => {
   const { settings } = answer;
   const faults = [settings.latency > 0, settings.failureRate > 0, settings.force !== 0, settings.offline].filter(
     Boolean,
   ).length;
   const when = (at: number) => intl.formatTime(at, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   return {
+    editingId,
     failurePercent: Math.round(settings.failureRate * 100),
     failureText: i18n.failures.value,
     faults,
@@ -125,3 +127,5 @@ export default ({ async: { default: answer }, i18n, intl, state }) => {
     })(),
   };
 };
+
+export const examples = { 'The lab': { props: { editingId: null } } };

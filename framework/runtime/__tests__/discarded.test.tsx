@@ -5,7 +5,7 @@ import { useLocation } from 'react-router';
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { Root } from '../root';
-import { routed } from './routed';
+import { routed, useTestRoute } from './routed';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
@@ -24,6 +24,7 @@ test('a render React throws away leaves the decision the guards read as the page
     path: 'components/gate',
     reads: { acl: ['locked'], state: ['acl'], view: ['acl'] },
     skins: {},
+    useRoute: useTestRoute,
     view: () =>
       Promise.resolve({
         // Its own rule, from a prop: decided in each render.
@@ -97,6 +98,7 @@ test('a render React throws away is not what the next render is compared with: w
     path: 'components/paged',
     reads: { view: ['route'] },
     skins: {},
+    useRoute: useTestRoute,
     view: () =>
       Promise.resolve({
         async: undefined,
@@ -122,6 +124,7 @@ test('a render React throws away is not what the next render is compared with: w
     path: 'components/keys',
     reads: { view: ['keyboard'] },
     skins: {},
+    useRoute: useTestRoute,
     view: () =>
       Promise.resolve({
         async: undefined,
@@ -141,12 +144,15 @@ test('a render React throws away is not what the next render is compared with: w
   });
   const never = new Promise<never>(() => undefined);
   // Page 2 has a sibling that never arrives: React renders it and commits nothing.
-  const Slow = () => (page.address.shown(useLocation()).route['page'] === 2 ? use(never) : null);
+
+  const Slow = () =>
+    JSON.parse(new URLSearchParams(useLocation().search).get('query') ?? '{}').page === 2 ? use(never) : null;
   const client = createQueryClient();
-  const page = routed({ page: 0 }, { page: 1 }, (address) =>
+
+  const page = routed({ page: 0 }, { page: 1 }, () =>
     createElement(
       Root,
-      { address, client, entity },
+      { client, entity },
       createElement(Suspense, { fallback: null }, createElement(Paged), createElement(Slow), createElement(Keys)),
     ),
   );

@@ -39,12 +39,11 @@ import {
   type SnapshotFrom,
 } from 'xstate';
 
-import { addressedActor, addressesOf, type ChartAddress, type ChartRoute, followChart } from './chart-address';
+import { addressedActor, type ChartRoute } from './chart-address';
 import { shareByIdentity } from './data';
 import { type Pin, PinContext } from './pin';
 import { report } from './pipeline';
 import { during, sameParts, tracking } from './reads';
-import { useFramework } from './root';
 
 type Sources = Record<string, unknown>;
 type Config = Record<string, unknown>;
@@ -60,13 +59,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype;
 
 /** Builds the machine from a `state.ts`, naming every referenced function for XState. */
-export function buildMachine(
-  path: string,
-  module: StateModule,
-  injection: Sources,
-  sources: { current: Sources },
-  routing?: ChartAddress,
-) {
+export function buildMachine(path: string, module: StateModule, injection: Sources, sources: { current: Sources }) {
   const actors: Record<string, unknown> = {};
   const guards: Record<string, Fn> = {};
   const actions: Record<string, unknown> = {};
@@ -133,13 +126,6 @@ export function buildMachine(
     const segment = isPlainObject(config['meta']) ? config['meta']['route'] : undefined;
     if (typeof segment === 'string') routes.push({ route: segment, state: at.join('.') });
     for (const key of ['entry', 'exit']) if (out[key] !== undefined) out[key] = action(out[key]);
-    // Under a route, each state says on entry which of the chart's addresses it is (address.ts, `hold`).
-    if (routing && at.length && !config['states']) {
-      const holdAddress = () =>
-        routing.address.hold(addressesOf(routes, routing), typeof segment === 'string' ? segment : null);
-      const entry = out['entry'] === undefined ? [] : Array.isArray(out['entry']) ? out['entry'] : [out['entry']];
-      out['entry'] = [...entry, holdAddress];
-    }
     if (out['always'] !== undefined) out['always'] = transition(out['always']);
     if (out['invoke'] !== undefined) out['invoke'] = invoke(out['invoke']);
     if (isPlainObject(out['after']))
@@ -196,7 +182,6 @@ type Declared = {
   module: StateModule;
   read: Map<string, Set<string>>;
   routes: ChartRoute[];
-  routing?: ChartAddress;
   sources: Sources;
 };
 
@@ -207,7 +192,6 @@ function declare(
   injection: Sources,
   sources: Sources,
   live: { current: Sources },
-  routing?: ChartAddress,
 ): Declared {
   const read = new Map<string, Set<string>>();
   const given = new Proxy(injection, {
@@ -219,7 +203,8 @@ function declare(
     },
     has: (target, key) => Reflect.has(target, key) || (typeof key === 'string' && Object.hasOwn(sources, key)),
   });
-  return { ...buildMachine(path, module, given, live, routing), injection, module, read, routing, sources };
+
+  return { ...buildMachine(path, module, given, live), injection, module, read, sources };
 }
 
 /** Whether the declaration would see something else now: another module or injection, or another value in what it read. */
@@ -340,9 +325,7 @@ function useChart(
   const first = useRef<null | { actor: AnyActorRef; declared: Declared }>(null);
   first.current ??= {
     actor: creating(() =>
-      pin
-        ? pinnedActor(declared.machine, pin)
-        : (addressedActor(declared.machine, declared.routes, declared.routing, rendered()) as AnyActorRef),
+      pin ? pinnedActor(declared.machine, pin) : addressedActor(declared.machine, declared.routes, rendered()),
     ),
     declared,
   };
@@ -361,9 +344,7 @@ function useChart(
   useEffect(() => {
     if (pin) return;
     actor.start();
-    const stopFollowing = followChart(actor, running.declared.routes, running.declared.routing);
     return () => {
-      stopFollowing();
       stopRestartably(actor);
     };
   }, [actor, pin, running.declared]);
@@ -384,32 +365,12 @@ export function useStateLayer(
   told: Sources = {},
   /** Whether the component is rendering now (component.tsx): what the chart reads then is that render's. */
   active: { current: boolean } = ALWAYS,
-  /** The pattern of the route the folder's chart names addresses under, when it is a route's chart. */
-  routed?: string,
 ) {
-  // The sources read the route from the router when they are read: a chart created in its
-  // component's first render reads the address that render is for, which the router is at already.
-  //
   // What a guard or a change reads depends on when it runs. While the component's files run in its
   // render (the chart being created or declared, `state.can` asked by the render: `active` is up),
   // it reads this render's sources.
   // At any other time (an event, a service answering) it reads those of the render React
   // committed: a render React throws away leaves nothing behind for them.
-  const { address } = useFramework();
-  // The route this chart's states name addresses under, when its folder is that route's chart: its
-  // pattern, which the plugin read from the folders, and its path at the address the chart is created at.
-  const routing = useMemo((): ChartAddress | undefined => {
-    const definition =
-      routed === undefined ? undefined : address?.codec.definitions.find((route) => route.path === routed);
-    if (!address || !definition) return undefined;
-    const { params } = address.getSnapshot();
-    if (definition.keys.some((key) => params[key] === undefined)) return undefined;
-    const base = address.codec.pathOf(
-      definition.path,
-      Object.fromEntries(definition.keys.map((key) => [key, params[key]!])),
-    );
-    return { address, base, pattern: definition.path };
-  }, [address, routed]);
   const committed = useRef(false);
   const live = useState(() => ({
     committed: sources,
@@ -432,9 +393,14 @@ export function useStateLayer(
   // The chart's files run here, in the render: its declaration, and its first reads as it is created.
   const reading = <T>(work: () => T) => during(active, work);
   if (!chart.current || stale(chart.current, module, injection, declared))
-    chart.current = reading(() => declare(path, module, injection, declared, live, routing));
-  const running = useChart(chart.current, pin, reading, () =>
-    routing ? (live.current['route'] as undefined | { pattern?: string })?.pattern : undefined,
+    chart.current = reading(() => declare(path, module, injection, declared, live));
+
+  const running = useChart(
+    chart.current,
+    pin,
+    reading,
+    // SAFETY: A component supplies route from its generated codec.
+    () => (live.current['route'] as undefined | { pattern?: string })?.pattern,
   );
   const { actor } = running;
   const { flags } = running.declared;

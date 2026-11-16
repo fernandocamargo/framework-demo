@@ -1,14 +1,12 @@
-import { Button, Dialog, Heading } from 'react-aria-components';
-
-import { go } from '@/address';
+import { Button, Dialog, Heading, Link } from 'react-aria-components';
 
 // Inside the modal the page opened (components/modal), in place of the product.
-export default ({ className, error, i18n, resetErrorBoundary }) => (
+export default ({ className, closeHref, error, i18n, resetErrorBoundary }) => (
   <Dialog className={`react-aria-Dialog ${className}`} role="alertdialog">
     <Heading slot="title">{i18n.failed.title}</Heading>
     <p>{error.message}</p>
     <footer>
-      <Button onPress={() => go('/products')}>{i18n.failed.close}</Button>
+      <Link href={closeHref}>{i18n.failed.close}</Link>
       <Button onPress={resetErrorBoundary}>{i18n.failed.retry}</Button>
     </footer>
   </Dialog>

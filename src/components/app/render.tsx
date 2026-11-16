@@ -14,16 +14,18 @@ export default ({
   askToSignIn,
   brand,
   className,
+  editingId,
   handlers,
-  navigating,
+  productOpen,
   routes,
   sections,
   signInReason,
+  skin,
   skip,
   states,
   world,
 }) => (
-  <div aria-busy={navigating} className={className} itemScope itemType="https://schema.org/WebPage">
+  <div className={className} itemScope itemType="https://schema.org/WebPage">
     <Button onPress={handlers.skipToContent}>{skip}</Button>
     <header>
       <hgroup>
@@ -32,7 +34,7 @@ export default ({
           <span itemProp="name">{world}</span>
         </p>
       </hgroup>
-      <Tour />
+      <Tour skin={skin} />
       <nav>
         {sections.map((item) => (
           <Link aria-current={item.current ? 'page' : undefined} href={item.href} key={item.id}>
@@ -41,12 +43,12 @@ export default ({
         ))}
         <Link href="#/states">{states}</Link>
       </nav>
-      <Lab />
+      <Lab editingId={editingId} />
       <Language />
-      <Skin />
+      <Skin skin={skin} />
       <Palette />
       <Keyboard />
-      <Session asked={askToSignIn} reason={signInReason} />
+      <Session asked={askToSignIn} productOpen={productOpen} reason={signInReason} />
     </header>
     <main id="main" tabIndex={-1}>
       {routes}

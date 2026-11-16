@@ -15,6 +15,7 @@ export default ({
   description,
   handlers,
   i18n,
+  id,
   images,
   price,
   removeHref,
@@ -68,7 +69,7 @@ export default ({
         )}
       </p>
       <p itemProp="description">{description}</p>
-      <Reviews />
+      <Reviews id={id} />
       <footer>
         <RemoveLink href={removeHref} title={title} />
         {canEdit && (

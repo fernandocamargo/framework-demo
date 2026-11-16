@@ -151,13 +151,14 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
           : `${types}.RenderProps<${folder}>`;
       }
       case 'async':
-        return `${types}.AsyncInjection<${clients}, ${services}>`;
+        return `${types}.AsyncInjection<${clients}, ${services}>${folders.declaredProps(found.dir) ? ` & ${typeImport(folders.declaredProps(found.dir))}.Props` : ''}`;
       case 'client':
         return `${types}.ClientInjection`;
       case 'error':
       case 'placeholder': {
         const i18n = folders.findLayer(found.dir, 'i18n');
-        return `${types}.${found.name === 'error' ? 'ErrorProps' : 'PlaceholderProps'}${i18n ? `<${moduleType(i18n)}>` : ''}`;
+
+        return `${types}.${found.name === 'error' ? 'ErrorProps' : 'PlaceholderProps'}${i18n ? `<${moduleType(i18n)}>` : ''}${folders.declaredProps(found.dir) ? ` & ${typeImport(folders.declaredProps(found.dir))}.Props` : ''}`;
       }
       case 'service':
       case 'serviceMeta':
@@ -167,7 +168,8 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
         const form = folders.findLayer(found.dir, 'form');
         const i18n = folders.findLayer(found.dir, 'i18n');
         if (!named) return `${types}.ChartInjection<${clients}, ${services}, ${i18n ? moduleType(i18n) : 'undefined'}>`;
-        return `${types}.StateArgs<${clients}, ${services}, ${moduleType(file)}, ${exportsEvents(file) ? `${typeImport(file)}.Events` : 'object'}, ${form ? moduleType(form) : 'undefined'}, ${i18n ? moduleType(i18n) : 'undefined'}>`;
+
+        return `${folders.declaredProps(found.dir) ? `${typeImport(folders.declaredProps(found.dir))}.Props & ` : ''}${types}.StateArgs<${clients}, ${services}, ${moduleType(file)}, ${exportsEvents(file) ? `${typeImport(file)}.Events` : 'object'}, ${form ? moduleType(form) : 'undefined'}, ${i18n ? moduleType(i18n) : 'undefined'}>`;
       }
       default:
         return null;

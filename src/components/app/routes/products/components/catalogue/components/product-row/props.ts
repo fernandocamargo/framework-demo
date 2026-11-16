@@ -1,14 +1,12 @@
 // One row of the catalogue. It is given its product as the catalogue's read answered it, and
 // the filters, so its links keep them. Prices and ratings are formatted for the locale on screen.
 
-import { type Filters, links } from '@/address';
 import { AVAILABILITY, CURRENCY, stockLevel } from '@/format';
 import type { Listed } from '@/services/products/types';
 
-export type Props = { filters: Filters; product: Listed };
+export type Props = { editHref: string; product: Listed; removeHref: string; viewHref: string };
 
-export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product, route }) => {
-  const { href } = links(route);
+export default ({ acl, async: { setStock }, editHref, flags, i18n, intl, product, removeHref, viewHref }) => {
   const level = stockLevel(product.stock);
   // Counting stock is being rolled out (the `stockCount` flag), and needs the grant to update
   // products and someone signed in to send it.
@@ -19,7 +17,7 @@ export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product,
     category: product.category,
     change: product.local ? { label: i18n.change[product.local], value: product.local } : null,
     currency: CURRENCY,
-    editHref: href('/products/:id/edit', { id: product.id }, filters),
+    editHref,
     editLabel: i18n.actions.edit({ title: product.title }),
     price: { text: intl.formatNumber(product.price, { currency: CURRENCY, style: 'currency' }), value: product.price },
     rating: product.rating
@@ -29,7 +27,7 @@ export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product,
           value: product.rating,
         }
       : null,
-    removeHref: href('/products/:id/remove', { id: product.id }, filters),
+    removeHref,
     stepper: counts
       ? {
           label: i18n.count.label({ title: product.title }),
@@ -49,7 +47,7 @@ export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product,
     },
     thumbnail: product.thumbnail,
     title: product.title,
-    viewHref: href('/products/:id', { id: product.id }, filters),
+    viewHref,
   };
 };
 
@@ -57,7 +55,7 @@ export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product,
 export const examples = {
   'In stock': {
     props: {
-      filters: { category: '', order: 'asc', page: 1, q: '', sort: 'title' },
+      editHref: '/products/22/edit',
       product: {
         brand: 'Fieldwork',
         category: 'lighting',
@@ -71,11 +69,13 @@ export const examples = {
         title: 'Arc Floor Lamp',
         version: 1,
       },
+      removeHref: '/products/22/remove',
+      viewHref: '/products/22',
     },
   },
   'Low, edited here': {
     props: {
-      filters: { category: '', order: 'desc', page: 1, q: 'lamp', sort: 'price' },
+      editHref: '/products/22/edit',
       product: {
         brand: 'Fieldwork',
         category: 'lighting',
@@ -90,6 +90,8 @@ export const examples = {
         title: 'Arc Floor Lamp',
         version: 2,
       },
+      removeHref: '/products/22/remove',
+      viewHref: '/products/22',
     },
   },
 };

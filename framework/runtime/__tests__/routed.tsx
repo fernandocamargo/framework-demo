@@ -1,35 +1,44 @@
 import { act } from '@testing-library/react';
-import { createElement, type ReactNode } from 'react';
-import { createMemoryRouter, RouterProvider } from 'react-router';
+import { createElement, type ReactNode, useEffect } from 'react';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 
-import { createCodec, type Field } from '../address';
-import { createRouterAddress, type RouterAddress } from '../router';
+import type { Values } from '../address';
+import type { Route } from '../index';
 
-type Values = Record<string, boolean | number | string>;
+/** A route hook for the synthetic page used by runtime tests. */
+export function useTestRoute(): Route {
+  const location = useLocation();
 
-/**
- * A page under React Router, in memory: one route, `/page`, whose query declares a field for each
- * key of `sample` (its type is the sample value's). `page` gives what the root route renders, with
- * the address to hand to `Root`. `go` moves to another query and waits for the router.
- */
-export function routed(sample: Values, start: Values, page: (address: RouterAddress) => ReactNode) {
-  const query = Object.fromEntries(
-    Object.entries(sample).map(([key, value]) => [key, { type: typeof value } as Field]),
-  );
-  const codec = createCodec([{ folder: 'page', keys: [], owner: '', params: {}, path: '/page', query }], {}, '/page');
-  const Shell = () => page(address);
-  const router = createMemoryRouter(
-    [{ children: [{ handle: { pattern: '/page' }, path: 'page' }], Component: Shell, path: '/' }],
-    { initialEntries: [codec.format('/page', {}, start)] },
-  );
-  const address = createRouterAddress(codec, router);
   return {
-    address,
-    element: createElement(RouterProvider, { router }),
-    go: (route: Values) =>
+    ...JSON.parse(new URLSearchParams(location.search).get('query') ?? '{}'),
+    params: {},
+    path: '/page',
+    pattern: '/page',
+  };
+}
+
+export function routed(_sample: Record<string, boolean | number | string>, start: Values, page: () => ReactNode) {
+  const commands = new EventTarget();
+  const href = (query: Values) => `/page?${new URLSearchParams({ query: JSON.stringify(query) })}`;
+
+  function Shell() {
+    const navigate = useNavigate();
+    useEffect(() => {
+      // SAFETY: This local event target receives only the test helper's query events.
+      const go = (event: Event) => void navigate(href((event as CustomEvent<Values>).detail));
+      commands.addEventListener('go', go);
+
+      return () => commands.removeEventListener('go', go);
+    }, [navigate]);
+
+    return page();
+  }
+
+  return {
+    element: createElement(MemoryRouter, { initialEntries: [href(start)] }, createElement(Shell)),
+    go: (query: Values) =>
       act(async () => {
-        await router.navigate(codec.format('/page', {}, route));
+        commands.dispatchEvent(new CustomEvent('go', { detail: query }));
       }),
-    router,
   };
 }

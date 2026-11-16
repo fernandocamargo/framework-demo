@@ -61,10 +61,9 @@ export const fillDemo = ({ event, form }) => {
 export const clearForm = ({ form }) => form.seed(undefined);
 export const closeSignIn = ({ navigation }) => navigation.query({ signin: false });
 /** Giving up on signing in closes what asked for it, too. */
-export const closeEverything = ({ navigation, route }) =>
-  route.pattern.startsWith('/products/')
-    ? navigation.go('/products', {}, { signin: false })
-    : navigation.query({ signin: false });
+
+export const closeEverything = ({ navigation, productOpen }) =>
+  productOpen ? navigation.go('/products', {}, { signin: false }) : navigation.query({ signin: false });
 
 export const credentials = ({ form }) => form.payload();
 

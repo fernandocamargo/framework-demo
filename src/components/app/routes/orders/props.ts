@@ -1,5 +1,5 @@
 // The orders page: whether its map and ledger may show, and what a guest is offered instead.
-import { links } from '@/address';
+import { links, settingsOf } from '@/address';
 
 export default ({ acl, i18n, route, routes }) => {
   const { href } = links(route);
@@ -7,7 +7,10 @@ export default ({ acl, i18n, route, routes }) => {
     allowed: acl.allowed,
     guest: acl.role === 'guest',
     i18n,
+    page: route.page,
+    region: route.region,
     routes,
+    settings: settingsOf(route),
     signInHref: href('/orders', {}, { signin: true }),
   };
 };

@@ -1,8 +1,8 @@
 import Catalogue from './components/catalogue';
 
-export default ({ routes }) => (
+export default ({ filters, routes, settings }) => (
   <>
-    <Catalogue />
+    <Catalogue filters={filters} settings={settings} />
     {routes}
   </>
 );

@@ -1,6 +1,8 @@
+import { matchPath } from 'react-router';
+
 /**
  * The generated schema of the app's addresses: typed parameters and one canonical JSON `query`.
- * It reads and writes addresses; matching, History and the store are React Router's (router.tsx).
+ * React Router matches paths and keeps History; this file validates parameters and query fields.
  */
 export type Field = {
   default?: boolean | number | string;
@@ -13,8 +15,8 @@ export type Field = {
 export type Fields = Record<string, Field>;
 export type Values = Record<string, boolean | number | string>;
 export type RouteDefinition = {
-  chart?: { component: string; state: string };
   folder: string;
+  index?: boolean;
   keys: string[];
   owner: string;
   params: Fields;
@@ -119,7 +121,7 @@ export function createCodec(definitions: readonly RouteDefinition[], global: Fie
     let parent: RouteDefinition | undefined = selected;
     while (parent) {
       chain.unshift(parent);
-      parent = definitions.find((route) => route.folder === parent?.owner && !route.chart);
+      parent = definitions.find((route) => route.folder === parent?.owner);
     }
     return chain;
   };
@@ -184,26 +186,21 @@ export function createCodec(definitions: readonly RouteDefinition[], global: Fie
     for (const [key, value] of Object.entries(changes))
       if (!fields[key] || !valid(value, fields[key])) throw new Error(`Invalid query field: ${key}`);
   };
-  return { at, base: prefix, carried, definitions, format, global, home, pathOf, validateQuery };
+
+  const read = (pathname: string, search = '', hash = '') => {
+    for (const route of definitions) {
+      const match = matchPath(route.path, pathname);
+
+      if (match) return at(route.path, match.params, search, hash);
+    }
+
+    return at(undefined, {}, search, hash);
+  };
+
+  return { at, base: prefix, carried, definitions, format, global, home, pathOf, read, validateQuery };
 }
+
 export type AddressCodec = ReturnType<typeof createCodec>;
-export type AddressChange = { from: AddressSnapshot; to: AddressSnapshot; traversal: boolean };
-/**
- * Who has a say in a change of address. Everyone is asked first, and being asked changes nothing.
- * Only when all agree is the address written; then each is told, and may move with it.
- */
-export type Participant = { agrees(change: AddressChange): boolean; follows(change: AddressChange): void };
-/** A chart's addresses: its route's path on screen, and the child segments its states name. */
-export type ChartAddresses = { base: string; pattern: string; segments: readonly string[] };
-export type AddressOptions = {
-  /** The hashes the app's shell shows a page for: a link to one is followed in place. Any other hash is the browser's. */
-  hashes?: (hash: string) => boolean;
-};
-
-/** Which of a chart's addresses `at` is: null for its route's own, a segment, or undefined when it is elsewhere. */
-export const heldAt = (own: ChartAddresses, at: AddressSnapshot) =>
-  at.path === own.base ? null : own.segments.find((segment) => at.path === `${own.base}/${segment}`);
-
 /** Parameters come from the pattern; a route's meta may refine a named parameter. */
 export type ParameterNames<Path extends string> = Path extends `${string}:${infer Name}/${infer Rest}`
   ? Name | ParameterNames<Rest>
@@ -240,9 +237,13 @@ export type TypedNavigation<Routes extends Catalogue<Routes>, Global extends obj
     pattern: Path,
     ...args: Arguments<Path, Routes[Path], Params, Query>
   ): string;
-  query<Changes extends Partial<Global>>(changes: Exact<Changes, Partial<Global>>): void;
+  query<Changes extends Partial<Global>>(
+    changes: Exact<Changes, Partial<Global>>,
+    options?: { replace: boolean },
+  ): void;
   query<Path extends keyof Routes & string, Changes extends Partial<Routes[Path]['query']>>(
     pattern: Path,
     changes: Exact<Changes, Partial<Routes[Path]['query']>>,
   ): void;
+  replace: TypedNavigation<Routes, Global>['go'];
 };

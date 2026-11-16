@@ -1,4 +1,3 @@
-import '@/address.setup';
 // The page's rule: changing the catalogue needs a session.
 
 import codec from 'virtual:framework/address';
@@ -18,9 +17,9 @@ const page = (answer: { pattern?: string; session: null | typeof session; signin
     async: { default: { pattern: '/products', signin: false, world: 'memory', ...answer } },
     className: 'components/app',
     i18n,
-    navigating: false,
-    route: codec.at('/products', {}, '', '').route,
+    pattern: answer.pattern ?? '/products',
     routes: null,
+    settings: { ...codec.at('/products', {}, '', '').route, signin: answer.signin ?? false },
   } as never);
 
 test('reading needs no session', () => {
@@ -56,8 +55,8 @@ test("the reason is in the locale's words", () => {
     },
     className: 'components/app',
     i18n: translated,
-    navigating: false,
-    route: codec.at('/products', {}, '', '').route,
+    pattern: '/products/:id/edit',
+    settings: codec.at('/products', {}, '', '').route,
   } as never);
   expect(shaped.signInReason).toBe('Entre para mudar o catálogo.');
 });

@@ -1,7 +1,7 @@
 /// <reference path="../framework/plugin/messages.d.ts" />
 // The locales the app speaks, and the part of the address that says which one shows:
 // the generated query's lang field, carried by every link.
-import { address, inPlace } from './address';
+import type { Navigation } from 'framework';
 
 export { default as preloadLocale } from 'virtual:framework/messages';
 
@@ -17,13 +17,13 @@ const spoken = (tag: null | string | undefined): Locale | null =>
       null);
 
 /** The locale the address asks for; or the first of the browser's the app speaks; or English. */
-export const currentLocale = (asked = address.latest().query['lang'] as string): Locale =>
+export const currentLocale = (asked = ''): Locale =>
   spoken(asked) ?? navigator.languages.map(spoken).find((locale) => locale !== null) ?? 'en';
 
 /** Shows the page in another locale: the address changes in place, and the shell follows. */
-export const speak = (locale: Locale) => {
+export const speak = (navigation: Navigation, locale: Locale) => {
   // The page may speak it already with no language in its address (the browser's): nothing to write then.
-  if (currentLocale() !== locale) inPlace({ lang: locale });
+  navigation.query({ lang: locale }, { replace: true });
 };
 
 /** A locale's name in that locale: "English", "Português (Brasil)". */

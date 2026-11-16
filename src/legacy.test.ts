@@ -1,4 +1,3 @@
-import './address.setup';
 import { fromLegacy } from './legacy';
 
 const at = (address: string) => {

@@ -1,6 +1,5 @@
-import '@/address.setup';
 // The tour's flow, with services the test records.
-import { address, codec, HOME } from '@/address';
+import { HOME } from '@/address';
 import { DEMO } from '@/components/session/form';
 import { startFlow } from 'framework/testing';
 
@@ -19,7 +18,7 @@ function fakes(overrides: { flag?: () => Promise<unknown>; signIn?: () => Promis
 
 test('start, then next through every step: each step performs its effects in order', async () => {
   const { go, log, services } = fakes();
-  const flow = startFlow(tour, { navigation: { go, query: go }, services });
+  const flow = startFlow(tour, { locale: 'en', navigation: { go, query: go }, services, skin: 'default' });
   await flow.settled();
   expect(flow.states).toEqual(['closed']);
 
@@ -57,6 +56,8 @@ test('start, then next through every step: each step performs its effects in ord
     ['lab', { force: 0 }],
     ['signIn', DEMO],
     ['flag', { name: 'stockCount', way: 'everyone' }],
+    ['go', { skin: 'broadsheet' }, { replace: true }],
+    ['go', { lang: 'pt-BR' }, { replace: true }],
   ]);
   flow.send({ type: 'next' });
   await flow.settled();
@@ -76,7 +77,7 @@ test('starting on orders sends the tour to the catalogue', async () => {
 
 test('address has no back, and every other step goes back one step', async () => {
   const { go, services } = fakes();
-  const flow = startFlow(tour, { navigation: { go, query: go }, services });
+  const flow = startFlow(tour, { locale: 'en', navigation: { go, query: go }, services, skin: 'default' });
   flow.send({ type: 'start' });
   flow.send({ type: 'back' });
   expect(flow.states).toEqual(['address']);
@@ -88,7 +89,7 @@ test('address has no back, and every other step goes back one step', async () =>
 
 test('leaving from a step tidies the lab and shows the plain list', async () => {
   const { go, log, services } = fakes();
-  const flow = startFlow(tour, { navigation: { go, query: go }, services });
+  const flow = startFlow(tour, { locale: 'en', navigation: { go, query: go }, services, skin: 'default' });
   flow.send({ type: 'start' });
   for (let step = 0; step < 3; step += 1) flow.send({ type: 'next' });
   await flow.settled();
@@ -99,13 +100,13 @@ test('leaving from a step tidies the lab and shows the plain list', async () => 
   await flow.settled();
   expect(flow.states).toEqual(['closed']);
   expect(log).toContainEqual(['lab', { failureRate: 0, force: 0, latency: 0 }]);
-  expect(go).toHaveBeenLastCalledWith('/products', {}, { signin: false });
+  expect(go).toHaveBeenLastCalledWith('/products', {}, { lang: 'en', signin: false, skin: 'default' });
   flow.stop();
 });
 
 test('a sign-in that is refused keeps the flow in person, with the reason', async () => {
   const { go, services } = fakes({ signIn: async () => Promise.reject(new Error('Invalid credentials')) });
-  const flow = startFlow(tour, { navigation: { go, query: go }, services });
+  const flow = startFlow(tour, { locale: 'en', navigation: { go, query: go }, services, skin: 'default' });
   flow.send({ type: 'start' });
   for (let step = 0; step < 5; step += 1) flow.send({ type: 'next' });
   await flow.settled();
@@ -116,7 +117,7 @@ test('a sign-in that is refused keeps the flow in person, with the reason', asyn
 
 test('a flag that cannot be served moves on, and says the dashboard owns it', async () => {
   const { go, services } = fakes({ flag: async () => Promise.reject(new Error('Served by GrowthBook')) });
-  const flow = startFlow(tour, { navigation: { go, query: go }, services });
+  const flow = startFlow(tour, { locale: 'en', navigation: { go, query: go }, services, skin: 'default' });
   flow.send({ type: 'start' });
   for (let step = 0; step < 6; step += 1) flow.send({ type: 'next' });
   await flow.settled();
@@ -126,19 +127,17 @@ test('a flag that cannot be served moves on, and says the dashboard owns it', as
 });
 
 test('leaving puts back the locale and the skin the page had when the tour started', async () => {
-  address.replace(codec.format('/products', {}, { lang: 'en', skin: 'broadsheet' }));
   const { go, services } = fakes();
-  const flow = startFlow(tour, { navigation: { go, query: go }, services });
+  const flow = startFlow(tour, { locale: 'en', navigation: { go, query: go }, services, skin: 'broadsheet' });
   flow.send({ type: 'start' });
   for (let step = 0; step < 9; step += 1) flow.send({ type: 'next' });
   await flow.settled();
   expect(flow.states).toEqual(['finished']);
-  expect(address.getSnapshot().query['lang']).toBe('pt-BR');
+  expect(go).toHaveBeenLastCalledWith({ lang: 'pt-BR' }, { replace: true });
 
   flow.send({ type: 'next' });
   await flow.settled();
   expect(flow.states).toEqual(['closed']);
-  expect(address.getSnapshot().query['skin']).toBe('broadsheet');
-  expect(address.getSnapshot().query['lang']).toBe('en');
+  expect(go).toHaveBeenLastCalledWith('/products', {}, { lang: 'en', signin: false, skin: 'broadsheet' });
   flow.stop();
 });

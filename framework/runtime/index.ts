@@ -70,7 +70,6 @@ export {
   type Site,
 } from './pipeline';
 export { Root, type RootProps } from './root';
-export { createRouterAddress, type RouterAddress, useAddress, usePreparing, useShown } from './router';
 export type { Keyboard } from './shortcuts';
 
 export { css, selector } from './style';

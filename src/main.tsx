@@ -2,7 +2,7 @@
 // app sees, hands `Root` what the framework injects, and shows what the
 // failure pipeline carries. The app itself starts at components/app.
 
-import { StrictMode, use, useEffect } from 'react';
+import { StrictMode, Suspense, use, useEffect } from 'react';
 import {
   Button,
   I18nProvider,
@@ -14,22 +14,11 @@ import {
   UNSTABLE_ToastRegion as ToastRegion,
 } from 'react-aria-components';
 import { createRoot } from 'react-dom/client';
-import { RouterProvider as Router } from 'react-router/dom';
+import { BrowserRouter, Navigate, useLocation, useNavigate } from 'react-router';
 
-import {
-  bound,
-  chartAt,
-  createQueryClient,
-  type Env,
-  onFailure,
-  Pinned,
-  Root,
-  useAddress,
-  usePreparing,
-  useShown,
-} from 'framework';
+import { bound, chartAt, createQueryClient, type Env, onFailure, Pinned, Root } from 'framework';
 
-import { address, codec, follow, samePage, start, STATES } from './address';
+import { codec, type Settings, settingsOf, STATES } from './address';
 import App from './components/app';
 import States from './components/states';
 import { fromLegacy } from './legacy';
@@ -43,21 +32,10 @@ import './blueprint.css';
 // A bookmark from before the routes opens its new address (legacy.ts).
 const moved = fromLegacy(window.location);
 if (moved !== null) window.history.replaceState(window.history.state, '', moved);
-// The router of this document, with the shell below as its root route. The gallery continues to
-// use its development hash.
-// A locale's messages are read before its address shows: the router waits for the shell's loader,
-// so the page keeps the old locale on screen until every folder on it has its new messages.
-const router = start(Shell, async ({ request }) => {
-  // The codec reads the address's query; the language is a field of every page's.
-  await preloadLocale(currentLocale(codec.at(undefined, {}, new URL(request.url).search, '').query['lang'] as string));
-  return null;
-});
-const stopAddress = address.listen(window);
-if (import.meta.hot) import.meta.hot.dispose(stopAddress);
+
+const initial = codec.read(window.location.pathname.slice(codec.base.length - 1), window.location.search);
 const world: Env['world'] =
-  address.getSnapshot().query['world'] === 'memory' || import.meta.env['VITE_WORLD'] === 'memory'
-    ? 'memory'
-    : 'dummyjson';
+  initial.query['world'] === 'memory' || import.meta.env['VITE_WORLD'] === 'memory' ? 'memory' : 'dummyjson';
 // GrowthBook serves the real world's flags when its client key is in the build (.env.local).
 const env: Env = {
   apiUrl: 'https://dummyjson.com',
@@ -129,27 +107,75 @@ function Frame({ path, state }: { path: string; state: string }) {
   );
 }
 
+const messages = new Map<string, Promise<unknown>>();
+
+const messagesFor = (locale: string) => {
+  let loading = messages.get(locale);
+
+  if (!loading) messages.set(locale, (loading = preloadLocale(locale)));
+
+  return loading;
+};
+
 function Shell() {
-  // The address in the bar, and the one on screen: the router shows its location in a transition,
-  // so the page stays until the next one is ready.
-  const snapshot = useAddress(address);
-  const shown = useShown(address);
-  const preparing = usePreparing();
-  // A page is being read. Another language or skin is not another page: it shows when it is ready,
-  // and the page on screen is not busy meanwhile.
-  const navigating = preparing || !samePage(snapshot, shown);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const shown = codec.read(location.pathname, location.search, location.hash);
+  // SAFETY: The generated schema supplies and validates every shell setting.
+  const settings = settingsOf(shown.query as Settings);
   const locale = currentLocale(shown.query['lang'] as string);
+  use(messagesFor(locale));
   const skin = currentSkin(shown.query['skin'] as string);
   const page = pageOf(shown.hash);
+
+  const follow = (href: string) => {
+    const url = new URL(href, window.location.href);
+
+    if (url.origin !== window.location.origin || !url.pathname.startsWith(codec.base))
+      return window.location.assign(href);
+    void navigate(`/${url.pathname.slice(codec.base.length)}${url.search}${url.hash}`);
+  };
+
+  useEffect(() => {
+    const click = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+        return;
+      const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+
+      if (
+        !(anchor instanceof HTMLAnchorElement) ||
+        anchor.hasAttribute('download') ||
+        (anchor.target && anchor.target !== '_self')
+      )
+        return;
+      const url = new URL(anchor.href);
+
+      if (
+        url.origin !== window.location.origin ||
+        !url.pathname.startsWith(codec.base) ||
+        (url.hash && !url.hash.startsWith(STATES))
+      )
+        return;
+      event.preventDefault();
+      void navigate(`/${url.pathname.slice(codec.base.length)}${url.search}${url.hash}`);
+    };
+
+    document.addEventListener('click', click);
+
+    return () => document.removeEventListener('click', click);
+  }, [navigate]);
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+  const canonical = `/${shown.href.slice(codec.base.length)}`;
+
+  if (`${location.pathname}${location.search}${location.hash}` !== canonical)
+    return <Navigate replace to={canonical} />;
   return (
     <RouterProvider navigate={follow}>
       <I18nProvider locale={locale}>
         <Root
           acl={permissions}
-          address={address}
           client={client}
           entity={entity}
           env={env}
@@ -161,9 +187,13 @@ function Shell() {
           user={whoIsSignedIn}
         >
           {page === null ? (
-            <App navigating={navigating} />
+            <App
+              editingId={shown.pattern === '/products/:id/edit' ? Number(shown.params['id']) : null}
+              pattern={shown.pattern}
+              settings={settings}
+            />
           ) : 'gallery' in page ? (
-            <States />
+            <States settings={settings} />
           ) : (
             <Frame key={`${page.path}/${page.state}`} path={page.path} state={page.state} />
           )}
@@ -176,6 +206,10 @@ function Shell() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Router router={router} />
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <Suspense fallback={null}>
+        <Shell />
+      </Suspense>
+    </BrowserRouter>
   </StrictMode>,
 );

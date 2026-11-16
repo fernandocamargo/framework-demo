@@ -11,10 +11,10 @@ import { problems } from './form';
 
 export const description = 'Edit a product, or write a new one, and save it.';
 
-export const context = ({ route }) => ({
+export const context = ({ creating }) => ({
   /** Whether a save was tried: problems show from then on. */
   checked: false,
-  creating: route.pattern === '/products/new',
+  creating,
   error: null as null | string,
   title: '',
   /** The version the person started from. A save says so, and is refused if the product has moved on. */
@@ -43,14 +43,16 @@ export const close = ({ navigation }) => navigation.go('/products');
 
 // ---- What the services are given ---------------------------------------------------------------
 
-export const productToRead = ({ route }) => route.params.id ?? 0;
-export const changesToSave = ({ context, form, route }) => ({
+export const productToRead = ({ id }) => id;
+
+export const changesToSave = ({ context, form, id }) => ({
   changes: form.payload(),
-  id: route.params.id ?? 0,
+  id,
   version: context.version,
 });
 /** The same changes, whatever the product's version: the person chose to keep theirs. */
-export const changesToForce = ({ form, route }) => ({ changes: form.payload(), id: route.params.id ?? 0 });
+
+export const changesToForce = ({ form, id }) => ({ changes: form.payload(), id });
 export const productToCreate = ({ form }) => form.payload();
 
 // The chart is declared from what the person may do: a read-only editor has no `save` at all. When

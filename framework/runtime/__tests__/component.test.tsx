@@ -7,7 +7,7 @@ import { component } from '../component';
 import { createQueryClient } from '../data';
 import { useFormLayer } from '../form';
 import { Root } from '../root';
-import { routed } from './routed';
+import { routed, useTestRoute } from './routed';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
@@ -47,8 +47,9 @@ async function show(element: ReactNode) {
 const entity = { id: 'shop' } as never;
 /** `tree` under a Root at `start`, in a memory router; `go` moves the address and lets the page settle. */
 async function at(client: ReturnType<typeof createQueryClient>, start: Props, tree: ReactNode) {
-  const page = routed({ edit: 0, other: '', page: 0 }, start as never, (address) =>
-    createElement(Root, { address, client, entity }, tree),
+  // SAFETY: These synthetic route values are the primitive fields declared by the test.
+  const page = routed({ edit: 0, other: '', page: 0 }, start as never, () =>
+    createElement(Root, { client, entity }, tree),
   );
   const { container } = await show(page.element);
   return {
@@ -88,6 +89,7 @@ test('a component with a default read reads again, and calls its render, only wh
     path: 'components/reader',
     reads: { async: ['route'] },
     skins: {},
+    useRoute: useTestRoute,
     view: view(
       (props) => {
         const answer = (props['async'] as { default: Answer }).default;
@@ -129,6 +131,7 @@ test('a new answer keeps the parts equal to the last one shown, so a child given
     path: 'components/parent',
     reads: { async: ['route'] },
     skins: {},
+    useRoute: useTestRoute,
     view: view(
       (props) => {
         const answer = (props['async'] as { default: Answer }).default;
@@ -237,6 +240,7 @@ test('a chart created by a change of route reads that route, not the one before 
     path: 'components/editor',
     reads: { state: ['route'] },
     skins: {},
+    useRoute: useTestRoute,
     view: () =>
       Promise.resolve({
         async: undefined,

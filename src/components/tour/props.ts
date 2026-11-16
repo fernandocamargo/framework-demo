@@ -1,3 +1,6 @@
+import type { Skin } from '@/skins';
+
+export type Props = { skin: Skin };
 // What the tour's panel shows: the step on screen, its place among the steps, its words in the
 // locale on screen, and the moves the flow allows from it.
 
@@ -25,3 +28,5 @@ export default ({ i18n, state }) => {
     title: step?.title ?? '',
   };
 };
+
+export const examples = { 'The tour': { props: { skin: 'default' } } };

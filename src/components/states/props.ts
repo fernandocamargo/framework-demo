@@ -1,10 +1,12 @@
-import { links } from '@/address';
+export type Props = { settings: Settings };
+
+import { links, type Settings } from '@/address';
 import type { Locale } from '@/locales';
 // Each chart and each of its states, with the address of the frame that shows it: the same page
 // in the memory world, in the locale and the skin on screen, holding the component in that state.
 
-export default ({ async: { default: charts }, i18n, locale, route }) => {
-  const { href } = links(route);
+export default ({ async: { default: charts }, i18n, locale, settings }) => {
+  const { href } = links(settings);
   return {
     backHref: href('/products'),
     charts: charts.map((chart) => ({
@@ -24,4 +26,8 @@ export default ({ async: { default: charts }, i18n, locale, route }) => {
     })),
     i18n,
   };
+};
+
+export const examples = {
+  'The gallery': { props: { settings: { lang: '', signin: false, skin: 'default', world: 'memory' } } },
 };

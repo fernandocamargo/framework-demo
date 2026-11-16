@@ -1,5 +1,11 @@
 import type { Key } from 'react-aria-components';
 
-import { type Locale, speak } from '@/locales';
+import { LOCALES, speak } from '@/locales';
 
-export const speakLanguage = () => (key: Key | null) => speak(key as Locale);
+export const speakLanguage =
+  ({ navigation }) =>
+  (key: Key | null) => {
+    const locale = LOCALES.find((value) => value === key);
+
+    if (locale) speak(navigation, locale);
+  };

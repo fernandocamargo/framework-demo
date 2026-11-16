@@ -1,4 +1,3 @@
-import './address.setup';
 import { SKINS } from './skins';
 
 // A component folder with a default sheet has a sheet for every skin: a folder without one shows

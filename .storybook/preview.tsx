@@ -5,14 +5,13 @@
 // starts at the address its example names, and then follows its links, as the app does.
 
 import type { Decorator, Preview } from '@storybook/react-vite';
-import { type ComponentType, createContext, use } from 'react';
+import type { ComponentType } from 'react';
 import { I18nProvider, RouterProvider } from 'react-aria-components';
-import { createBrowserRouter, createMemoryRouter, type DataRouter } from 'react-router';
-import { RouterProvider as Router } from 'react-router/dom';
+import { MemoryRouter, useNavigate } from 'react-router';
 
 import { createQueryClient, type Env, Root, type Route } from 'framework';
 
-import { address, codec, follow, start } from '../src/address';
+import { codec } from '../src/address';
 import memory from '../src/clients/memory';
 import { DEMOS } from '../src/components/session/form';
 import { LOCALES } from '../src/locales';
@@ -40,19 +39,16 @@ async function signInAs(role: string) {
   await api.session.signIn({ password: demo.password, username: demo.username });
 }
 
-/** What a story's frame shows: the story, and the toolbars' choices. The router's root route reads it. */
 type Shown = { locale: (typeof LOCALES)[number]; role: string; skin: string; Story: ComponentType };
-const ShownContext = createContext<null | Shown>(null);
 
-/** The root route of a story's router: the app's `Root` around the story, as the shell has it around the page. */
-function Stage() {
-  const { locale, role, skin, Story } = use(ShownContext)!;
+function Stage({ locale, role, skin, Story }: Shown) {
+  const navigate = useNavigate();
   return (
-    <RouterProvider navigate={follow}>
-      {/* A new Root for each person, so its reads start over for them. */}
+    <RouterProvider
+      navigate={(href) => void navigate(href.startsWith(codec.base) ? `/${href.slice(codec.base.length)}` : href)}
+    >
       <Root
         acl={permissions}
-        address={address}
         client={clients[role]!}
         entity={entity}
         env={env}
@@ -68,14 +64,15 @@ function Stage() {
   );
 }
 
-// Each story has a router of its own, in memory: Storybook's own address is not the story's.
 const inRoot: Decorator = (Story, context) => {
   const { locale, role, skin } = context.globals as Omit<Shown, 'Story'>;
+  // SAFETY: The loader below always returns the generated href for this story.
+  const href = context.loaded['href'] as string;
   return (
     <I18nProvider locale={locale}>
-      <ShownContext value={{ locale, role, skin, Story }}>
-        <Router router={context.loaded['router'] as DataRouter} />
-      </ShownContext>
+      <MemoryRouter basename={codec.base} initialEntries={[href]} key={context.id}>
+        <Stage locale={locale} role={role} skin={skin} Story={Story} />
+      </MemoryRouter>
     </I18nProvider>
   );
 };
@@ -123,10 +120,9 @@ export default {
         ...example,
         world: 'memory',
       });
-      const inMemory: typeof createBrowserRouter = (routes, options) =>
-        createMemoryRouter(routes, { ...options, initialEntries: [href] });
-      const router = start(Stage, undefined, inMemory);
-      return signInAs(globals['role'] as string).then(() => ({ router }));
+
+      // SAFETY: The toolbar declares the role strings accepted by signInAs.
+      return signInAs(globals['role'] as string).then(() => ({ href }));
     },
   ],
   parameters: {

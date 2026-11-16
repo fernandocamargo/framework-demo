@@ -8,7 +8,7 @@ import { createQueryClient } from '../data';
 import { type Failure, type Interaction, onFailure, pipeline, type Scope } from '../pipeline';
 import { Root } from '../root';
 import { interact } from '../track';
-import { routed } from './routed';
+import { routed, useTestRoute } from './routed';
 
 // No app here: the plugin's modules of clients and services are empty.
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
@@ -62,11 +62,12 @@ function folder(
   const seen: Handlers[] = [];
   const Component = component({
     path,
-    // A folder with an async.ts here has a render that reads `async`.
     reads: {
       view: [...['route', 'acl', 'flags'].filter((name) => source.includes(name)), ...(layers.async ? ['async'] : [])],
     },
     skins: {},
+    // A folder with an async.ts here has a render that reads `async`.
+    useRoute: useTestRoute,
     view: () =>
       Promise.resolve({
         async: layers.async as never,
@@ -280,8 +281,9 @@ test('a handler that reads a field of the route is a new function for that field
     'export const keep = ({ record, route }) => () => record(route.page);',
   );
   const client = createQueryClient();
-  const page = routed({ page: 0, q: '' }, { page: 1, q: 'a' }, (address) =>
-    createElement(Root, { address, client, entity }, createElement(Component, { record })),
+
+  const page = routed({ page: 0, q: '' }, { page: 1, q: 'a' }, () =>
+    createElement(Root, { client, entity }, createElement(Component, { record })),
   );
   await show(page.element);
   // Another field: the folder renders with the router's new location, and the handler is the same function.

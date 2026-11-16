@@ -1,11 +1,13 @@
+export type Props = { closeHref: string; id: number; settings: Settings };
 // The order's dialog: its lines, each a product of the catalogue, its customer and where it ships.
 // The street and the postal code are for a grant to read customers; anyone else is shown the city
 // and the state, with a note that the rest is hidden. The customer's name follows the ledger's rule.
-import { HOME, links } from '@/address';
+
+import { HOME, links, type Settings } from '@/address';
 import { CURRENCY } from '@/format';
 
-export default ({ acl, async: { default: order }, i18n, intl, route }) => {
-  const { href } = links(route);
+export default ({ acl, async: { default: order }, i18n, intl, settings }) => {
+  const { href } = links(settings);
   const full = acl.grants.customers.includes('read');
   const { address, firstName, lastName } = order.customer;
   const price = (value: number) => intl.formatNumber(value, { currency: CURRENCY, style: 'currency' });
@@ -36,6 +38,10 @@ export default ({ acl, async: { default: order }, i18n, intl, route }) => {
 
 /** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
 export const examples = {
-  'An order, read by a moderator': { route: { params: { id: 1 }, pattern: '/orders/:id' } },
-  'An order, read by an admin': { route: { params: { id: 24 }, pattern: '/orders/:id' } },
+  'An order, read by a moderator': {
+    props: { closeHref: '/orders', id: 1, settings: { lang: '', signin: false, skin: 'default', world: 'memory' } },
+  },
+  'An order, read by an admin': {
+    props: { closeHref: '/orders', id: 24, settings: { lang: '', signin: false, skin: 'default', world: 'memory' } },
+  },
 };

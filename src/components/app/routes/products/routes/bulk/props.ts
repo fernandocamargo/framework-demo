@@ -11,7 +11,7 @@ import { STEP } from './state';
 
 const STEPS = ['products', 'rule', 'preview', 'apply', 'summary'] as const;
 
-export default ({ acl, async: { default: categories }, flags, form, i18n, intl, state }) => {
+export default ({ acl, async: { default: categories }, flags, form, i18n, intl, routes, state }) => {
   const { context } = state;
   const { values } = form;
   const rule = form.payload();
@@ -64,6 +64,7 @@ export default ({ acl, async: { default: categories }, flags, form, i18n, intl, 
     },
     results: context.results.map((result) => ({ ...result, from: money(result.from), to: money(result.to) })),
     retryText: i18n.retryFailed({ count: failed.length }),
+    routes,
     ruleProblem: problem ? i18n.problems[problem] : null,
     selectedIds: values.selected.map(String),
     selectionText: i18n.choose.selected({ count: context.items.length, selected: values.selected.length }),

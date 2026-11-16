@@ -1,3 +1,4 @@
+export type Props = { id: number };
 // The reviews, in the locale on screen: their count and average in one plural message, and each
 // date as the locale writes it. The messages mark which of their words are which value, so the
 // render can name each as schema.org does.
@@ -32,6 +33,4 @@ export default ({ async: { default: reviews }, i18n, intl }) => {
 };
 
 /** The address each story Storybook shows of this folder needs (framework/storybook). */
-export const examples = {
-  "A product's reviews": { route: { view: 22 } },
-};
+export const examples = { "A product's reviews": { props: { id: 22 } } };
