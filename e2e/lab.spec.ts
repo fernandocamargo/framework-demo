@@ -50,49 +50,29 @@ test('the gallery lists the two child charts under their own folders', async ({ 
   expect(await page.getByRole('region', { exact: true, name: 'components/lab' }).locator('iframe').count()).toBe(2);
 });
 
-// A list's sheet is its own file, loaded when the list first shows in a skin. After the page's skin
-// changed, the first tab shown waits for it: the tab alone, with the page and the lab around it as
-// they were, and never as a list with nothing in it.
-test('the API client tab waits alone for its sheet after the skin changed', async ({ page }) => {
+// The page loads what every folder it loads will need, a list's sheet included, so after the page's
+// skin changed and the page is at rest, the lab opens on its first tab asking for nothing more: its
+// entries at once, never waiting and never a list with nothing in it.
+test('the API client tab shows at once after the skin changed, its files already loaded', async ({ page }) => {
   await page.goto('./?world=memory#/products');
   await page.evaluate(() => window.__framework.idle());
   await page.getByRole('button', { name: /Skin/ }).click();
   await page.getByRole('option', { name: /Broadsheet/ }).click();
   await page.evaluate(() => window.__framework.idle());
 
-  // Every script asked for from here on is held until the test has looked at the page.
-  const held: (() => void)[] = [];
-  let holding = true;
-  let asked = () => {};
-  const sheet = new Promise<void>((resolve) => (asked = resolve));
-
-  await page.route('**/*.js', async (route) => {
-    if (holding)
-      await new Promise<void>((send) => {
-        held.push(send);
-        asked();
-      });
-    await route.continue();
+  const asked: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().endsWith('.js')) asked.push(request.url());
   });
-
   const lab = page.getByRole('complementary', { name: 'Network lab' });
   await page.getByRole('button', { name: /Network lab/ }).click();
-  await sheet;
-
-  // Two frames: the commit that asked for the sheet has painted.
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
+  expect(asked).toEqual([]);
   expect(await page.getByRole('list', { name: 'Products' }).isVisible()).toBe(true);
-  expect(await lab.isVisible()).toBe(true);
   expect(await lab.getByRole('tab', { name: 'API client' }).getAttribute('aria-selected')).toBe('true');
-  expect(await lab.locator('ol[aria-busy="true"]').count()).toBe(1);
-  expect(await lab.locator('ol > li').count()).toBe(0);
-
-  holding = false;
-  for (const send of held.splice(0)) send();
-  await page.evaluate(() => window.__framework.idle());
   expect(await lab.locator('ol[aria-busy="true"]').count()).toBe(0);
-  expect(await lab.locator('ol > li[itemscope]').count()).toBeGreaterThan(0);
+  expect(await lab.locator('ol > li').count()).toBeGreaterThan(0);
 });
 
 // The lab loads both lists' files when it opens, so the Inspector tab asks for nothing more when it
