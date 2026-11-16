@@ -513,6 +513,186 @@ function readsOf(root, dir) {
   return { all: SOURCES.filter((source) => all.has(source)), byLayer, names };
 }
 
+/** Owned operation names and the fixed status fields their observing layers read. */
+function operationsOf(root, dir) {
+  const ts = typescriptFor(root);
+  const fields = ['pending', 'error', 'data', 'actor'];
+
+  const unwrap = (node) => {
+    while (
+      node &&
+      (ts.isParenthesizedExpression(node) ||
+        ts.isAsExpression(node) ||
+        ts.isTypeAssertionExpression(node) ||
+        ts.isSatisfiesExpression(node) ||
+        ts.isNonNullExpression(node))
+    )
+      node = node.expression;
+
+    return node;
+  };
+
+  const exported = (node, kind) =>
+    ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((modifier) => modifier.kind === kind);
+
+  const exportsOf = (layer) => {
+    const file = findLayer(dir, layer);
+    const found = new Map();
+
+    if (!file) return found;
+
+    const source = ts.createSourceFile(
+      file,
+      readFileSync(file, 'utf8'),
+      ts.ScriptTarget.Latest,
+      true,
+      JSX_FILE.test(file) ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    );
+
+    const declared = new Map();
+
+    const declarations = (statement) =>
+      ts.isVariableStatement(statement)
+        ? statement.declarationList.declarations
+        : ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement) || ts.isEnumDeclaration(statement)
+          ? [statement]
+          : [];
+
+    for (const statement of source.statements)
+      for (const declaration of declarations(statement))
+        if (declaration.name && ts.isIdentifier(declaration.name))
+          declared.set(declaration.name.text, unwrap(declaration.initializer ?? declaration));
+
+    const resolve = (node) => {
+      node = unwrap(node);
+
+      return node && ts.isIdentifier(node) ? declared.get(node.text) : node;
+    };
+
+    for (const statement of source.statements) {
+      if (ts.isExportAssignment(statement) && !statement.isExportEquals)
+        found.set('default', resolve(statement.expression));
+      else if (exported(statement, ts.SyntaxKind.ExportKeyword)) {
+        for (const declaration of declarations(statement)) {
+          const name = exported(statement, ts.SyntaxKind.DefaultKeyword) ? 'default' : declaration.name?.text;
+
+          if (name) found.set(name, resolve(declaration.initializer ?? declaration));
+        }
+      } else if (
+        ts.isExportDeclaration(statement) &&
+        !statement.isTypeOnly &&
+        statement.exportClause &&
+        ts.isNamedExports(statement.exportClause)
+      )
+        for (const element of statement.exportClause.elements)
+          if (!element.isTypeOnly)
+            found.set(
+              element.name.text,
+              statement.moduleSpecifier ? undefined : declared.get((element.propertyName ?? element.name).text),
+            );
+    }
+
+    return found;
+  };
+
+  const names = [...exportsOf('async').keys()].filter((name) => name !== 'default').sort();
+  const status = new Map(names.map((name) => [name, new Set()]));
+
+  const add = (operation, field) => {
+    // A source prop is not an owned operation; its binding is a separate contract.
+    for (const name of operation === undefined ? names : [operation]) {
+      const read = status.get(name);
+
+      if (read) for (const each of fields.includes(field) ? [field] : fields) read.add(each);
+    }
+  };
+
+  const keyOf = (node) => (ts.isIdentifier(node) || ts.isStringLiteral(node) ? node.text : undefined);
+
+  const collect = (fn) => {
+    if (!fn || !(ts.isArrowFunction(fn) || ts.isFunctionExpression(fn) || ts.isFunctionDeclaration(fn))) return add();
+    const parameter = fn.parameters[0];
+
+    if (!parameter) return;
+
+    if (!ts.isObjectBindingPattern(parameter.name)) return add();
+    const bound = new Map();
+
+    const bindStatus = (pattern, operation) => {
+      if (ts.isIdentifier(pattern)) bound.set(pattern.text, operation);
+      else if (ts.isObjectBindingPattern(pattern)) {
+        for (const element of pattern.elements) {
+          const key = keyOf(element.propertyName ?? element.name);
+
+          if (element.dotDotDotToken || key === undefined) add(operation);
+          else if (operation === undefined) bindStatus(element.name, key);
+          else add(operation, key);
+        }
+      } else add(operation);
+    };
+
+    for (const element of parameter.name.elements) {
+      const key = keyOf(element.propertyName ?? element.name);
+
+      if (element.dotDotDotToken || key === undefined) add();
+      else if (key === 'status') bindStatus(element.name);
+    }
+
+    const visit = (node) => {
+      if (ts.isTypeNode(node)) return;
+
+      if (ts.isIdentifier(node) && bound.has(node.text)) {
+        const parent = node.parent;
+
+        const isName =
+          (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
+          (ts.isBindingElement(parent) && parent.propertyName === node) ||
+          (ts.isPropertyAssignment(parent) && parent.name === node) ||
+          ts.isJsxAttribute(parent);
+
+        if (!isName) {
+          let value = node;
+
+          const member = () => {
+            while (value.parent && unwrap(value.parent) === value) value = value.parent;
+
+            if (ts.isPropertyAccessExpression(value.parent) && value.parent.expression === value) {
+              value = value.parent;
+
+              return value.name.text;
+            }
+
+            return undefined;
+          };
+
+          const operation = bound.get(node.text) ?? member();
+          add(operation, operation === undefined ? undefined : member());
+        }
+      }
+
+      ts.forEachChild(node, visit);
+    };
+    // A shadowed name may widen the read, never hide an outer reference.
+
+    if (fn.body) visit(fn.body);
+
+    const defaults = (node) => {
+      if ((ts.isBindingElement(node) || ts.isParameter(node)) && node.initializer) visit(node.initializer);
+      ts.forEachChild(node, defaults);
+    };
+
+    for (const each of fn.parameters) defaults(each);
+  };
+
+  for (const layer of ['props', 'handlers', 'shortcuts', 'acl', ...(findLayer(dir, 'props') ? [] : ['render'])])
+    for (const [name, fn] of exportsOf(layer)) if (layer === 'handlers' || name === 'default') collect(fn);
+
+  return {
+    names,
+    status: Object.fromEntries(names.map((name) => [name, fields.filter((field) => status.get(name).has(field))])),
+  };
+}
+
 /**
  * The messages of a component's `i18n.ts`, read without running it: its default export must be
  * an object literal whose leaves are strings (ICU messages) or functions, nested in objects as
@@ -818,6 +998,7 @@ module.exports = {
   listSkins,
   listTranslations,
   messagesOf,
+  operationsOf,
   posix,
   problems,
   readsOf,

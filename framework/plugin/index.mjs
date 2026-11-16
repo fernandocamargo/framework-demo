@@ -46,6 +46,7 @@ const {
   listServices,
   listSkins,
   listTranslations,
+  operationsOf,
   posix,
   problems,
   readsOf,
@@ -926,7 +927,12 @@ export default function framework(userOptions) {
         if (path.basename(file).replace(CODE, '') === 'props') writeTypes(options);
         const dir = path.dirname(file);
         if (!readsSeen.has(dir) || !CODE.test(file)) return;
-        if (JSON.stringify(readsOf(options.root, dir)) === readsSeen.get(dir)) return;
+
+        if (
+          JSON.stringify({ operations: operationsOf(options.root, dir), reads: readsOf(options.root, dir) }) ===
+          readsSeen.get(dir)
+        )
+          return;
         for (const environment of Object.values(server.environments)) {
           const mod = environment.moduleGraph.getModuleById(COMPONENT + dir);
           if (mod) environment.moduleGraph.invalidateModule(mod);
@@ -1049,7 +1055,8 @@ export default function framework(userOptions) {
         const i18n = findLayer(dir, 'i18n');
         const skins = listSkins(dir);
         const reads = readsOf(options.root, dir);
-        readsSeen.set(dir, JSON.stringify(reads));
+        const operations = operationsOf(options.root, dir);
+        readsSeen.set(dir, JSON.stringify({ operations, reads }));
         return [
           `import { component } from ${runtime};`,
           ...(placeholder ? [`import placeholder from ${JSON.stringify(placeholder)};`] : []),
@@ -1075,6 +1082,7 @@ export default function framework(userOptions) {
             async: reads.byLayer.async ?? [],
             // What the chart's declaration destructures: it is declared again when those change.
             chart: reads.names.chart ?? [],
+            operations,
             state: reads.byLayer.state ?? [],
             view: [
               ...new Set(['props', 'render', 'handlers', 'shortcuts'].flatMap((layer) => reads.byLayer[layer] ?? [])),

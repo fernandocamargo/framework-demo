@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { after, before, test } = require('node:test');
 
-const { declaredProps, problems, readsOf } = require('./folders.cjs');
+const { declaredProps, operationsOf, problems, readsOf } = require('./folders.cjs');
 
 let root;
 const write = (relative, text) => {
@@ -44,6 +44,191 @@ before(() => {
 });
 
 after(() => rmSync(root, { force: true, recursive: true }));
+
+const operationFields = ['pending', 'error', 'data', 'actor'];
+
+const operationFixture = (name, render, async = 'export const save = () => {}; export const remove = () => {};') => {
+  write(`components/${name}/render.tsx`, render);
+  write(`components/${name}/async.ts`, async);
+
+  return () => operationsOf(root, path.join(root, 'components', name));
+};
+
+test('commands, pending and actor reads have distinct fixed manifests', () => {
+  for (const [name, render, fields] of [
+    ['command', '({ async: { save } }) => save', []],
+    ['pending', '({ status }) => status.save.pending', ['pending']],
+    ['actor', '({ status }) => status.save.actor', ['actor']],
+  ]) {
+    const manifest = operationFixture(name, `export default ${render};`);
+    assert.deepEqual(manifest(), { names: ['remove', 'save'], status: { remove: [], save: fields } });
+  }
+});
+
+test('status aliases and default bindings select fields in canonical order without duplicates', () => {
+  const manifest = operationFixture(
+    'status-aliases',
+    `export default ({ status: current = {} } = {}) =>
+      [current.save.actor, current.save.data.title, current?.save?.pending, current.save.data];`,
+  );
+
+  assert.deepEqual(manifest().status, { remove: [], save: ['pending', 'data', 'actor'] });
+  write(
+    'components/status-aliases/handlers.ts',
+    `export const retry = ({ status: { save: result = {} } }) => () => result.error;
+     export const show = ({ status: { save: { pending: busy = false } = {} } = {} }) => () => busy;`,
+  );
+  assert.deepEqual(manifest(), {
+    names: ['remove', 'save'],
+    status: { remove: [], save: operationFields },
+  });
+});
+
+test('whole, rest, computed and unsupported status reads fall back to the nearest whole shape', () => {
+  for (const expression of [
+    '({ status }) => status',
+    '({ ...given }) => given',
+    '(given) => given.status.save.pending',
+    '({ [key]: value }) => value',
+    '({ status }) => status[key].pending',
+    '({ status: { ...results } }) => results',
+  ]) {
+    assert.deepEqual(operationFixture('status-broad', `export default ${expression};`)().status, {
+      remove: operationFields,
+      save: operationFields,
+    });
+  }
+
+  for (const expression of [
+    '({ status }) => status.save',
+    '({ status }) => status.save[key]',
+    '({ status }) => status.save.unknown',
+    '({ status: { save: { ...result } } }) => result',
+    '({ status: { save: { [key]: value } } }) => value',
+    '({ status: { save: [value] } }) => value',
+    '({ status: { save: result } }) => consume(result)',
+    '({ status }) => { const result = status.save; return result.pending; }',
+  ]) {
+    assert.deepEqual(operationFixture('status-broad-operation', `export default ${expression};`)().status, {
+      remove: [],
+      save: operationFields,
+    });
+  }
+});
+
+test('only the observing layers contribute status, and a shaped render is excluded', () => {
+  const manifest = operationFixture('status-layers', 'export default ({ status }) => status.save.actor;');
+  write('components/status-layers/props.ts', 'export default ({ status }) => status.save.pending;');
+  write('components/status-layers/handlers.ts', 'export const retry = ({ status }) => () => status.save.error;');
+  write('components/status-layers/shortcuts.ts', 'export default ({ status }) => status.save.data;');
+  write('components/status-layers/acl.ts', 'export default ({ status }) => status.remove.pending;');
+  write('components/status-layers/state.ts', 'export const check = ({ status }) => status.remove.actor;');
+  write('components/status-layers/form.ts', 'export const seed = ({ status }) => status.remove.error;');
+  assert.deepEqual(manifest(), {
+    names: ['remove', 'save'],
+    status: { remove: ['pending'], save: ['pending', 'error', 'data'] },
+  });
+});
+
+test('export names are sorted values, including aliases, while default stays a query', () => {
+  const manifest = operationFixture(
+    'status-exports',
+    'export default () => null;',
+    `const store = () => {}; export { store as save, store as again, store as default };
+     export function remove() {};
+     export type Value = string;
+     export { type Other, work as remote } from './elsewhere';`,
+  );
+
+  write(
+    'components/status-exports/props.ts',
+    `const shape = ({ status: { save: { pending: busy } } }) => busy;
+     export { shape as default };
+     export const helper = ({ status }) => status.remove.actor;`,
+  );
+  assert.deepEqual(manifest(), {
+    names: ['again', 'remote', 'remove', 'save'],
+    status: { again: [], remote: [], remove: [], save: ['pending'] },
+  });
+});
+
+test('missing, empty and default-only async layers own no operations', () => {
+  for (const source of ['', 'export default () => Promise.resolve([]);']) {
+    assert.deepEqual(operationFixture('status-empty', 'export default (given) => given;', source)(), {
+      names: [],
+      status: {},
+    });
+  }
+
+  assert.deepEqual(operationsOf(root, path.join(root, 'components/clean')), { names: [], status: {} });
+});
+
+test('unresolved observers are broad, while source props are left for their own contract', () => {
+  const manifest = operationFixture('status-unresolved', 'export default imported;');
+  assert.deepEqual(manifest().status, { remove: operationFields, save: operationFields });
+  write('components/status-unresolved/render.tsx', 'export default ({ busy }) => busy.pending;');
+  assert.deepEqual(manifest().status, { remove: [], save: [] });
+});
+
+test('the plugin serializes status metadata without connecting generated execution', async () => {
+  const { default: framework } = await import('../plugin/index.mjs');
+  operationFixture('status-manifest', 'export default ({ status }) => status.save.pending;');
+  const plugin = framework({ cwd: root, root: '.', runtime: 'runtime.ts' });
+  const dir = path.join(root, 'components/status-manifest');
+  const code = plugin.load(`\0framework-component:${dir}`);
+  const manifest = JSON.parse(/  reads: (.*),\n/.exec(code)[1]);
+  assert.deepEqual(manifest, {
+    acl: [],
+    async: [],
+    chart: [],
+    operations: { names: ['remove', 'save'], status: { remove: [], save: ['pending'] } },
+    state: [],
+    view: [],
+  });
+  const view = plugin.load(`\0framework-view:${dir}`);
+  assert.doesNotMatch(view, /useOperation|useSelector/);
+  assert.match(view, /export \* as async from/);
+});
+
+test('a status-only edit invalidates the serialized manifest even when top-level reads stay equal', async () => {
+  const { default: framework } = await import('../plugin/index.mjs');
+  operationFixture('status-edit', 'export default ({ status }) => status.save.pending;');
+  const plugin = framework({ cwd: root, root: '.', runtime: 'runtime.ts' });
+  const dir = path.join(root, 'components/status-edit');
+  const id = `\0framework-component:${dir}`;
+  const before = plugin.load(id);
+  const listeners = new Map();
+  const invalidated = [];
+  let reload;
+
+  const reloaded = new Promise((resolve) => {
+    reload = resolve;
+  });
+
+  plugin.configureServer({
+    config: { logger: { warn() {} } },
+    environments: {
+      client: {
+        hot: { send: reload },
+        moduleGraph: {
+          getModuleById: (id) => id,
+          idToModuleMap: new Map(),
+          invalidateModule: (mod) => invalidated.push(mod),
+        },
+      },
+    },
+    watcher: { add() {}, on: (event, callback) => listeners.set(event, callback) },
+  });
+  const file = path.join(dir, 'render.tsx');
+  listeners.get('change')(file);
+  assert.deepEqual(invalidated, []);
+  write('components/status-edit/render.tsx', 'export default ({ status }) => status.save.error;');
+  listeners.get('change')(file);
+  assert.deepEqual(invalidated, [id]);
+  assert.match(plugin.load(id), /"save":\["error"\]/);
+  assert.match(before, /"save":\["pending"\]/);
+  await reloaded;
+});
 
 test('a component folder whose rendering files each hold one component passes', () => {
   assert.deepEqual(about('components/clean'), []);
