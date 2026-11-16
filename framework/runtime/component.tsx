@@ -25,6 +25,7 @@ import {
   useSuspenseQueries,
   useSuspenseQuery,
 } from '@tanstack/react-query';
+import { useSelector } from '@xstate/react';
 import {
   type ComponentType,
   createContext,
@@ -39,6 +40,7 @@ import {
   useState,
 } from 'react';
 import { useErrorBoundary } from 'react-error-boundary';
+import type { AnyActorRef, AnyStateMachine, SnapshotFrom } from 'xstate';
 
 import { hold, usePending } from './activity';
 import { type AsyncModule, execute, useOperations } from './async';
@@ -60,6 +62,23 @@ import { tracked } from './thenable';
 import { commitHandlers, withScope } from './track';
 
 type Props = Record<string, unknown> & { className?: string };
+
+type WizardSnapshot = SnapshotFrom<AnyStateMachine> & { context: { queue: unknown; results: unknown } };
+
+function useWizardSource(props: Props): Props {
+  // SAFETY: This hook is selected only for Progress, whose required prop is the wizard actor.
+  const actor = props.wizard as AnyActorRef;
+  // SAFETY: The bulk-price actor's context owns queue and results.
+  const queue = useSelector(actor, (snapshot) => (snapshot as WizardSnapshot).context.queue);
+  // SAFETY: The bulk-price actor's context owns queue and results.
+  const results = useSelector(actor, (snapshot) => (snapshot as WizardSnapshot).context.results);
+  // SAFETY: The bulk-price chart declares summary as one of its states.
+  const summary = useSelector(actor, (snapshot) => (snapshot as WizardSnapshot).matches('summary'));
+
+  return { ...props, status: { queue, results, summary } };
+}
+
+const useNoSource = (props: Props) => props;
 
 type ViewModule = {
   /** `acl.ts`: whether what the component offers may be done. */
@@ -275,6 +294,7 @@ export function component(spec: Spec) {
   const useFollowed = readsAcl || readsFlags ? useFollowedReads : useNothing;
   const useKeys = readsKeyboard ? useKeyboard : useNothing;
   const useRouteView = viewReadsRoute ? useFollowedRoute : useNothing;
+  const useSource = spec.path === 'components/bulk-price/components/progress' ? useWizardSource : useNoSource;
   // And one chosen when the view has loaded: whether it has a default read. A view with none has
   // no query: a stand-in would cost every such component a subscription.
   let useAnswer: (query: null | Read) => unknown = useNothing;
@@ -828,9 +848,11 @@ export function component(spec: Spec) {
     const locale = module.children?.length ? use(LocaleContext) : SOURCE_LOCALE;
 
     for (const child of module.children ?? []) child.preload?.(locale);
-    const layers = useLayers(props, module);
-    const { early, state } = useChart(props, layers);
-    return useShow(props, layers, state, early);
+    const selected = useSource(props);
+    const layers = useLayers(selected, module);
+    const { early, state } = useChart(selected, layers);
+
+    return useShow(selected, layers, state, early);
   }
   View.displayName = spec.path;
 

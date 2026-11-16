@@ -19,25 +19,23 @@ import {
   SelectValue,
 } from 'react-aria-components';
 
+import Progress from './components/progress';
+
 export default ({
   applies,
   applyText,
   canApply,
   categories,
   className,
-  current,
-  failedCount,
   handlers,
   i18n,
+  intl,
   items,
   largeText,
   largeTitle,
   limitText,
   loadError,
   preview,
-  progress,
-  results,
-  retryText,
   ruleProblem,
   selectedIds,
   selectionText,
@@ -45,8 +43,8 @@ export default ({
   step,
   steps,
   stepText,
-  summaryText,
   values,
+  wizard,
 }) => (
   <ModalOverlay
     isDismissable={!state.applying}
@@ -212,55 +210,13 @@ export default ({
           )}
 
           {step >= 4 && (
-            <>
-              {state.summary ? (
-                <div role="status">
-                  <link
-                    href={
-                      failedCount ? 'https://schema.org/FailedActionStatus' : 'https://schema.org/CompletedActionStatus'
-                    }
-                    itemProp="actionStatus"
-                  />
-                  <p>{summaryText}</p>
-                </div>
-              ) : (
-                <p>
-                  <span>{current ?? progress.text}</span>
-                  <progress aria-label={i18n.progress.label} max={progress.total} value={progress.value}>
-                    {progress.text}
-                  </progress>
-                </p>
-              )}
-              <ul aria-label={i18n.results}>
-                {results.map((result) => (
-                  <li itemScope itemType="https://schema.org/ReplaceAction" key={result.id}>
-                    <link
-                      href={
-                        result.error === null
-                          ? 'https://schema.org/CompletedActionStatus'
-                          : 'https://schema.org/FailedActionStatus'
-                      }
-                      itemProp="actionStatus"
-                    />
-                    <span itemProp="object">{result.title}</span>
-                    {result.error === null ? (
-                      <span>
-                        <span itemProp="replacee">{result.from}</span> →{' '}
-                        <strong itemProp="replacer">{result.to}</strong>
-                      </span>
-                    ) : (
-                      <span itemProp="error">{result.error}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {state.summary && (
-                <footer>
-                  {failedCount > 0 && <Button onPress={handlers.retryFailed}>{retryText}</Button>}
-                  <Button onPress={handlers.closeWizard}>{i18n.done}</Button>
-                </footer>
-              )}
-            </>
+            <Progress
+              closeWizard={handlers.closeWizard}
+              i18n={i18n}
+              intl={intl}
+              retryFailed={handlers.retryFailed}
+              wizard={wizard}
+            />
           )}
         </div>
       </Dialog>

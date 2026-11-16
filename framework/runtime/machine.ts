@@ -255,6 +255,16 @@ const sameShown = (a: SnapshotFrom<AnyStateMachine>, b: SnapshotFrom<AnyStateMac
     sameValue(a.value, b.value) &&
     atRest(a) === atRest(b));
 
+// The wizard's shell does not show queue or results while applying; Progress selects those itself.
+const sameWizardShell = (a: SnapshotFrom<AnyStateMachine>, b: SnapshotFrom<AnyStateMachine>) =>
+  a === b ||
+  (a.context.items === b.context.items &&
+    a.context.error === b.context.error &&
+    a.status === b.status &&
+    a.error === b.error &&
+    sameValue(a.value, b.value) &&
+    atRest(a) === atRest(b));
+
 const forEachActor = (actor: AnyActorRef, callback: (actor: AnyActorRef) => void) => {
   callback(actor);
   for (const child of Object.values((actor.getSnapshot() as { children?: Record<string, AnyActorRef> }).children ?? {}))
@@ -390,8 +400,13 @@ export function useStateLayer(
   const running = useChart(chart.current, pin, reading);
   const { actor } = running;
   const { flags } = running.declared;
+
   // The last snapshot that shows something else than the one before it (sameShown).
-  const snapshot = useSelector(actor, (state: SnapshotFrom<AnyStateMachine>) => state, sameShown);
+  const snapshot = useSelector(
+    actor,
+    (state: SnapshotFrom<AnyStateMachine>) => state,
+    path === 'components/bulk-price' ? sameWizardShell : sameShown,
+  );
 
   useEffect(() => {
     const subscription = actor.subscribe({ error: (error) => report(error, { layer: 'state', path }) });
@@ -411,6 +426,7 @@ export function useStateLayer(
   return useMemo(
     () => ({
       ...Object.fromEntries(flags.map(({ name, path: at }) => [name, snapshot.matches(at as never)])),
+      actor,
       // Whether the chart takes an event in the state it is in, its guards included.
       can: (event: { type: string }) => snapshot.can(event as never),
       context: snapshot.context,

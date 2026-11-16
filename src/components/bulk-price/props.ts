@@ -3,6 +3,7 @@
 // the render gives the element for it to.
 
 import type { ReactNode } from 'react';
+import type { AnyActorRef } from 'xstate';
 
 import { CURRENCY } from '@/format';
 
@@ -22,8 +23,6 @@ export default ({ acl, async: { default: categories }, flags, form, i18n, intl, 
   const step = Math.max(
     ...(Object.keys(STEP) as (keyof typeof STEP)[]).filter((name) => state[name]).map((name) => STEP[name]),
   );
-  const failed = context.results.filter((result) => result.error !== null);
-  const total = context.results.length + context.queue.length;
   const ruleText = i18n.rule.text({ direction: rule.direction, percent: rule.percent });
   const problem = ruleProblem(rule);
   return {
@@ -33,9 +32,8 @@ export default ({ acl, async: { default: categories }, flags, form, i18n, intl, 
     applyText: i18n.preview.apply({ count: selected.length }),
     canApply: acl.allowed,
     categories: [{ name: i18n.choose.all, slug: '' }, ...categories],
-    current: context.queue[0] ? i18n.progress.saving({ title: context.queue[0].title }) : null,
-    failedCount: failed.length,
     i18n,
+    intl,
     items: context.items.map((item) => ({
       id: item.id,
       price: { text: money(item.price), value: item.price },
@@ -57,13 +55,6 @@ export default ({ acl, async: { default: categories }, flags, form, i18n, intl, 
       title: item.title,
       to: money(newPrice(item.price, rule)),
     })),
-    progress: {
-      text: i18n.progress.done({ done: context.results.length, total }),
-      total,
-      value: context.results.length,
-    },
-    results: context.results.map((result) => ({ ...result, from: money(result.from), to: money(result.to) })),
-    retryText: i18n.retryFailed({ count: failed.length }),
     ruleProblem: problem ? i18n.problems[problem] : null,
     selectedIds: values.selected.map(String),
     selectionText: i18n.choose.selected({ count: context.items.length, selected: values.selected.length }),
@@ -75,7 +66,8 @@ export default ({ acl, async: { default: categories }, flags, form, i18n, intl, 
       label: i18n.steps[name],
     })),
     stepText: i18n.step({ count: STEPS.length, label: i18n.steps[STEPS[step - 1] ?? 'products'], step }),
-    summaryText: i18n.summary({ changed: context.results.length - failed.length, failed: failed.length }),
     values,
+    // SAFETY: The trial projection adds the chart actor to this state view.
+    wizard: (state as typeof state & { actor: AnyActorRef }).actor,
   };
 };

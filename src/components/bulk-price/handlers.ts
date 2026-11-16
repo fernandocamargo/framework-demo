@@ -3,39 +3,39 @@ import type { Key } from 'react-aria-components';
 // The wizard's commands send the chart's events its buttons and its dialogs' dismissal send, and
 // write the fields the person fills in.
 export const dismiss =
-  ({ state }) =>
+  ({ state: { send } }) =>
   (open: boolean) => {
-    if (!open) state.send({ type: 'close' });
+    if (!open) send({ type: 'close' });
   };
 export const dismissLargeChange =
-  ({ state }) =>
+  ({ state: { send } }) =>
   (open: boolean) => {
-    if (!open) state.send({ type: 'back' });
+    if (!open) send({ type: 'back' });
   };
 export const chooseCategory =
-  ({ state }) =>
+  ({ state: { send } }) =>
   (key: Key | null) =>
-    state.send({ category: String(key), type: 'categoryChanged' });
+    send({ category: String(key), type: 'categoryChanged' });
 export const retryLoad =
-  ({ state }) =>
+  ({ state: { send } }) =>
   () =>
-    state.send({ type: 'retry' });
+    send({ type: 'retry' });
 export const selectProducts =
   ({ form }) =>
   (ids: string[]) =>
     form.set('selected', ids.map(Number));
 export const closeWizard =
-  ({ state }) =>
+  ({ state: { send } }) =>
   () =>
-    state.send({ type: 'close' });
+    send({ type: 'close' });
 export const goBack =
-  ({ state }) =>
+  ({ state: { send } }) =>
   () =>
-    state.send({ type: 'back' });
+    send({ type: 'back' });
 export const goNext =
-  ({ state }) =>
+  ({ state: { send } }) =>
   () =>
-    state.send({ type: 'next' });
+    send({ type: 'next' });
 export const setDirection =
   ({ form }) =>
   (value: string) =>
@@ -45,14 +45,14 @@ export const setPercent =
   (value: number) =>
     form.set('percent', value);
 export const applyChange =
-  ({ state }) =>
+  ({ state: { send } }) =>
   () =>
-    state.send({ type: 'apply' });
+    send({ type: 'apply' });
 export const retryFailed =
-  ({ state }) =>
+  ({ state: { send } }) =>
   () =>
-    state.send({ type: 'retryFailed' });
+    send({ type: 'retryFailed' });
 export const confirmLargeChange =
-  ({ state }) =>
+  ({ state: { send } }) =>
   () =>
-    state.send({ type: 'confirm' });
+    send({ type: 'confirm' });
