@@ -1,4 +1,4 @@
-import { sectionHref, SECTIONS } from '@/address';
+import { links, SECTIONS } from '@/address';
 
 // The page's rules. Changing the catalogue needs a session: when the address opens one of
 // those dialogs and nobody is signed in, the sign-in dialog is asked for, on top of it.
@@ -7,19 +7,21 @@ export type Props = {
   navigating: boolean;
 };
 
-export default ({ acl, async: { default: page }, i18n, navigating }) => {
+export default ({ async: { default: page }, i18n, navigating, route, routes }) => {
+  const { sectionHref } = links(route);
   const { session } = page;
-  // An order's dialog is not mounted for someone who may not read orders: its address is not a way round.
-  const dialogs = { ...page.dialogs, cart: acl.grants.orders.includes('read') ? page.dialogs.cart : null };
-  const changing = dialogs.edit !== null || dialogs.create || dialogs.remove !== null || dialogs.bulk;
+  const section = page.pattern.split('/')[1];
+  const changing =
+    page.pattern === '/products/new' ||
+    page.pattern.startsWith('/products/bulk') ||
+    /\/(edit|remove)$/.test(page.pattern);
   return {
     askToSignIn: !session && (page.signin || changing),
     brand: i18n.brand,
-    dialogs,
     navigating,
-    section: page.section,
+    routes,
     sections: SECTIONS.map((id) => ({
-      current: id === page.section,
+      current: id === section,
       href: sectionHref(id),
       id,
       label: i18n.sections[id],
@@ -33,7 +35,7 @@ export default ({ acl, async: { default: page }, i18n, navigating }) => {
 
 /** What a parent passes, for each story Storybook shows of this folder (framework/storybook). */
 export const examples = {
-  'A product open': { props: { navigating: false }, route: { view: 22 } },
+  'A product open': { props: { navigating: false }, route: { params: { id: 22 }, pattern: '/products/:id' } },
   'Reading the next page': { props: { navigating: true } },
   'The page': { props: { navigating: false } },
 };

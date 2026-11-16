@@ -1,9 +1,9 @@
 import { Link } from 'react-aria-components';
 
-export default ({ charts, className, i18n }) => (
+export default ({ backHref, charts, className, i18n }) => (
   <main aria-labelledby="states-title" className={className}>
     <header>
-      <Link href="#/products">{i18n.back}</Link>
+      <Link href={backHref}>{i18n.back}</Link>
       <h1 id="states-title">{i18n.title}</h1>
       <p>{i18n.intro}</p>
     </header>

@@ -614,7 +614,8 @@ progress {
   padding: 1rem;
   background: rgb(8 10 16 / 0.5);
   overflow: auto;
-  &[data-entering] {
+  /* A dialog under another counts as entering for as long as it is covered: it has faded in already. */
+  &[data-entering]:not([data-covered]) {
     animation: fade 160ms var(--ease);
   }
   &[data-react-aria-top-layer] {

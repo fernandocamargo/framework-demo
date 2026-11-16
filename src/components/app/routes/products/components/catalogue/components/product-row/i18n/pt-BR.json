@@ -1,0 +1,10 @@
+{
+  "components/app/routes/products/components/catalogue/components/product-row/stock": "{level, select, out {Esgotado} low {Restam {count, number}} other {{count, number} em estoque}}",
+  "components/app/routes/products/components/catalogue/components/product-row/change/created": "Novo",
+  "components/app/routes/products/components/catalogue/components/product-row/change/edited": "Editado",
+  "components/app/routes/products/components/catalogue/components/product-row/rated": "Avaliação",
+  "components/app/routes/products/components/catalogue/components/product-row/actions/edit": "Editar {title}",
+  "components/app/routes/products/components/catalogue/components/product-row/count/label": "Estoque de {title}",
+  "components/app/routes/products/components/catalogue/components/product-row/count/less": "Um a menos no estoque",
+  "components/app/routes/products/components/catalogue/components/product-row/count/more": "Um a mais no estoque"
+}

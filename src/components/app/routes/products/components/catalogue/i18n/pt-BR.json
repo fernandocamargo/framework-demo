@@ -1,0 +1,23 @@
+{
+  "components/app/routes/products/components/catalogue/title": "Produtos",
+  "components/app/routes/products/components/catalogue/summary": "<total>{count, plural, one {# produto} other {# produtos}}</total>{filter, select, q { com “{q}”} category { em {category}} both { com “{q}” em {category}} other {}}",
+  "components/app/routes/products/components/catalogue/actions/bulk": "Mudar preços em lote",
+  "components/app/routes/products/components/catalogue/actions/create": "Novo produto",
+  "components/app/routes/products/components/catalogue/list": "Produtos",
+  "components/app/routes/products/components/catalogue/empty/narrowed": "Nenhum produto atende a estes filtros.",
+  "components/app/routes/products/components/catalogue/empty/none": "O catálogo está vazio.",
+  "components/app/routes/products/components/catalogue/empty/clear": "Limpar os filtros",
+  "components/app/routes/products/components/catalogue/paging/label": "Páginas",
+  "components/app/routes/products/components/catalogue/paging/previous": "Anterior",
+  "components/app/routes/products/components/catalogue/paging/next": "Próxima",
+  "components/app/routes/products/components/catalogue/paging/page": "Página {page, number} de {pages, number}",
+  "components/app/routes/products/components/catalogue/loading": "Lendo o catálogo…",
+  "components/app/routes/products/components/catalogue/failed/message": "Não foi possível ler o catálogo: {message}",
+  "components/app/routes/products/components/catalogue/failed/retry": "Tentar de novo",
+  "components/app/routes/products/components/catalogue/readOnly": "Você pode navegar pelo catálogo. Mudá-lo pede uma permissão que você não tem.",
+  "components/app/routes/products/components/catalogue/keys/search": "Buscar no catálogo",
+  "components/app/routes/products/components/catalogue/keys/create": "Novo produto",
+  "components/app/routes/products/components/catalogue/keys/bulk": "Mudar preços em lote",
+  "components/app/routes/products/components/catalogue/keys/previous": "Página anterior",
+  "components/app/routes/products/components/catalogue/keys/next": "Próxima página"
+}

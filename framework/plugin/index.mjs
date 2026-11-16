@@ -29,6 +29,7 @@ import path from 'node:path';
 import { parseAst } from 'vite';
 
 import folders from '../shared/folders.cjs';
+import { addressModule, routesModule, routeTypes, scanRoutes, staticPages } from './routes.mjs';
 
 const {
   CODE,
@@ -50,6 +51,8 @@ const {
 const CLIENTS = 'virtual:framework/clients';
 const SERVICES = 'virtual:framework/services';
 const CHARTS = 'virtual:framework/charts';
+const ADDRESS = 'virtual:framework/address';
+const ROUTES = 'virtual:framework/routes';
 const COMPONENT = '\0framework-component:';
 const VIEW = 'framework-view:';
 const HANDLERS = 'framework-handlers:';
@@ -102,6 +105,10 @@ export function writeTypes(options) {
       ].join('\n'),
     );
   }
+
+  const scan = scanRoutes(options.root);
+  if (scan.routes.length)
+    expected.set(path.join(options.types, path.relative(options.cwd, options.root), 'routes.d.ts'), routeTypes(scan));
 
   const existing = [];
   const collect = (dir) => {
@@ -779,6 +786,7 @@ export default function framework(userOptions) {
     return null;
   };
   let isBuild = false;
+  let base = '/';
   /** The sources each component folder's files read, as last written into its module. */
   const readsSeen = new Map();
 
@@ -789,6 +797,7 @@ export default function framework(userOptions) {
     },
     configResolved(config) {
       isBuild = config.command === 'build';
+      base = config.base;
     },
 
     configureServer(server) {
@@ -813,7 +822,9 @@ export default function framework(userOptions) {
               id.startsWith(`\0${HANDLERS}`) ||
               id === `\0${CLIENTS}` ||
               id === `\0${SERVICES}` ||
-              id === `\0${CHARTS}`
+              id === `\0${CHARTS}` ||
+              id === `\0${ADDRESS}` ||
+              id === `\0${ROUTES}`
             ) {
               graph.invalidateModule(mod);
             }
@@ -831,7 +842,8 @@ export default function framework(userOptions) {
       // the folder's module, and the page reloads.
       server.watcher.on('change', (file) => {
         if (!isInside(file)) return;
-        if (path.basename(file).replace(CODE, '') === 'props') writeTypes(options);
+        if (['meta', 'props', 'state'].includes(path.basename(file).replace(CODE, ''))) writeTypes(options);
+        if (['meta', 'state'].includes(path.basename(file).replace(CODE, ''))) return refresh(file);
         const dir = path.dirname(file);
         if (!readsSeen.has(dir) || !CODE.test(file)) return;
         if (JSON.stringify(readsOf(options.root, dir)) === readsSeen.get(dir)) return;
@@ -845,6 +857,16 @@ export default function framework(userOptions) {
 
     enforce: 'pre',
 
+    generateBundle: {
+      handler(_, bundle) {
+        const html = bundle['index.html'];
+        const scan = scanRoutes(options.root);
+        if (html?.type === 'asset' && scan.routes.length)
+          for (const page of staticPages(scan, String(html.source))) this.emitFile({ type: 'asset', ...page });
+      },
+      order: 'post',
+    },
+
     // The view's module holds what the plugin read of the folder's files (the folders its render
     // imports, where each key is declared), so an edit to one of them writes it again.
     hotUpdate({ file }) {
@@ -857,6 +879,13 @@ export default function framework(userOptions) {
     },
 
     load(id) {
+      // Vite's filesystem loader rejects colons, even on POSIX. These are source files of our routes realm.
+      if (isInside(id) && /\/routes\/:[A-Za-z_]\w*\//.test(posix(id)) && CODE.test(id) && existsSync(id)) {
+        this.addWatchFile(id);
+        return readFileSync(id, 'utf8');
+      }
+      if (id === `\0${ADDRESS}`) return addressModule(scanRoutes(options.root), runtime, base);
+      if (id === `\0${ROUTES}`) return routesModule(scanRoutes(options.root), options.root);
       if (id === `\0${CLIENTS}`) {
         const clients = listClients(options.root);
         return [
@@ -935,12 +964,16 @@ export default function framework(userOptions) {
         const reads = readsOf(options.root, dir);
         readsSeen.set(dir, JSON.stringify(reads));
         return [
-          `import { component } from ${runtime};`,
+          `import { component, Routes } from ${runtime};`,
+          "import { createElement } from 'react';",
           ...(placeholder ? [`import placeholder from ${JSON.stringify(placeholder)};`] : []),
           ...(error ? [`import error from ${JSON.stringify(error)};`] : []),
           ...(i18n ? [`import * as i18n from ${JSON.stringify(i18n)};`] : []),
           'const folder = component({',
           `  path: ${JSON.stringify(componentPath(options.root, dir))},`,
+          ...(isDirectory(path.join(dir, 'routes'))
+            ? [`  routes: createElement(Routes, { owner: ${JSON.stringify(componentPath(options.root, dir))} }),`]
+            : []),
           `  view: () => import(${JSON.stringify(VIEW + dir)}),`,
           `  skins: { ${skins.map((skin) => `${JSON.stringify(skin.name)}: () => import(${JSON.stringify(skin.file)})`).join(', ')} },`,
           ...(placeholder ? ['  placeholder,'] : []),
@@ -1039,6 +1072,8 @@ export default function framework(userOptions) {
 
     async resolveId(source, importer) {
       if (
+        source === ADDRESS ||
+        source === ROUTES ||
         source === CLIENTS ||
         source === SERVICES ||
         source === CHARTS ||

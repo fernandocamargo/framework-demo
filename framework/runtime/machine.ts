@@ -39,10 +39,12 @@ import {
   type SnapshotFrom,
 } from 'xstate';
 
+import { addressedActor, addressesOf, type ChartAddress, type ChartRoute, followChart } from './chart-address';
 import { shareByIdentity } from './data';
 import { type Pin, PinContext } from './pin';
 import { report } from './pipeline';
 import { during, sameParts, tracking } from './reads';
+import { AddressContext, RouteScope } from './routes';
 
 type Sources = Record<string, unknown>;
 type Config = Record<string, unknown>;
@@ -58,12 +60,19 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype;
 
 /** Builds the machine from a `state.ts`, naming every referenced function for XState. */
-export function buildMachine(path: string, module: StateModule, injection: Sources, sources: { current: Sources }) {
+export function buildMachine(
+  path: string,
+  module: StateModule,
+  injection: Sources,
+  sources: { current: Sources },
+  routing?: ChartAddress,
+) {
   const actors: Record<string, unknown> = {};
   const guards: Record<string, Fn> = {};
   const actions: Record<string, unknown> = {};
   const names = new Map<unknown, string>();
   const flags: { key: string; path: string }[] = [];
+  const routes: ChartRoute[] = [];
   let count = 0;
   const withSources = (args: Record<string, unknown>) => ({ ...sources.current, ...args });
 
@@ -121,7 +130,16 @@ export function buildMachine(path: string, module: StateModule, injection: Sourc
   };
   const node = (config: Config, at: string[]): Config => {
     const out: Config = { ...config };
+    const segment = isPlainObject(config['meta']) ? config['meta']['route'] : undefined;
+    if (typeof segment === 'string') routes.push({ route: segment, state: at.join('.') });
     for (const key of ['entry', 'exit']) if (out[key] !== undefined) out[key] = action(out[key]);
+    // Under a route, each state says on entry which of the chart's addresses it is (address.ts, `hold`).
+    if (routing && at.length && !config['states']) {
+      const holdAddress = () =>
+        routing.address.hold(addressesOf(routes, routing), typeof segment === 'string' ? segment : null);
+      const entry = out['entry'] === undefined ? [] : Array.isArray(out['entry']) ? out['entry'] : [out['entry']];
+      out['entry'] = [...entry, holdAddress];
+    }
     if (out['always'] !== undefined) out['always'] = transition(out['always']);
     if (out['invoke'] !== undefined) out['invoke'] = invoke(out['invoke']);
     if (isPlainObject(out['after']))
@@ -167,7 +185,7 @@ export function buildMachine(path: string, module: StateModule, injection: Sourc
     config as any,
   );
   /* eslint-enable @typescript-eslint/no-explicit-any */
-  return { flags: flagNames, machine: machine as AnyStateMachine };
+  return { flags: flagNames, machine: machine as AnyStateMachine, routes };
 }
 
 /** A chart, declared from the injection and what its declaration read of the sources. */
@@ -177,6 +195,8 @@ type Declared = {
   machine: AnyStateMachine;
   module: StateModule;
   read: Map<string, Set<string>>;
+  routes: ChartRoute[];
+  routing?: ChartAddress;
   sources: Sources;
 };
 
@@ -187,6 +207,7 @@ function declare(
   injection: Sources,
   sources: Sources,
   live: { current: Sources },
+  routing?: ChartAddress,
 ): Declared {
   const read = new Map<string, Set<string>>();
   const given = new Proxy(injection, {
@@ -198,7 +219,7 @@ function declare(
     },
     has: (target, key) => Reflect.has(target, key) || (typeof key === 'string' && Object.hasOwn(sources, key)),
   });
-  return { ...buildMachine(path, module, given, live), injection, module, read, sources };
+  return { ...buildMachine(path, module, given, live, routing), injection, module, read, routing, sources };
 }
 
 /** Whether the declaration would see something else now: another module or injection, or another value in what it read. */
@@ -305,14 +326,24 @@ function pinnedActor(machine: AnyStateMachine, pin: Pin) {
 }
 
 /** The running chart: the declared one, once the flow is at rest; the last one until then. A pinned one is never started. */
-function useChart(declared: Declared, pin: null | Pin, creating: <T>(create: () => T) => T) {
+function useChart(
+  declared: Declared,
+  pin: null | Pin,
+  creating: <T>(create: () => T) => T,
+  /** The pattern of the route being rendered, for a chart under a route: it starts in the state that names it. */
+  rendered: () => string | undefined,
+) {
   // Created in the render itself, not in useState's initializer: creating it runs the chart's first
   // reads, and the route being rendered is read from contexts, which a hook's callback may not read.
   // The ref is written once, in the instance's first render: if React throws that render away, the
   // instance goes with it, and the actor, never started, with both.
   const first = useRef<null | { actor: AnyActorRef; declared: Declared }>(null);
   first.current ??= {
-    actor: creating(() => (pin ? pinnedActor(declared.machine, pin) : (createActor(declared.machine) as AnyActorRef))),
+    actor: creating(() =>
+      pin
+        ? pinnedActor(declared.machine, pin)
+        : (addressedActor(declared.machine, declared.routes, declared.routing, rendered()) as AnyActorRef),
+    ),
     declared,
   };
   const [current, setCurrent] = useState(first.current);
@@ -330,8 +361,12 @@ function useChart(declared: Declared, pin: null | Pin, creating: <T>(create: () 
   useEffect(() => {
     if (pin) return;
     actor.start();
-    return () => stopRestartably(actor);
-  }, [actor, pin]);
+    const stopFollowing = followChart(actor, running.declared.routes, running.declared.routing);
+    return () => {
+      stopFollowing();
+      stopRestartably(actor);
+    };
+  }, [actor, pin, running.declared]);
   return running;
 }
 
@@ -364,6 +399,16 @@ export function useStateLayer(
   // it reads this render's sources.
   // At any other time (an event, a service answering) it reads those of the render React
   // committed: a render React throws away leaves nothing behind for them.
+  const address = use(AddressContext);
+  const scope = use(RouteScope);
+  // The route this chart's states name addresses under, when it is shown as that route's chart.
+  const routing = useMemo(() => {
+    if (!address || !scope) return undefined;
+    const owner = address.codec.definitions.find((route) => route.path === scope.pattern && !route.chart)?.folder;
+    return address.codec.definitions.some((route) => route.owner === owner && route.chart?.component === path)
+      ? { address, ...scope }
+      : undefined;
+  }, [address, scope, path]);
   const committed = useRef(false);
   const live = useState(() => ({
     committed: sources,
@@ -386,8 +431,10 @@ export function useStateLayer(
   // The chart's files run here, in the render: its declaration, and its first reads as it is created.
   const reading = <T>(work: () => T) => during(active, work);
   if (!chart.current || stale(chart.current, module, injection, declared))
-    chart.current = reading(() => declare(path, module, injection, declared, live));
-  const running = useChart(chart.current, pin, reading);
+    chart.current = reading(() => declare(path, module, injection, declared, live, routing));
+  const running = useChart(chart.current, pin, reading, () =>
+    routing ? (live.current['route'] as undefined | { pattern?: string })?.pattern : undefined,
+  );
   const { actor } = running;
   const { flags } = running.declared;
   // The last snapshot that shows something else than the one before it (sameShown).

@@ -1,9 +1,0 @@
-{
-  "components/product/detail/components/reviews/label": "Avaliações",
-  "components/product/detail/components/reviews/heading": "{count, plural, =0 {Nenhuma avaliação ainda} one {<reviews># avaliação</reviews>, média de <mean>{average, number, ::.0}</mean>} other {<reviews># avaliações</reviews>, média de <mean>{average, number, ::.0}</mean>}}",
-  "components/product/detail/components/reviews/rating": "{rating, number} de 5",
-  "components/product/detail/components/reviews/by": "<author>{name}</author>, <date>{on}</date>",
-  "components/product/detail/components/reviews/loading": "Lendo as avaliações…",
-  "components/product/detail/components/reviews/failed/message": "Não foi possível ler as avaliações: {message}",
-  "components/product/detail/components/reviews/failed/retry": "Tentar de novo"
-}

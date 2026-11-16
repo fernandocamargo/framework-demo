@@ -24,6 +24,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+import { visit } from './address.mjs';
 import { STEPS } from './steps.mjs';
 
 const VERSION = '0.9.23';
@@ -114,7 +115,7 @@ const doctor = spawn(
     '--yes',
     `react-doctor@${VERSION}`,
     'scan',
-    `${base}/?world=memory#/products`,
+    `${base}${visit('/products')}`,
     '--cdp',
     cdp,
     '--format',

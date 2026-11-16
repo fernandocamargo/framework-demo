@@ -1,0 +1,6 @@
+{
+  "components/app/routes/orders/title": "Pedidos",
+  "components/app/routes/orders/restricted": "Pedidos são para administradores e moderadores, e a sua conta não pode vê-los.",
+  "components/app/routes/orders/guest/note": "Pedidos são para administradores e moderadores.",
+  "components/app/routes/orders/guest/signIn": "Entre para vê-los."
+}

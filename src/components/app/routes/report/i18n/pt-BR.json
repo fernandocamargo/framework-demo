@@ -1,0 +1,22 @@
+{
+  "components/app/routes/report/deck": "{kind, select, out {{units, number} unidades em estoque, valendo {value}. {low, plural, =0 {Nada mais está acabando.} one {# a mais está acabando.} other {# a mais estão acabando.}}} low {{units, number} unidades em estoque, valendo {value}. {out, plural, =0 {Nada está esgotado.} one {# está esgotado.} other {# estão esgotados.}}} other {{units, number} unidades em estoque, valendo {value}.}}",
+  "components/app/routes/report/figures/low": "Acabando",
+  "components/app/routes/report/figures/out": "Esgotados",
+  "components/app/routes/report/figures/products": "Produtos",
+  "components/app/routes/report/figures/units": "Unidades",
+  "components/app/routes/report/figures/value": "Valor",
+  "components/app/routes/report/failed/message": "Não foi possível ler o relatório: {message}",
+  "components/app/routes/report/failed/retry": "Tentar de novo",
+  "components/app/routes/report/headline": "{kind, select, out {{count, plural, one {# produto está esgotado} other {# produtos estão esgotados}}} low {{category} está acabando: {count, plural, one {# produto com {limit, number} unidades ou menos} other {# produtos com {limit, number} unidades ou menos}}} other {Todos os produtos têm mais de {limit, number} unidades}}",
+  "components/app/routes/report/loading": "Lendo o relatório…",
+  "components/app/routes/report/shortest/label": "Os produtos mais perto de acabar",
+  "components/app/routes/report/shortest/title": "Mais perto de acabar",
+  "components/app/routes/report/stock": "{level, select, out {Esgotado} low {Restam {count, number}} other {{count, number} em estoque}}",
+  "components/app/routes/report/table/caption": "Estoque por categoria",
+  "components/app/routes/report/table/category": "Categoria",
+  "components/app/routes/report/table/offers": "Produtos",
+  "components/app/routes/report/table/prices": "Preços",
+  "components/app/routes/report/table/units": "Unidades",
+  "components/app/routes/report/table/value": "Valor",
+  "components/app/routes/report/title": "Relatório"
+}

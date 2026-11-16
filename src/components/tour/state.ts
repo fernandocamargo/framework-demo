@@ -3,7 +3,7 @@
 // the visitor to read it. Leaving the tour, from any step, tidies what it changed: the network lab's
 // faults are off and the address shows the plain list.
 
-import { CLOSED } from '@/address';
+import { HOME } from '@/address';
 import { DEMO } from '@/components/session/form';
 import { currentLocale, type Locale, speak } from '@/locales';
 import { currentSkin, type Skin, wear } from '@/skins';
@@ -35,11 +35,11 @@ export const context = () => ({
 // ---- Changes and inputs ----------------------------------------------------------------------
 
 export const openAddress = ({ navigation }) =>
-  navigation.go({ ...CLOSED, category: '', order: 'desc', page: 1, q: '', section: 'products', sort: 'price' });
-export const openProduct = ({ navigation }) => navigation.go({ view: 4 });
-export const secondPage = ({ navigation }) => navigation.go({ page: 2, view: null });
-export const firstPage = ({ navigation }) => navigation.go({ page: 1 });
-export const thirdPage = ({ navigation }) => navigation.go({ page: 3 });
+  navigation.go('/products', {}, { ...HOME, order: 'desc', signin: false, sort: 'price' });
+export const openProduct = ({ navigation }) => navigation.go('/products/:id', { id: 4 });
+export const secondPage = ({ navigation }) => navigation.go('/products', {}, { page: 2 });
+export const firstPage = ({ navigation }) => navigation.query('/products', { page: 1 });
+export const thirdPage = ({ navigation }) => navigation.query('/products', { page: 3 });
 export const slowRequests = () => ({ latency: 1500 });
 export const breakRequests = () => ({ force: 500 as const, latency: 0 });
 export const healRequests = () => ({ force: 0 as const });
@@ -61,7 +61,7 @@ export const remember = () => ({ before: { locale: currentLocale(), skin: curren
 /** Leaving the tour: the lab's faults off, the list plain, and the locale and skin the page had. */
 export const tidy = ({ context, navigation, services }) => {
   services.lab.change({ failureRate: 0, force: 0, latency: 0 });
-  navigation.go(CLOSED);
+  navigation.go('/products', {}, { signin: false });
   if (context.before) {
     wear(context.before.skin);
     speak(context.before.locale);

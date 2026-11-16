@@ -33,3 +33,13 @@ declare module 'virtual:framework/charts' {
   }>;
   export default charts;
 }
+
+declare module 'virtual:framework/address' {
+  export const createAddress: typeof import('./address').createAddress;
+  export const codec: import('./address').AddressCodec;
+  export default codec;
+}
+declare module 'virtual:framework/routes' {
+  const components: Record<string, import('react').ComponentType>;
+  export default components;
+}
