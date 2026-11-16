@@ -17,4 +17,11 @@ export default css`
   .react-aria-Select {
     flex: 0 1 13rem;
   }
+  & > select {
+    flex: 0 1 13rem;
+    border-color: var(--border-strong);
+    background: var(--surface-2);
+    color: var(--text);
+    font-family: var(--mono);
+  }
 `;

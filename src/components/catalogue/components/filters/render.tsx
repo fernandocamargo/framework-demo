@@ -24,13 +24,12 @@ export default ({ categories, category, className, handlers, i18n, q, sort, sort
         <ListBox items={categories}>{(item) => <ListBoxItem id={item.slug}>{item.name}</ListBoxItem>}</ListBox>
       </Popover>
     </Select>
-    <Select aria-label={i18n.sort.label} onSelectionChange={handlers.pickSort} selectedKey={sort}>
-      <Button>
-        <SelectValue />
-      </Button>
-      <Popover>
-        <ListBox items={sorts}>{(item) => <ListBoxItem id={item.id}>{item.label}</ListBoxItem>}</ListBox>
-      </Popover>
-    </Select>
+    <select aria-label={i18n.sort.label} onChange={handlers.pickSort} value={sort}>
+      {sorts.map((item) => (
+        <option key={item.id} value={item.id}>
+          {item.label}
+        </option>
+      ))}
+    </select>
   </search>
 );

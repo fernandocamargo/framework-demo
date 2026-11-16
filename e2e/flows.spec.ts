@@ -63,11 +63,18 @@ test('the catalogue follows the address: search, category, sort and page', async
   expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp']);
 
   await act(page, async () => {
-    await page.getByRole('button', { name: /Sort/ }).click();
-    await page.getByRole('option', { name: 'Price, high to low' }).click();
+    await page.getByRole('combobox', { name: 'Sort' }).selectOption('price:desc');
   });
   expect(page.url()).toContain('sort=price&order=desc');
   expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp']);
+
+  await act(page, async () => {
+    await page.getByRole('combobox', { name: 'Sort' }).focus();
+    await page.keyboard.press('ArrowUp');
+  });
+  expect(page.url()).toContain('sort=price');
+  expect(page.url()).not.toContain('order=desc');
+  expect(await titles(page)).toEqual(['Task Lamp', 'Clamp Lamp', 'Arc Floor Lamp']);
 
   await open(page, '#/products?category=desks&page=1');
   expect(await summary(page)).toBe('10 products in Desks');

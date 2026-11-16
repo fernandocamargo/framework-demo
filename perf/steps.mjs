@@ -141,8 +141,8 @@ export const STEPS = [
   },
   {
     act: async (page) => {
-      await page.getByRole('button', { name: /Sort/ }).click();
-      await page.getByRole('option', { name: 'Price, high to low' }).click();
+      await page.getByRole('combobox', { name: 'Sort' }).focus();
+      await page.getByRole('combobox', { name: 'Sort' }).selectOption('price:desc');
     },
     check: async (page) => page.url().includes('sort=price&order=desc'),
     name: 'sort by price, high to low',
@@ -176,8 +176,8 @@ export const STEPS = [
   },
   {
     act: async (page) => {
-      await page.getByRole('button', { name: /Sort/ }).click();
-      await page.getByRole('option', { name: 'Title, A to Z' }).click();
+      await page.getByRole('combobox', { name: 'Sort' }).focus();
+      await page.getByRole('combobox', { name: 'Sort' }).selectOption('title:asc');
     },
     check: async (page) => !page.url().includes('sort='),
     name: 'sort by title again',
@@ -412,52 +412,27 @@ export const STEPS = [
   },
   {
     act: async (page) => {
-      await startSelectTimeline(page, 'Price, low to high');
-      await page.getByRole('button', { name: /Sort/ }).click();
-      await page.waitForFunction(() => window.__selectTimeline.events.some(({ event }) => event === 'choice'));
-      await page.evaluate(() => window.__framework.idle());
-      await page.locator('.react-aria-Popover').waitFor({ state: 'detached' });
+      await page.getByRole('combobox', { name: 'Sort' }).focus();
+      await page.getByRole('combobox', { name: 'Sort' }).selectOption('price:asc');
     },
-    check: async (page) => {
-      const events = await page.evaluate(() => window.__selectTimeline.events);
-
-      return (
-        (await page.getByRole('button', { name: /Sort/ }).innerText()).includes('Price, low to high') &&
-        (await page.locator('.react-aria-Popover').count()) === 0 &&
-        events.some(({ event, running }) => event === 'choice' && running) &&
-        events.some(({ detail, event }) => event === 'removal' && detail !== 'later') &&
-        page.url().includes('sort=price') &&
-        !page.url().includes('order=')
-      );
-    },
+    check: async (page) =>
+      (await page.getByRole('combobox', { name: 'Sort' }).inputValue()) === 'price:asc' &&
+      page.url().includes('sort=price') &&
+      !page.url().includes('order='),
     further: true,
-    name: 'sort during the entrance',
+    name: 'sort immediately with the native control',
   },
   {
     act: async (page) => {
-      await startSelectTimeline(page);
-      await page.getByRole('button', { name: /Sort/ }).click();
-      await page.evaluate(() => window.__selectTimeline.entrance.finished);
-      await page.getByRole('option', { name: 'Title, A to Z' }).click();
-      await page.evaluate(() => window.__framework.idle());
-      await page.locator('.react-aria-Popover').waitFor({ state: 'detached' });
+      await page.getByRole('combobox', { name: 'Sort' }).focus();
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await page.getByRole('combobox', { name: 'Sort' }).selectOption('title:asc');
     },
-    check: async (page) => {
-      const events = await page.evaluate(() => window.__selectTimeline.events);
-      const end = events.findIndex(({ event }) => event === 'entrance end');
-
-      const choice = events.findIndex(({ event }) => event === 'choice');
-
-      return (
-        (await page.getByRole('button', { name: /Sort/ }).innerText()).includes('Title, A to Z') &&
-        (await page.locator('.react-aria-Popover').count()) === 0 &&
-        end >= 0 &&
-        choice > end &&
-        !page.url().includes('sort=')
-      );
-    },
+    check: async (page) =>
+      (await page.getByRole('combobox', { name: 'Sort' }).inputValue()) === 'title:asc' &&
+      !page.url().includes('sort='),
     further: true,
-    name: 'sort after the entrance',
+    name: 'sort after two frames with the native control',
   },
 ];
 
