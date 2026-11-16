@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { I18n, Message } from '../i18n-types';
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
-const expect = <T extends true>() => undefined as unknown as T;
+const expect = <_ extends true>(): void => undefined;
 
 const messages = {
   bare: () => 'x',

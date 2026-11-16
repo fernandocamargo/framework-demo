@@ -1,42 +1,16 @@
 import { QueryObserver } from '@tanstack/react-query';
-import { act, render } from '@testing-library/react';
-import { createElement, type ReactNode } from 'react';
+import { act } from '@testing-library/react';
+import { createElement } from 'react';
 
 import { component } from '../component';
 import { createDataLayer, createQueryClient, name, recording } from '../data';
 import { type DataEvent, onData } from '../pipeline';
 import { Root } from '../root';
+import { entity, settle, show, viewOf } from '../testing';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
-type Props = Record<string, unknown>;
-type Layers = { acl?: (given: Props) => unknown };
-const view =
-  (render: (props: Props) => ReactNode, layers: Layers = {}) =>
-  () =>
-    Promise.resolve({
-      acl: layers.acl ? { default: layers.acl } : undefined,
-      async: undefined,
-      children: [],
-      form: undefined,
-      props: undefined,
-      render,
-      state: undefined,
-    });
-const settle = () =>
-  act(async () => {
-    for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-async function show(element: ReactNode) {
-  let shown: ReturnType<typeof render> | undefined;
-  await act(async () => {
-    shown = render(element);
-  });
-  await settle();
-  return shown!.container;
-}
-const entity = { id: 'shop' } as never;
 type Person = null | { id: number };
 type Flagged = { counting: boolean; deletions: boolean; theme: string };
 
@@ -46,18 +20,18 @@ test('the flags are for the person the user read names, and a component follows 
     path: 'components/counter',
     reads: { view: ['flags'] },
     skins: {},
-    view: view(({ flags }) => {
+    view: viewOf<{ flags: Flagged }>(({ flags }) => {
       calls.push('counter');
-      return createElement('i', null, (flags as Flagged).counting ? 'count ' : 'plain ');
+      return createElement('i', null, flags.counting ? 'count ' : 'plain ');
     }),
   });
   const Themed = component({
     path: 'components/themed',
     reads: { view: ['flags'] },
     skins: {},
-    view: view(({ flags }) => {
+    view: viewOf<{ flags: Flagged }>(({ flags }) => {
       calls.push('themed');
-      return createElement('b', null, (flags as Flagged).theme);
+      return createElement('b', null, flags.theme);
     }),
   });
   let person: Person = { id: 1 };
@@ -70,7 +44,7 @@ test('the flags are for the person the user read names, and a component follows 
     return { counting: user?.id === 1, deletions: true, theme };
   }) as never;
   const client = createQueryClient();
-  const container = await show(
+  const { container } = await show(
     createElement(Root, { client, entity, flags, user }, createElement(Counter), createElement(Themed)),
   );
   expect(container.textContent).toBe('count light');
@@ -104,14 +78,13 @@ test('a folder rule that reads the snapshot and the flags renders an instance ag
     path: 'components/link',
     reads: { acl: ['acl', 'flags'], view: ['acl'] },
     skins: {},
-    view: view(
+    view: viewOf<{ acl: { allowed: boolean; grants: string[] }; flags: Flagged; id: number }>(
       ({ acl, id }) => {
         calls.push(`link ${String(id)}`);
-        return createElement('i', null, (acl as { allowed: boolean }).allowed ? 'yes ' : 'no ');
+        return createElement('i', null, acl.allowed ? 'yes ' : 'no ');
       },
       {
-        acl: ({ acl, flags }) =>
-          (flags as Flagged).deletions && (acl as { grants: string[] }).grants.includes('delete'),
+        acl: ({ acl, flags }) => flags.deletions && acl.grants.includes('delete'),
       },
     ),
   });
@@ -120,7 +93,7 @@ test('a folder rule that reads the snapshot and the flags renders an instance ag
   const acl = (async () => snapshot) as never;
   const flags = (async () => flagged) as never;
   const client = createQueryClient();
-  const container = await show(
+  const { container } = await show(
     createElement(Root, { acl, client, entity, flags }, ...[1, 2, 3].map((id) => createElement(Link, { id, key: id }))),
   );
   expect(container.textContent).toBe('yes yes yes ');

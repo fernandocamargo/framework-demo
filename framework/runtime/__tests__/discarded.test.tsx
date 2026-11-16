@@ -1,20 +1,15 @@
-import { act, render } from '@testing-library/react';
+import { act } from '@testing-library/react';
 import { createElement, startTransition, Suspense, use, useState } from 'react';
 
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { Root } from '../root';
+import { entity, settle, show, viewOf } from '../testing';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
-type Props = Record<string, unknown>;
-type State = { send: (event: { type: string }) => void } & Record<string, unknown>;
-const entity = { id: 'shop' } as never;
-const settle = () =>
-  act(async () => {
-    for (let i = 0; i < 8; i++) await new Promise((resolve) => setTimeout(resolve, 0));
-  });
+type State = { done?: boolean; send: (event: { type: string }) => void };
 
 test('a render React throws away leaves the decision the guards read as the page shows it', async () => {
   let state: State | undefined;
@@ -22,22 +17,15 @@ test('a render React throws away leaves the decision the guards read as the page
     path: 'components/gate',
     reads: { acl: ['locked'], state: ['acl'], view: ['acl'] },
     skins: {},
-    view: () =>
-      Promise.resolve({
+    view: viewOf<{ acl: { allowed: boolean }; locked: boolean; state: State }>(
+      ({ acl, state: current }) => {
+        state = current;
+        return createElement('p', null, state['done'] ? 'done' : acl.allowed ? 'open' : 'locked');
+      },
+      {
         // Its own rule, from a prop: decided in each render.
-        acl: { default: ({ locked }: { locked: boolean }) => !locked },
+        acl: ({ locked }: { locked: boolean }) => !locked,
         async: undefined,
-        children: [],
-        form: undefined,
-        props: undefined,
-        render: (props: Props) => {
-          state = props['state'] as State;
-          return createElement(
-            'p',
-            null,
-            state['done'] ? 'done' : (props['acl'] as { allowed: boolean }).allowed ? 'open' : 'locked',
-          );
-        },
         state: {
           allowed: ({ acl }: { acl: { allowed: boolean } }) => acl.allowed,
           default: {
@@ -45,7 +33,8 @@ test('a render React throws away leaves the decision the guards read as the page
             done: {},
           },
         },
-      }) as never,
+      },
+    ),
   });
   // A sibling that never arrives while `locked`: the transition that locks the gate never commits.
   const never = new Promise<never>(() => undefined);
@@ -61,26 +50,22 @@ test('a render React throws away leaves the decision the guards read as the page
       createElement(Slow, { wait: locked }),
     );
   };
-  let shown: ReturnType<typeof render> | undefined;
-  await act(async () => {
-    shown = render(createElement(Root, { client: createQueryClient(), entity }, createElement(Page)));
-  });
-  await settle();
-  expect(shown!.container.textContent).toBe('open');
+  const shown = await show(createElement(Root, { client: createQueryClient(), entity }, createElement(Page)), 8);
+  expect(shown.container.textContent).toBe('open');
 
   // React renders the gate locked, then waits for the sibling, and commits nothing.
   await act(async () => startTransition(() => lock(true)));
-  await settle();
-  expect(shown!.container.textContent).toBe('open');
+  await settle(8);
+  expect(shown.container.textContent).toBe('open');
   // The person goes back before it arrives: the page is as it was, and the gate does not render again.
   await act(async () => startTransition(() => lock(false)));
-  await settle();
-  expect(shown!.container.textContent).toBe('open');
+  await settle(8);
+  expect(shown.container.textContent).toBe('open');
 
   // The page shows the gate open, so its guard lets the event through.
   await act(async () => state!.send({ type: 'go' }));
-  await settle();
-  expect(shown!.container.textContent).toBe('done');
+  await settle(8);
+  expect(shown.container.textContent).toBe('done');
 });
 
 test('a render React throws away is not what the next render is compared with: what the page shows is', async () => {
@@ -95,47 +80,30 @@ test('a render React throws away is not what the next render is compared with: w
     path: 'components/paged',
     reads: { view: ['route'] },
     skins: {},
-    view: () =>
-      Promise.resolve({
-        async: undefined,
-        children: [],
-        form: undefined,
+    view: viewOf<{ page: number }>(
+      ({ page }) => {
+        calls.push(page);
+        return createElement('p', null, createElement(Marker, { odd: page % 2 === 1 }), `page ${String(page)}`);
+      },
+      {
         props: { default: ({ route }: { route: { page: number } }) => ({ page: route.page }) },
-        render: ({ page }: Props) => {
-          calls.push(page);
-          return createElement(
-            'p',
-            null,
-            createElement(Marker, { odd: (page as number) % 2 === 1 }),
-            `page ${String(page)}`,
-          );
-        },
         // The key's label follows the page, so the keys on screen say which render registered them.
-        shortcuts: { default: ({ route }: Props) => ({ g: { label: `page ${(route as { page: number }).page}` } }) },
-        state: undefined,
-      }) as never,
+        shortcuts: { default: ({ route }: { route: { page: number } }) => ({ g: { label: `page ${route.page}` } }) },
+      },
+    ),
   });
   /** The keys on screen, as the framework lists them. */
   const Keys = component({
     path: 'components/keys',
     reads: { view: ['keyboard'] },
     skins: {},
-    view: () =>
-      Promise.resolve({
-        async: undefined,
-        children: [],
-        form: undefined,
-        props: undefined,
-        render: ({ keyboard }: Props) =>
-          createElement(
-            'i',
-            null,
-            (keyboard as { groups: { shortcuts: { label: string }[] }[] }).groups
-              .flatMap((group) => group.shortcuts.map((shortcut) => shortcut.label))
-              .join(),
-          ),
-        state: undefined,
-      }) as never,
+    view: viewOf<{ keyboard: { groups: { shortcuts: { label: string }[] }[] } }>(({ keyboard }) =>
+      createElement(
+        'i',
+        null,
+        keyboard.groups.flatMap((group) => group.shortcuts.map((shortcut) => shortcut.label)).join(),
+      ),
+    ),
   });
   const never = new Promise<never>(() => undefined);
   const Slow = ({ wait }: { wait: boolean }) => (wait ? use(never) : null);
@@ -156,27 +124,23 @@ test('a render React throws away is not what the next render is compared with: w
       ),
     );
   };
-  let shown: ReturnType<typeof render> | undefined;
-  await act(async () => {
-    shown = render(createElement(Page));
-  });
-  await settle();
+  const shown = await show(createElement(Page), 8);
   // The page, then the keys on screen: the one key, labelled by the page.
-  expect(shown!.container.textContent).toBe('odd page 1page 1');
+  expect(shown.container.textContent).toBe('odd page 1page 1');
   const mounted = calls.length;
   const markedOnce = marked;
 
   // React renders page 2, waits for the sibling, and commits nothing.
   await act(async () => startTransition(() => turn(2)));
-  await settle();
-  expect(shown!.container.textContent).toBe('odd page 1page 1');
+  await settle(8);
+  expect(shown.container.textContent).toBe('odd page 1page 1');
   expect(calls.slice(mounted)).toEqual([2]);
   expect(marked).toBe(markedOnce + 1);
   // The person moves on to page 3. Its render is compared with page 1, which the page shows, not
   // with page 2, which it never showed: the marker is the element React showed, and is skipped.
   await act(async () => startTransition(() => turn(3)));
-  await settle();
-  expect(shown!.container.textContent).toBe('odd page 3page 3');
+  await settle(8);
+  expect(shown.container.textContent).toBe('odd page 3page 3');
   expect(calls.slice(mounted)).toEqual([2, 3]);
   expect(marked).toBe(markedOnce + 1);
 });

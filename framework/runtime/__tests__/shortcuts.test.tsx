@@ -6,42 +6,35 @@ import { createQueryClient } from '../data';
 import { type Interaction, pipeline } from '../pipeline';
 import { Root } from '../root';
 import { type Entry, type Keyboard, useKeyboard, useShortcuts } from '../shortcuts';
+import { entity, settle, show, viewOf } from '../testing';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
-
-type Props = Record<string, unknown>;
-const settle = () =>
-  act(async () => {
-    for (let i = 0; i < 8; i++) await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-const entity = { id: 'shop' } as never;
 
 /** A component with a chart and keys; its render shows the state it is in. */
 const Flow = component({
   path: 'components/flow',
   reads: { acl: [], chart: [], state: [], view: [] },
   skins: {},
-  view: () =>
-    Promise.resolve({
-      async: undefined,
-      children: [],
-      form: undefined,
-      props: undefined,
-      render: ({ className, state }: Props) => {
-        const current = state as Record<string, unknown>;
-        return createElement(
-          'p',
-          { className },
-          Object.keys(current)
-            .filter((key) => current[key] === true)
-            .join(','),
-          createElement('input', { 'aria-label': 'Name' }),
-        );
-      },
+  view: viewOf<{
+    className?: string;
+    state: { [key: string]: ((event: { type: string }) => void) | boolean };
+    when?: boolean;
+  }>(
+    ({ className, state }) => {
+      return createElement(
+        'p',
+        { className },
+        Object.keys(state)
+          .filter((key) => state[key] === true)
+          .join(','),
+        createElement('input', { 'aria-label': 'Name' }),
+      );
+    },
+    {
       shortcuts: {
         // Its order matters: the list shows the keys in this order.
-        default: ({ when }: Props) => ({
+        default: ({ when }: { when?: boolean }) => ({
           s: { label: 'Start', send: 'start' },
           'mod+s': { label: 'Save', send: 'save' },
           '/': { focus: 'input', label: 'Name', when: when !== false },
@@ -54,7 +47,8 @@ const Flow = component({
           saved: {},
         }),
       },
-    }),
+    },
+  ),
 });
 
 /** A component that lists the keys on screen, as the framework gives them. */
@@ -62,32 +56,22 @@ const Keys = component({
   path: 'components/keys',
   reads: { acl: [], chart: [], state: [], view: ['keyboard'] },
   skins: {},
-  view: () =>
-    Promise.resolve({
-      async: undefined,
-      children: [],
-      form: undefined,
-      props: undefined,
-      render: ({ keyboard }: Props) => {
-        const { groups } = keyboard as {
-          groups: { path: string; shortcuts: { available: boolean; keys: string[]; label: string }[] }[];
-        };
-        return createElement(
-          'ul',
-          null,
-          groups.flatMap((group) =>
-            group.shortcuts.map((shortcut) =>
-              createElement(
-                'li',
-                { key: shortcut.label },
-                `${shortcut.keys.join('+')} ${shortcut.label}${shortcut.available ? '' : ' (not now)'}`,
-              ),
-            ),
+  view: viewOf<{ keyboard: Keyboard }>(({ keyboard }) => {
+    const { groups } = keyboard;
+    return createElement(
+      'ul',
+      null,
+      groups.flatMap((group) =>
+        group.shortcuts.map((shortcut) =>
+          createElement(
+            'li',
+            { key: shortcut.label },
+            `${shortcut.keys.join('+')} ${shortcut.label}${shortcut.available ? '' : ' (not now)'}`,
           ),
-        );
-      },
-      state: undefined,
-    }),
+        ),
+      ),
+    );
+  }),
 });
 
 /** A component that keeps the keys it is given, to call them. */
@@ -98,24 +82,20 @@ const Runner = component({
   path: 'components/runner',
   reads: { acl: [], chart: [], state: [], view: ['keyboard'] },
   skins: {},
-  view: () =>
-    Promise.resolve({
-      async: undefined,
-      children: [],
-      form: undefined,
-      props: undefined,
-      render: ({ keyboard }: Props) => {
-        listed = keyboard as Keyboard;
-        return createElement('p', null, 'runner');
-      },
+  view: viewOf<{ keyboard: Keyboard }>(
+    ({ keyboard }) => {
+      listed = keyboard;
+      return createElement('p', null, 'runner');
+    },
+    {
       shortcuts: {
         default: () => ({
           r: { label: 'Run', run: ran },
           x: { label: 'Skipped', run: skipped, when: false },
         }),
       },
-      state: undefined,
-    }),
+    },
+  ),
 });
 
 /** A component whose key says which instance ran it. */
@@ -124,26 +104,12 @@ const Named = component({
   path: 'components/named',
   reads: { acl: [], chart: [], state: [], view: [] },
   skins: {},
-  view: () =>
-    Promise.resolve({
-      async: undefined,
-      children: [],
-      form: undefined,
-      props: undefined,
-      render: ({ name }: Props) => createElement('p', null, String(name)),
-      shortcuts: { default: ({ name }: Props) => ({ n: { label: 'Who', run: () => who(name) } }) },
-      state: undefined,
-    }),
+  view: viewOf<{ name: string }>(({ name }) => createElement('p', null, String(name)), {
+    shortcuts: { default: ({ name }: { name: string }) => ({ n: { label: 'Who', run: () => who(name) } }) },
+  }),
 });
 
-async function show(element: ReactNode) {
-  let shown: ReturnType<typeof render> | undefined;
-  await act(async () => {
-    shown = render(createElement(Root, { client: createQueryClient(), entity }, element));
-  });
-  await settle();
-  return shown!.container;
-}
+const showRoot = (element: ReactNode) => show(createElement(Root, { client: createQueryClient(), entity }, element), 8);
 
 const press = (key: string, init: KeyboardEventInit = {}) =>
   act(async () => {
@@ -181,7 +147,7 @@ test('removing a mounted folder’s shortcuts unregisters its keys', () => {
 });
 
 test('a key sends its event only while the chart takes it, and the list of keys says which work now', async () => {
-  const shown = await show(createElement('div', null, createElement(Flow), createElement(Keys)));
+  const { container: shown } = await showRoot(createElement('div', null, createElement(Flow), createElement(Keys)));
   const flow = () => shown.querySelector('p')!.textContent;
   const list = () => [...shown.querySelectorAll('li')].map((item) => item.textContent);
 
@@ -200,7 +166,7 @@ test('a key sends its event only while the chart takes it, and the list of keys 
   const listen = (event: Event) => interactions.push((event as CustomEvent<Interaction>).detail);
   pipeline.addEventListener('interaction', listen);
   await press('s');
-  await settle();
+  await settle(8);
   pipeline.removeEventListener('interaction', listen);
   expect(flow()).toBe('editing');
   expect(list()).toEqual(['S Start (not now)', 'Ctrl+S Save', '/ Name']);
@@ -213,7 +179,7 @@ test('a key sends its event only while the chart takes it, and the list of keys 
 });
 
 test('a key without a modifier is the field’s while one has the focus; a key with one still works', async () => {
-  const shown = await show(createElement(Flow));
+  const { container: shown } = await showRoot(createElement(Flow));
   const flow = () => shown.querySelector('p')!.textContent;
 
   await press('/');
@@ -232,7 +198,7 @@ test('a key without a modifier is the field’s while one has the focus; a key w
 });
 
 test('a component hidden behind a dialog answers no key', async () => {
-  const shown = await show(createElement('div', { 'aria-hidden': 'true' }, createElement(Flow)));
+  const { container: shown } = await showRoot(createElement('div', { 'aria-hidden': 'true' }, createElement(Flow)));
   const flow = () => shown.querySelector('p')!.textContent;
   const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 's' });
   await act(async () => {
@@ -244,7 +210,7 @@ test('a component hidden behind a dialog answers no key', async () => {
 });
 
 test('a listed key runs what its shortcut does, and only when it is available', async () => {
-  await show(createElement(Runner));
+  await showRoot(createElement(Runner));
   const shortcut = (label: string) =>
     listed!.groups.flatMap((group) => group.shortcuts).find((item) => item.label === label)!;
 
@@ -256,7 +222,7 @@ test('a listed key runs what its shortcut does, and only when it is available', 
 });
 
 test('a listed key does what pressing it does: the chart’s event only while the chart takes it, tracked where it was written', async () => {
-  const shown = await show(createElement('div', null, createElement(Flow), createElement(Runner)));
+  const { container: shown } = await showRoot(createElement('div', null, createElement(Flow), createElement(Runner)));
   const flow = () => shown.querySelector('p')!.textContent;
   const flowKey = (label: string) =>
     listed!.groups.find((group) => group.path === 'components/flow')!.shortcuts.find((item) => item.label === label)!;
@@ -269,7 +235,7 @@ test('a listed key does what pressing it does: the chart’s event only while th
   const listen = (event: Event) => interactions.push((event as CustomEvent<Interaction>).detail);
   pipeline.addEventListener('interaction', listen);
   await act(async () => flowKey('Start').run());
-  await settle();
+  await settle(8);
   pipeline.removeEventListener('interaction', listen);
   expect(flow()).toBe('editing');
   expect(interactions.map((interaction) => interaction.name)).toEqual(['components/flow#shortcuts.s']);
@@ -291,7 +257,7 @@ test('of two instances of a folder, a listed key runs the last shown, as pressin
       ),
     );
   });
-  await settle();
+  await settle(8);
   const run = listed!.groups.find((group) => group.path === 'components/named')!.shortcuts[0]!.run;
   who.mockClear();
 
@@ -302,7 +268,7 @@ test('of two instances of a folder, a listed key runs the last shown, as pressin
 
   who.mockClear();
   await act(async () => rendered!.rerender(root(createElement(Runner))));
-  await settle();
+  await settle(8);
   await act(async () => run());
   expect(who).not.toHaveBeenCalled();
 });
@@ -320,7 +286,7 @@ test('two Roots on a page each keep their own keys: one leaving takes only its o
     first = render(root('first'));
     second = render(root('second'));
   });
-  await settle();
+  await settle(8);
   const run = listed!.groups.find((group) => group.path === 'components/named')!.shortcuts[0]!.run;
   who.mockClear();
 
@@ -328,13 +294,13 @@ test('two Roots on a page each keep their own keys: one leaving takes only its o
   expect(who).toHaveBeenLastCalledWith('second');
 
   await act(async () => second!.unmount());
-  await settle();
+  await settle(8);
   await act(async () => run());
   expect(who).toHaveBeenLastCalledWith('first');
 
   who.mockClear();
   await act(async () => first!.unmount());
-  await settle();
+  await settle(8);
   await act(async () => run());
   expect(who).not.toHaveBeenCalled();
 });

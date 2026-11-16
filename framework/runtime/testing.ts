@@ -10,11 +10,49 @@
  *   expect(flow.states).toEqual(['saved'])
  */
 
+import { act, render } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { createActor } from 'xstate';
 
+import type { ViewModule } from './component';
 import { build, intlFor } from './i18n';
 import type { I18n } from './i18n-types';
+import type { Entity } from './index';
 import { buildMachine, type StateModule } from './machine';
+
+export const entity: Entity = { id: 'shop' };
+
+export const settle = (turns = 5) =>
+  act(async () => {
+    for (let i = 0; i < turns; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+export async function show(element: ReactNode, turns = 5) {
+  let shown: ReturnType<typeof render> | undefined;
+  await act(async () => {
+    shown = render(element);
+  });
+  await settle(turns);
+  return shown!;
+}
+
+export function viewOf<P>(
+  render: (props: P) => ReactNode,
+  layers: Omit<Partial<ViewModule>, 'acl' | 'render'> & { acl?: (given: P) => boolean } = {},
+) {
+  return () =>
+    Promise.resolve({
+      acl: layers.acl ? { default: layers.acl } : undefined,
+      async: layers.async,
+      children: layers.children ?? [],
+      form: layers.form,
+      props: layers.props,
+      // SAFETY: The test declares the props its folder's props.ts would pass to render.
+      render: render as ViewModule['render'],
+      shortcuts: layers.shortcuts,
+      state: layers.state,
+    });
+}
 
 /**
  * For tests of a `props.ts` or a `state.ts`: a folder's `i18n` as the component gets it, in the

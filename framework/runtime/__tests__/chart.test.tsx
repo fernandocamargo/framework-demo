@@ -1,53 +1,40 @@
-import { act, render } from '@testing-library/react';
-import { createElement, type ReactNode } from 'react';
+import { act } from '@testing-library/react';
+import { createElement } from 'react';
 
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { Pinned } from '../pin';
 import { Root } from '../root';
+import { entity, settle, show, viewOf } from '../testing';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
-type Props = Record<string, unknown>;
-type State = { send: (event: { type: string }) => void } & Record<string, unknown>;
-const settle = () =>
-  act(async () => {
-    for (let i = 0; i < 8; i++) await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-const entity = { id: 'shop' } as never;
+type State = { [key: string]: ((event: { type: string }) => void) | boolean; send: (event: { type: string }) => void };
 
 /** A component whose chart is declared from `acl`, its rule from the snapshot; its render shows the states it is in. */
-function setup(
-  declaration: (injection: { acl: { allowed: boolean } }) => Record<string, unknown>,
-  extra: Record<string, unknown> = {},
-  state: string[] = [],
-) {
+function setup(declaration: (injection: { acl: { allowed: boolean } }) => object, state: string[] = []) {
   let send: State['send'] = () => undefined;
   const Flow = component({
     path: 'components/flow',
     reads: { acl: ['acl'], chart: ['acl'], state, view: [] },
     skins: {},
-    view: () =>
-      Promise.resolve({
-        acl: { default: ({ acl }: { acl: { grants: string[] } }) => acl.grants.includes('update') },
-        async: undefined,
-        children: [],
-        form: undefined,
-        props: undefined,
-        render: ({ state }: Props) => {
-          const current = state as State;
-          send = current.send;
-          return createElement(
-            'p',
-            null,
-            Object.keys(current)
-              .filter((key) => current[key] === true)
-              .join(','),
-          );
-        },
-        state: { default: declaration, ...extra },
-      }),
+    view: viewOf<{ acl: { grants: string[] }; state: State }>(
+      ({ state }) => {
+        send = state.send;
+        return createElement(
+          'p',
+          null,
+          Object.keys(state)
+            .filter((key) => state[key] === true)
+            .join(','),
+        );
+      },
+      {
+        acl: ({ acl }) => acl.grants.includes('update'),
+        state: { default: declaration },
+      },
+    ),
   });
   let grants = ['update'];
   const acl = (async () => ({ grants })) as never;
@@ -59,19 +46,10 @@ function setup(
       await act(async () => {
         await client.invalidateQueries();
       });
-      await settle();
+      await settle(8);
     },
     send: (type: string) => act(async () => send({ type })),
   };
-}
-
-async function show(element: ReactNode) {
-  let shown: ReturnType<typeof render> | undefined;
-  await act(async () => {
-    shown = render(element);
-  });
-  await settle();
-  return shown!.container;
 }
 
 test('a chart declared from acl is declared again when what it read changes, and keeps its place', async () => {
@@ -80,20 +58,20 @@ test('a chart declared from acl is declared again when what it read changes, and
     editing: { on: { ...(acl.allowed && { save: 'saved' }), stop: 'idle' } },
     saved: {},
   }));
-  const shown = await show(flow.element);
+  const { container: shown } = await show(flow.element, 8);
   await flow.send('start');
   expect(shown.textContent).toBe('editing');
 
   // The grant goes: the chart is declared with no `save`, still in `editing`.
   await flow.grant([]);
   await flow.send('save');
-  await settle();
+  await settle(8);
   expect(shown.textContent).toBe('editing');
 
   // It comes back: `save` is there again, and the flow is where it was.
   await flow.grant(['update']);
   await flow.send('save');
-  await settle();
+  await settle(8);
   expect(shown.textContent).toBe('saved');
 });
 
@@ -105,7 +83,7 @@ test('a chart running a service moves to the new chart only once it rests', asyn
     working: { invoke: { onDone: 'done', src: work } },
     done: { on: { ...(acl.allowed && { again: 'idle' }) } },
   }));
-  const shown = await show(flow.element);
+  const { container: shown } = await show(flow.element, 8);
   await flow.send('start');
   expect(shown.textContent).toBe('working');
 
@@ -113,18 +91,18 @@ test('a chart running a service moves to the new chart only once it rests', asyn
   await flow.grant([]);
   expect(shown.textContent).toBe('working');
   await act(async () => finish());
-  await settle();
+  await settle(8);
   expect(shown.textContent).toBe('done');
 
   // At rest now, in the chart declared without `again`.
   await flow.send('again');
-  await settle();
+  await settle(8);
   expect(shown.textContent).toBe('done');
 });
 
 test('a chart whose new declaration has no such state starts over', async () => {
   const flow = setup(({ acl }) => (acl.allowed ? { idle: { on: { open: 'special' } }, special: {} } : { idle: {} }));
-  const shown = await show(flow.element);
+  const { container: shown } = await show(flow.element, 8);
   await flow.send('open');
   expect(shown.textContent).toBe('special');
   await flow.grant([]);
@@ -139,10 +117,9 @@ test('a chart whose file reads a source is told when it changes, by an event of 
       waiting: { on: { acl: { guard: refused, target: 'refused' } } },
       refused: {},
     }),
-    {},
     ['acl'],
   );
-  const shown = await show(flow.element);
+  const { container: shown } = await show(flow.element, 8);
   expect(shown.textContent).toBe('waiting');
 
   await flow.grant(['update', 'delete']);
@@ -157,15 +134,16 @@ test('a pinned component shows the state it is held in, with the example over it
     editing: { on: { save: 'saved' } },
     saved: {},
   }));
-  const shown = await show(
+  const { container: shown } = await show(
     createElement(
       Pinned,
       { example: { context: { note: 'held' } }, path: 'components/flow', state: 'editing' },
       flow.element,
     ),
+    8,
   );
   expect(shown.textContent).toBe('editing');
   await flow.send('save');
-  await settle();
+  await settle(8);
   expect(shown.textContent).toBe('editing');
 });

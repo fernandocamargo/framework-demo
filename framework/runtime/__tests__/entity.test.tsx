@@ -1,9 +1,11 @@
-import { act, render } from '@testing-library/react';
-import { createElement, type ReactNode, startTransition, Suspense, use, useState } from 'react';
+import { act } from '@testing-library/react';
+import { createElement, startTransition, Suspense, use, useState } from 'react';
 
 import { component } from '../component';
 import { createQueryClient } from '../data';
+import type { Entity } from '../index';
 import { Root } from '../root';
+import { settle, entity as shop, show, viewOf } from '../testing';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 // One service, which answers with the entity it is run for.
@@ -26,23 +28,21 @@ vi.mock('virtual:framework/services', () => ({
   ],
 }));
 
-type Props = Record<string, unknown>;
 type Tenant = { read: () => Promise<string>; write: () => Promise<string> };
-const shop = { id: 'shop' } as never;
-const other = { id: 'other' } as never;
-const settle = () =>
-  act(async () => {
-    for (let i = 0; i < 8; i++) await new Promise((resolve) => setTimeout(resolve, 0));
-  });
+const other: Entity = { id: 'other' };
 
 /** A component that shows the entity its read was answered for, and offers a write. */
 function setup() {
-  const seen: { write?: () => Promise<unknown> } = {};
+  const seen: { write?: () => Promise<string> } = {};
   const Probe = component({
     path: 'components/probe',
     skins: {},
-    view: () =>
-      Promise.resolve({
+    view: viewOf<{ async: { default: string; write: () => Promise<string> } }>(
+      ({ async }) => {
+        seen.write = async.write;
+        return createElement('p', null, async.default);
+      },
+      {
         async: {
           default: ({ services }: { services: { tenant: Tenant } }) => services.tenant.read(),
           write:
@@ -50,16 +50,8 @@ function setup() {
             () =>
               services.tenant.write(),
         },
-        children: [],
-        form: undefined,
-        props: undefined,
-        render: (props: Props) => {
-          const async = props['async'] as { default: string; write: () => Promise<unknown> };
-          seen.write = async.write;
-          return createElement('p', null, async.default);
-        },
-        state: undefined,
-      }) as never,
+      },
+    ),
   });
   return { Probe, seen };
 }
@@ -69,7 +61,7 @@ test('a render React throws away does not hand its entity to a service that runs
   // A sibling that never arrives for the other entity: the transition that selects it never commits.
   const never = new Promise<never>(() => undefined);
   const Slow = ({ wait }: { wait: boolean }) => (wait ? use(never) : null);
-  let select: (entity: never) => void = () => undefined;
+  let select: (entity: Entity) => void = () => undefined;
   const client = createQueryClient();
   const Page = () => {
     const [entity, setEntity] = useState(shop);
@@ -82,20 +74,16 @@ test('a render React throws away does not hand its entity to a service that runs
         { fallback: null },
         createElement(Probe),
         createElement(Slow, { wait: entity === other }),
-      ) as ReactNode,
+      ),
     );
   };
-  let shown: ReturnType<typeof render> | undefined;
-  await act(async () => {
-    shown = render(createElement(Page));
-  });
-  await settle();
-  expect(shown!.container.textContent).toBe('shop');
+  const shown = await show(createElement(Page), 8);
+  expect(shown.container.textContent).toBe('shop');
 
   // React renders the page for the other entity, waits for the sibling, and commits nothing.
   await act(async () => startTransition(() => select(other)));
-  await settle();
-  expect(shown!.container.textContent).toBe('shop');
+  await settle(8);
+  expect(shown.container.textContent).toBe('shop');
   // The page shows the shop, so a write made from it is the shop's.
   let written: unknown;
   await act(async () => {
@@ -106,27 +94,19 @@ test('a render React throws away does not hand its entity to a service that runs
 
 test('an entity React commits is the one the reads on the page are answered for, and the writes after it', async () => {
   const { Probe, seen } = setup();
-  let select: (entity: never) => void = () => undefined;
+  let select: (entity: Entity) => void = () => undefined;
   const client = createQueryClient();
   const Page = () => {
     const [entity, setEntity] = useState(shop);
     select = setEntity;
-    return createElement(
-      Root,
-      { client, entity },
-      createElement(Suspense, { fallback: null }, createElement(Probe)) as ReactNode,
-    );
+    return createElement(Root, { client, entity }, createElement(Suspense, { fallback: null }, createElement(Probe)));
   };
-  let shown: ReturnType<typeof render> | undefined;
-  await act(async () => {
-    shown = render(createElement(Page));
-  });
-  await settle();
-  expect(shown!.container.textContent).toBe('shop');
+  const shown = await show(createElement(Page), 8);
+  expect(shown.container.textContent).toBe('shop');
 
   await act(async () => select(other));
-  await settle();
-  expect(shown!.container.textContent).toBe('other');
+  await settle(8);
+  expect(shown.container.textContent).toBe('other');
   let written: unknown;
   await act(async () => {
     written = await seen.write!();
@@ -135,6 +115,6 @@ test('an entity React commits is the one the reads on the page are answered for,
 
   // And back: the shop's answer is still in the cache, under its own key.
   await act(async () => select(shop));
-  await settle();
-  expect(shown!.container.textContent).toBe('shop');
+  await settle(8);
+  expect(shown.container.textContent).toBe('shop');
 });

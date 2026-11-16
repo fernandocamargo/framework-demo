@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from '@testing-library/react';
+import { act, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 
 import { component } from '../component';
@@ -6,13 +6,12 @@ import { createQueryClient } from '../data';
 import { shareElements } from '../elements';
 import type { Site } from '../pipeline';
 import { Root } from '../root';
+import { entity, settle, show, viewOf } from '../testing';
 import { track } from '../track';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
-type Props = Record<string, unknown>;
-const entity = { id: 'shop' } as never;
 const site = (prop: string): Site =>
   ({
     column: 1,
@@ -25,10 +24,6 @@ const site = (prop: string): Site =>
   }) as Site;
 const ROW = site('onClick');
 const TITLE = site('onFocus');
-const settle = () =>
-  act(async () => {
-    for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 0));
-  });
 
 test('an element equal to the last one is that element; a changed part takes the rest along', () => {
   const before = createElement(
@@ -79,38 +74,27 @@ test('a handler is the same from render to render and calls the one React commit
   const List = component({
     path: 'components/list',
     skins: {},
-    view: () =>
-      Promise.resolve({
-        async: undefined,
-        children: [],
-        form: undefined,
-        props: undefined,
-        render: ({ items }: Props) =>
+    view: viewOf<{ items: string[] }>(({ items }) =>
+      createElement(
+        'div',
+        null,
+        createElement(Probe),
+        // No key on the button: its handler is told apart by its place among the rows.
+        items.map((item) =>
           createElement(
-            'div',
-            null,
-            createElement(Probe),
-            // No key on the button: its handler is told apart by its place among the rows.
-            (items as string[]).map((item) =>
-              createElement(
-                'p',
-                { key: item },
-                createElement('button', { onClick: track(() => clicked.push(item), ROW) }, item),
-              ),
-            ),
-            createElement('input', { 'aria-label': 'Title', onFocus: track(() => clicked.push('focus'), TITLE) }),
+            'p',
+            { key: item },
+            createElement('button', { onClick: track(() => clicked.push(item), ROW) }, item),
           ),
-        state: undefined,
-      }),
+        ),
+        createElement('input', { 'aria-label': 'Title', onFocus: track(() => clicked.push('focus'), TITLE) }),
+      ),
+    ),
   });
   const client = createQueryClient();
   const tree = (items: string[]) => createElement(Root, { client, entity }, createElement(List, { items }));
-  let shown: ReturnType<typeof render> | undefined;
-  await act(async () => {
-    shown = render(tree(['a', 'b']));
-  });
-  await settle();
-  const container = shown!.container;
+  const shown = await show(tree(['a', 'b']));
+  const container = shown.container;
   const input = () => container.querySelector('input')!;
   const handler = () => Object.entries(input()).find(([key]) => key.startsWith('__reactProps$'))![1].onFocus as unknown;
   const first = handler();
@@ -118,7 +102,7 @@ test('a handler is the same from render to render and calls the one React commit
 
   // The rows change order: the list renders, the probe and the input do not change, and each button
   // calls the closure of the row it shows.
-  await act(async () => shown!.rerender(tree(['b', 'a'])));
+  await act(async () => shown.rerender(tree(['b', 'a'])));
   await settle();
   expect(probes).toBe(1);
   expect(handler()).toBe(first);

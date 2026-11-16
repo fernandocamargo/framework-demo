@@ -4,56 +4,38 @@
 // hook come or go, and a Root that lacks a read stands in for it.
 
 import { act, render } from '@testing-library/react';
-import { createElement, type ReactNode, useState } from 'react';
+import { createElement, useState } from 'react';
 
 import { useOperations } from '../async';
 import { component, type Spec } from '../component';
 import { createQueryClient } from '../data';
 import { useFormLayer } from '../form';
+import type { StateModule } from '../machine';
 import { Root } from '../root';
+import { entity, settle, show, viewOf } from '../testing';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 vi.mock('../async', { spy: true });
 vi.mock('../form', { spy: true });
 
-type Props = Record<string, unknown>;
-const entity = { id: 'shop' } as never;
-const settle = () =>
-  act(async () => {
-    for (let i = 0; i < 8; i++) await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-async function show(element: ReactNode) {
-  let shown: ReturnType<typeof render> | undefined;
-  await act(async () => {
-    shown = render(element);
-  });
-  await settle();
-  return shown!.container;
-}
-
 /** A component of one kind: what its files read, and which layer files its view has. */
-const kind = (
+const kind = <P,>(
   name: string,
   reads: Spec['reads'],
-  text: (props: Props) => string,
-  layers: { read?: () => Promise<unknown>; state?: Record<string, unknown> } = {},
+  text: (props: P) => string,
+  layers: { read?: () => Promise<string>; state?: StateModule } = {},
 ) =>
   component({
     i18n: name === 'spoken' ? { default: { hello: 'hello' } } : undefined,
     path: `components/${name}`,
     reads,
     skins: {},
-    view: () =>
-      Promise.resolve({
-        async: layers.read ? { default: layers.read } : undefined,
-        children: [],
-        form: undefined,
-        props: undefined,
-        render: (props: Props) => createElement('i', null, `${name}:${text(props)} `),
-        state: layers.state,
-      }) as never,
-  } as Spec);
+    view: viewOf<P>((props) => createElement('i', null, `${name}:${text(props)} `), {
+      async: layers.read ? { default: layers.read } : undefined,
+      state: layers.state,
+    }),
+  });
 
 test.each([
   { answer: undefined, async: undefined, name: 'no async layer' },
@@ -62,19 +44,21 @@ test.each([
 ])('a folder with $name runs no absent form or operation hooks', async ({ answer, async }) => {
   vi.mocked(useFormLayer).mockClear();
   vi.mocked(useOperations).mockClear();
-  const calls = vi.fn((props: Props) => createElement('p', null, String(props['round'])));
+  const calls = vi.fn((props: { async?: { default?: string }; round: number }) =>
+    createElement('p', null, String(props.round)),
+  );
   const Plain = component({
     path: 'components/without-layers',
     skins: {},
-    view: () => Promise.resolve({ async, form: undefined, props: undefined, render: calls, state: undefined }),
+    view: viewOf(calls, { async }),
   });
   const client = createQueryClient();
   const page = (round: number) => createElement(Root, { client, entity }, createElement(Plain, { round }));
   const shown = await act(async () => render(page(0)));
-  await settle();
+  await settle(8);
   expect(shown.container.textContent).toBe('0');
   await act(async () => shown.rerender(page(1)));
-  await settle();
+  await settle(8);
   expect(shown.container.textContent).toBe('1');
   for (const [given] of calls.mock.calls) {
     expect(given).not.toHaveProperty('form');
@@ -87,20 +71,20 @@ test('each kind of component gets what it reads, and renders again without a hoo
   const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   const kinds = [
     kind('plain', {}, () => 'x'),
-    kind('user', { view: ['user'] }, ({ user }) => String((user as { id: number }).id)),
-    kind('acl', { view: ['acl'] }, ({ acl }) => (acl as { role: string }).role),
-    kind('flags', { view: ['flags'] }, ({ flags }) => String((flags as { on: boolean }).on)),
-    kind('both', { view: ['acl', 'flags'] }, ({ acl, flags }) =>
-      [(acl as { role: string }).role, (flags as { on: boolean }).on].join('+'),
+    kind<{ user: { id: number } }>('user', { view: ['user'] }, ({ user }) => String(user.id)),
+    kind<{ acl: { role: string } }>('acl', { view: ['acl'] }, ({ acl }) => acl.role),
+    kind<{ flags: { on: boolean } }>('flags', { view: ['flags'] }, ({ flags }) => String(flags.on)),
+    kind<{ acl: { role: string }; flags: { on: boolean } }>('both', { view: ['acl', 'flags'] }, ({ acl, flags }) =>
+      [acl.role, flags.on].join('+'),
     ),
-    kind('keys', { view: ['keyboard'] }, ({ keyboard }) => typeof keyboard),
-    kind('spoken', { view: ['i18n', 'locale'] }, ({ i18n, locale }) =>
-      [(i18n as { hello: string }).hello, locale].join('+'),
+    kind<{ keyboard: object }>('keys', { view: ['keyboard'] }, ({ keyboard }) => typeof keyboard),
+    kind<{ i18n: { hello: string }; locale: string }>('spoken', { view: ['i18n', 'locale'] }, ({ i18n, locale }) =>
+      [i18n.hello, locale].join('+'),
     ),
-    kind('read', {}, ({ async }) => String((async as { default: unknown }).default), {
+    kind<{ async: { default: string } }>('read', {}, ({ async }) => String(async.default), {
       read: () => Promise.resolve('answer'),
     }),
-    kind('chart', { state: [] }, ({ state }) => String((state as { idle: boolean }).idle), {
+    kind<{ state: { idle: boolean } }>('chart', { state: [] }, ({ state }) => String(state.idle), {
       state: { default: { idle: {} } },
     }),
   ];
@@ -121,7 +105,7 @@ test('each kind of component gets what it reads, and renders again without a hoo
       ...kinds.map((Kind, index) => createElement(Kind, { key: index, round: count })),
     );
   };
-  const container = await show(createElement(Page));
+  const { container } = await show(createElement(Page), 8);
   expect(container.textContent).toBe(
     'plain:x user:1 acl:admin flags:true both:admin+true keys:object spoken:hello+en read:answer chart:true ',
   );
@@ -134,7 +118,7 @@ test('each kind of component gets what it reads, and renders again without a hoo
     await client.invalidateQueries();
     rerender(1);
   });
-  await settle();
+  await settle(8);
   expect(container.textContent).toBe(
     'plain:x user:2 acl:moderator flags:false both:moderator+false keys:object spoken:hello+pt-BR read:answer chart:true ',
   );
@@ -149,22 +133,12 @@ test('under a Root with no user, acl or flags read, a component that reads them 
     path: 'components/reader',
     reads: { view: ['acl', 'flags', 'user'] },
     skins: {},
-    view: () =>
-      Promise.resolve({
-        async: undefined,
-        children: [],
-        form: undefined,
-        props: undefined,
-        render: ({ acl, flags, round, user }: Props) => {
-          calls.push(String(round));
-          return createElement(
-            'i',
-            null,
-            [String(user), (acl as { allowed: boolean }).allowed, Object.keys(flags as object).length].join(' '),
-          );
-        },
-        state: undefined,
-      }) as never,
+    view: viewOf<{ acl: { allowed: boolean }; flags: object; round: boolean; user: null }>(
+      ({ acl, flags, round, user }) => {
+        calls.push(String(round));
+        return createElement('i', null, [String(user), acl.allowed, Object.keys(flags).length].join(' '));
+      },
+    ),
   });
   let rerender: (round: number) => void = () => undefined;
   const Page = () => {
@@ -172,15 +146,15 @@ test('under a Root with no user, acl or flags read, a component that reads them 
     rerender = setRound;
     return createElement(Root, { client: createQueryClient(), entity }, createElement(Reader, { round: round > 1 }));
   };
-  const container = await show(createElement(Page));
+  const { container } = await show(createElement(Page), 8);
   expect(container.textContent).toBe('null true 0');
   expect(calls).toEqual(['false']);
 
   // The page renders again and passes the same props: the render is not called.
   await act(async () => rerender(1));
-  await settle();
+  await settle(8);
   expect(calls).toEqual(['false']);
   await act(async () => rerender(2));
-  await settle();
+  await settle(8);
   expect(calls).toEqual(['false', 'true']);
 });

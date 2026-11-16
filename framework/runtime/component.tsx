@@ -60,7 +60,7 @@ import { chainOf, commitHandlers, withScope } from './track';
 
 type Props = Record<string, unknown> & { className?: string };
 
-type ViewModule = {
+export type ViewModule = {
   /** `acl.ts`: whether what the component offers may be done. */
   acl?: undefined | { default?: unknown };
   async: AsyncModule | undefined;

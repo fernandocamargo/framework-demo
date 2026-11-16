@@ -1,47 +1,15 @@
-import { act, render } from '@testing-library/react';
-import { createElement, type ReactNode } from 'react';
+import { act } from '@testing-library/react';
+import { createElement } from 'react';
 
 import { component } from '../component';
 import { createQueryClient } from '../data';
 import { type Failure, onFailure } from '../pipeline';
 import { Root } from '../root';
+import { entity, settle, show, viewOf } from '../testing';
 
 vi.mock('virtual:framework/clients', () => ({ default: [] }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
-type Props = Record<string, unknown>;
-type Layers = { acl?: (given: Props) => unknown; children?: ReactNode };
-const view =
-  (render: (props: Props) => ReactNode, layers: Layers = {}) =>
-  () =>
-    Promise.resolve({
-      acl: layers.acl ? { default: layers.acl } : undefined,
-      async: undefined,
-      children: [],
-      form: undefined,
-      props: undefined,
-      render,
-      state: undefined,
-    });
-const settle = () =>
-  act(async () => {
-    for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-async function show(element: ReactNode) {
-  let shown: ReturnType<typeof render> | undefined;
-  await act(async () => {
-    shown = render(element);
-  });
-  await settle();
-  return {
-    container: shown!.container,
-    rerender: async (next: ReactNode) => {
-      await act(async () => shown!.rerender(next));
-      await settle();
-    },
-  };
-}
-const entity = { id: 'shop' } as never;
 type Person = null | { id: number; role: string };
 
 test("a folder's acl.ts reaches every component below it, until one below says otherwise; only those that read it render again", async () => {
@@ -50,26 +18,26 @@ test("a folder's acl.ts reaches every component below it, until one below says o
     path: 'components/page/leaf',
     reads: { view: ['acl'] },
     skins: {},
-    view: view(({ acl }) => {
+    view: viewOf<{ acl: { allowed: boolean } }>(({ acl }) => {
       calls.push('leaf');
-      return createElement('i', null, (acl as { allowed: boolean }).allowed ? 'leaf:yes ' : 'leaf:no ');
+      return createElement('i', null, acl.allowed ? 'leaf:yes ' : 'leaf:no ');
     }),
   });
   const Narrow = component({
     path: 'components/page/narrow',
     reads: { view: ['acl', 'user'] },
     skins: {},
-    view: view(
-      ({ acl }) => createElement('b', null, (acl as { allowed: boolean }).allowed ? 'narrow:yes ' : 'narrow:no '),
+    view: viewOf<{ acl: { allowed: boolean }; user: Person }>(
+      ({ acl }) => createElement('b', null, acl.allowed ? 'narrow:yes ' : 'narrow:no '),
       {
-        acl: ({ acl, user }) => (acl as { allowed: boolean }).allowed && (user as Person)?.role === 'admin',
+        acl: ({ acl, user }) => acl.allowed && user?.role === 'admin',
       },
     ),
   });
   const Plain = component({
     path: 'components/page/plain',
     skins: {},
-    view: view(() => {
+    view: viewOf(() => {
       calls.push('plain');
       return createElement('u', null, 'plain');
     }),
@@ -78,9 +46,10 @@ test("a folder's acl.ts reaches every component below it, until one below says o
     path: 'components/page',
     reads: { view: ['user'] },
     skins: {},
-    view: view(() => createElement('div', null, createElement(Leaf), createElement(Narrow), createElement(Plain)), {
-      acl: ({ user }) => (user as Person)?.role !== 'user',
-    }),
+    view: viewOf<{ user: Person }>(
+      () => createElement('div', null, createElement(Leaf), createElement(Narrow), createElement(Plain)),
+      { acl: ({ user }) => user?.role !== 'user' },
+    ),
   });
   let person: Person = { id: 1, role: 'admin' };
   // The app declares its own User (src/env.d.ts); these tests use their own.
@@ -96,7 +65,8 @@ test("a folder's acl.ts reaches every component below it, until one below says o
   await act(async () => {
     await client.invalidateQueries();
   });
-  await rerender(createElement(Root, { client, entity, user }, createElement(Page)));
+  await act(async () => rerender(createElement(Root, { client, entity, user }, createElement(Page))));
+  await settle();
   expect(container.textContent).toBe('leaf:yes narrow:no plain');
   expect(calls).toEqual([]);
 
@@ -116,7 +86,7 @@ test('a rule that throws refuses, and is reported as the acl layer', async () =>
     path: 'components/guarded',
     reads: { view: ['acl'] },
     skins: {},
-    view: view(({ acl }) => createElement('p', null, (acl as { allowed: boolean }).allowed ? 'yes' : 'no'), {
+    view: viewOf<{ acl: { allowed: boolean } }>(({ acl }) => createElement('p', null, acl.allowed ? 'yes' : 'no'), {
       acl: () => {
         throw new Error('no rule');
       },
@@ -140,18 +110,18 @@ test('a component follows only the parts of the backend snapshot it reads', asyn
     path: 'components/decision',
     reads: { view: ['acl'] },
     skins: {},
-    view: view(({ acl }) => {
+    view: viewOf<{ acl: { allowed: boolean } }>(({ acl }) => {
       calls.push('decision');
-      return createElement('i', null, (acl as { allowed: boolean }).allowed ? 'yes ' : 'no ');
+      return createElement('i', null, acl.allowed ? 'yes ' : 'no ');
     }),
   });
   const Limit = component({
     path: 'components/limit',
     reads: { view: ['acl'] },
     skins: {},
-    view: view(({ acl }) => {
+    view: viewOf<{ acl: { limits: { change: number } } }>(({ acl }) => {
       calls.push('limit');
-      return createElement('b', null, String((acl as { limits: { change: number } }).limits.change));
+      return createElement('b', null, String(acl.limits.change));
     }),
   });
   let snapshot = { limits: { change: 20 }, role: 'moderator' };
