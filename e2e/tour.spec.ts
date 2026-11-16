@@ -98,6 +98,7 @@ test('the tour walks every step, does each one, and finishing it tidies the lab'
   await act(page, () => forward(page).click());
   // Language: the page speaks Brazilian Portuguese.
   expect(await htmlAttribute(page, 'lang')).toBe('pt-BR');
+  expect(await page.getByRole('combobox', { name: 'Idioma' }).inputValue()).toBe('pt-BR');
 
   await act(page, () => forward(page).click());
   // Finished: the page keeps the broadsheet until the tour is finished.
@@ -108,6 +109,7 @@ test('the tour walks every step, does each one, and finishing it tidies the lab'
   expect(await panel(page).count()).toBe(0);
   expect(await htmlAttribute(page, 'data-skin')).toBe('default');
   expect(await htmlAttribute(page, 'lang')).toBe('en');
+  expect(await page.getByRole('combobox', { name: 'Language' }).inputValue()).toBe('en');
   expect(await faults(page)).toBe(0);
 });
 

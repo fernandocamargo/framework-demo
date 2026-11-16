@@ -97,6 +97,8 @@ test('the gallery holds the search states in their own styled folder', async ({ 
   const search = page.getByRole('region', { name: 'components/palette/components/search' });
   expect(await search.locator('iframe').count()).toBe(3);
   expect(await search.innerText()).toContain('The products are searched for the last text');
+  // The parent's framework idle does not track the frames' imports; let them finish before unloading them.
+  await page.waitForLoadState('networkidle');
 
   for (const skin of ['default', 'broadsheet', 'blueprint']) {
     for (const state of ['idle', 'waiting', 'searching']) {

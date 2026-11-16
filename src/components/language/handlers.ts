@@ -1,5 +1,5 @@
-import type { Key } from 'react-aria-components';
-
 import { type Locale, speak } from '@/locales';
 
-export const speakLanguage = () => (key: Key | null) => speak(key as Locale);
+export const speakLanguage = () => (event: React.ChangeEvent<HTMLSelectElement>) =>
+  // SAFETY: The select's options are the supported LOCALES.
+  speak(event.currentTarget.value as Locale);

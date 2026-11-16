@@ -344,18 +344,12 @@ export const STEPS = [
     name: 'open the network lab',
   },
   {
-    act: async (page) => {
-      await page.getByRole('button', { name: 'Language' }).click();
-      await page.getByRole('option', { name: 'Português (Brasil)' }).click();
-    },
+    act: (page) => page.getByRole('combobox', { name: 'Language' }).selectOption('pt-BR'),
     check: async (page) => (await status(page)) === '37 produtos',
     name: 'switch to Português (Brasil)',
   },
   {
-    act: async (page) => {
-      await page.getByRole('button', { name: 'Idioma' }).click();
-      await page.getByRole('option', { name: 'English' }).click();
-    },
+    act: (page) => page.getByRole('combobox', { name: 'Idioma' }).selectOption('en'),
     check: async (page) => (await status(page)) === '37 products',
     name: 'back to English',
   },

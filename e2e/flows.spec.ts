@@ -433,10 +433,7 @@ test('the page speaks Brazilian Portuguese, and changes language in place', asyn
   expect(await dialog(page, 'Audio Interface').getByRole('button', { name: 'Editar' }).count()).toBe(1);
   await act(page, () => page.keyboard.press('Escape'));
 
-  await act(page, async () => {
-    await page.getByRole('button', { name: 'Idioma' }).click();
-    await page.getByRole('option', { name: 'English' }).click();
-  });
+  await act(page, () => page.getByRole('combobox', { name: 'Idioma' }).selectOption('en'));
   expect(page.url()).toContain('lang=en');
   expect(await page.locator('html').getAttribute('lang')).toBe('en');
   expect(await summary(page)).toBe('37 products');
