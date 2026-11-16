@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { hold } from './activity';
 import { latency } from './latency';
-import { report, toError } from './pipeline';
+import { isAbortError, report, toError } from './pipeline';
 
 export type AsyncModule = Record<string, unknown> & { default?: unknown };
 
@@ -55,10 +55,7 @@ export function useOperation<Injection extends object, Result>(
   // The machine watches promises; stopping it cannot abort the work that created them.
   useEffect(
     () => () => {
-      for (const call of actor.getSnapshot().context.running) {
-        actor.send({ call, type: 'ABORT' });
-        call.abort();
-      }
+      for (const call of actor.getSnapshot().context.running) call.abort();
     },
     [actor],
   );
@@ -76,9 +73,9 @@ export function useOperation<Injection extends object, Result>(
 
           return data;
         } catch (thrown) {
-          const error = call.signal.aborted ? toError(thrown) : report(thrown, { during: name, layer: 'async', path });
+          const error = report(thrown, { during: name, layer: 'async', path });
 
-          actor.send({ call, error, type: 'REJECT' });
+          actor.send(isAbortError(error) ? { call, type: 'CANCEL' } : { call, error, type: 'REJECT' });
           throw error;
         } finally {
           actor.send({ call, type: 'FINISH' });

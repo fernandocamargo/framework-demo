@@ -1,6 +1,44 @@
 import { QueryObserver } from '@tanstack/react-query';
 
-import { createDataLayer, createQueryClient, name, recording, shareByIdentity } from '../data';
+import { isBusy } from '../activity';
+import { createDataLayer, createQueryClient, name, recording, shareByIdentity, update } from '../data';
+import { type DataEvent, onData, onFailure, toError } from '../pipeline';
+
+test.each(['native', 'normalized'])('a %s cancellation rolls back a write without reporting failure', async (kind) => {
+  const client = createQueryClient();
+  const data = createDataLayer(client, { id: 'shop' });
+  const events: DataEvent[] = [];
+  const failures: unknown[] = [];
+  const offData = onData((event) => events.push(event));
+  const offFailure = onFailure((failure) => failures.push(failure));
+  const get = () => Promise.resolve(10);
+  name(get, 'demo.get');
+  data.rule('demo.get', { reads: true });
+  data.rule('demo.save', { optimistic: [update(get, () => 11)] });
+  await data.call('demo.get', get, []);
+  let reject!: (reason: Error) => void;
+
+  const waiting = new Promise((_, no) => {
+    reject = no;
+  });
+
+  const write = data.call('demo.save', () => waiting, []);
+  expect(client.getQueryData(['demo.get', 'shop'])).toBe(11);
+  expect(isBusy()).toBe(true);
+  const reason = new DOMException('The operation was aborted.', 'AbortError');
+  reject(kind === 'native' ? reason : toError(reason));
+  const caught = await write.catch((error: Error) => error);
+  offData();
+  offFailure();
+  expect(caught).toBe(reason);
+  expect(client.getQueryData(['demo.get', 'shop'])).toBe(10);
+  expect(events.flatMap((event) => (event.action === 'write' ? [event.outcome] : []))).toEqual(['sent', 'cancelled']);
+  expect(events.filter((event) => event.action === 'rollback')).toHaveLength(1);
+  expect(events.filter((event) => event.action === 'stale' || event.action === 'tab')).toEqual([]);
+  expect(failures).toEqual([]);
+  expect(isBusy()).toBe(false);
+  client.clear();
+});
 
 test('an operation read twice through the recording is the same function, and its calls are recorded', async () => {
   const list = () => Promise.resolve([]);

@@ -64,6 +64,8 @@ function describe(entry: Tracked, i18n: I18n<typeof messages>, intl: Intl, cause
       case 'write': {
         if (event.outcome === 'done') return i18n.inspector.done({ ms });
         if (event.outcome === 'failed') return i18n.inspector.failed({ ms });
+
+        if (event.outcome === 'cancelled') return i18n.inspector.cancelled({ ms });
         const cause = event.cause === undefined ? undefined : causes.get(event.cause);
         return cause ? i18n.inspector.sentBy({ cause }) : i18n.inspector.sent;
       }

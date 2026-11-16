@@ -10,6 +10,7 @@ export default {
   force: { label: 'Every request answers', ok: 'As it should' },
   // What each event of the data layer says, in the inspector.
   inspector: {
+    cancelled: 'cancelled, {ms, number} ms',
     component: 'read {reads}, {ms, number} ms',
     derived: 'worked out again from the cache: {reads} changed',
     done: 'done, {ms, number} ms',

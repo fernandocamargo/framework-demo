@@ -37,6 +37,7 @@
   "components/lab/kinds/rollback": "desfeita",
   "components/lab/kinds/stale": "desatualizada",
   "components/lab/kinds/tab": "abas",
+  "components/lab/inspector/cancelled": "cancelada, {ms, number} ms",
   "components/lab/inspector/took": "{ms, number} ms",
   "components/lab/inspector/component": "leu {reads}, {ms, number} ms",
   "components/lab/inspector/derived": "refeita a partir do cache: {reads} mudou",

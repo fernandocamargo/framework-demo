@@ -1,11 +1,15 @@
 import { act, render } from '@testing-library/react';
-import { createElement, type ReactNode, Suspense, useCallback, useMemo } from 'react';
+import { useSelector } from '@xstate/react';
+import { Activity, createElement, type ReactNode, StrictMode, Suspense, useCallback, useMemo } from 'react';
 
 // @ts-expect-error The plugin is plain JavaScript, with no declarations.
 import { handlersModule } from '../../plugin/index.mjs';
+import { isBusy, whenIdle } from '../activity';
+import { useOperation } from '../async';
+import { bound } from '../boundaries';
 import { component } from '../component';
-import { createQueryClient } from '../data';
-import { type Failure, type Interaction, onFailure, pipeline, type Scope } from '../pipeline';
+import { createDataLayer, createQueryClient } from '../data';
+import { type DataEvent, type Failure, type Interaction, onData, onFailure, pipeline, type Scope } from '../pipeline';
 import { Root } from '../root';
 import { interact } from '../track';
 
@@ -103,6 +107,92 @@ async function show(element: ReactNode) {
   };
 }
 const entity = { id: 'shop' } as never;
+
+test.each(['cancel', 'succeed', 'fail'] as const)(
+  'a hidden operation can %s through the service and tracked handler without replay on reveal',
+  async (outcome) => {
+    const client = createQueryClient();
+    const data = createDataLayer(client, { id: 'shop' });
+    const failures: Failure[] = [];
+    const events: DataEvent[] = [];
+    const offFailure = onFailure((failure) => failures.push(failure));
+    const offData = onData((event) => events.push(event));
+
+    const reason =
+      outcome === 'cancel' ? new DOMException('The operation was aborted.', 'AbortError') : new Error('server refused');
+
+    let calls = 0;
+    let signal!: AbortSignal;
+    let finish!: () => void;
+
+    const service = (given: AbortSignal) => {
+      calls++;
+      signal = given;
+
+      return new Promise<number>((resolve, reject) => {
+        finish = () => (outcome === 'succeed' ? resolve(7) : reject(reason));
+
+        if (outcome === 'cancel') given.addEventListener('abort', finish, { once: true });
+      });
+    };
+
+    const injection = { save: (signal: AbortSignal) => data.call('demo.save', () => service(signal), []) };
+    const exported = ({ save, signal }: typeof injection & { signal: AbortSignal }) => save(signal);
+
+    const { Component, seen } = folder(
+      'components/handler-cancellation',
+      'export const store = ({ save }) => () => save();',
+      {},
+      ({ phase }) => String(phase),
+    );
+
+    function Owner() {
+      const [save, actor] = useOperation('components/handler-cancellation', 'save', exported, injection);
+      const phase = useSelector(actor, (snapshot) => snapshot.value);
+
+      return bound(createElement(Component, { phase, save }));
+    }
+
+    const tree = (mode: 'hidden' | 'visible') =>
+      createElement(
+        StrictMode,
+        null,
+        createElement(Root, { client, entity }, createElement(Activity, { children: createElement(Owner), mode })),
+      );
+
+    const view = await show(tree('visible'));
+    let promise!: Promise<unknown>;
+    await act(async () => {
+      promise = Promise.resolve(seen.at(-1)!.store!());
+    });
+    expect(calls).toBe(1);
+    expect(signal.aborted).toBe(false);
+    await view.rerender(tree('hidden'));
+    expect(signal.aborted).toBe(true);
+
+    if (outcome !== 'cancel') {
+      expect(isBusy()).toBe(true);
+      finish();
+    }
+
+    const result = await promise.catch((error: Error) => error);
+    await view.rerender(tree('visible'));
+    await whenIdle();
+    offFailure();
+    offData();
+    expect(calls).toBe(1);
+    expect(view.container.textContent).toBe(
+      outcome === 'cancel' ? 'idle' : outcome === 'succeed' ? 'fulfilled' : 'rejected',
+    );
+    expect(result).toBe(outcome === 'succeed' ? 7 : reason);
+    expect(events.flatMap((event) => (event.action === 'write' ? [event.outcome] : []))).toEqual([
+      'sent',
+      outcome === 'cancel' ? 'cancelled' : outcome === 'succeed' ? 'done' : 'failed',
+    ]);
+    expect(failures).toEqual(outcome === 'fail' ? [expect.objectContaining({ error: reason, layer: 'service' })] : []);
+    client.clear();
+  },
+);
 
 test('a handler is the same function while what it reads is the same, and a new one when it changes', async () => {
   const recorded: unknown[] = [];

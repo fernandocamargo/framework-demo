@@ -14,17 +14,13 @@ type Context = {
 type Event =
   | { call: AbortController; data: unknown; type: 'RESOLVE' }
   | { call: AbortController; error: Error; type: 'REJECT' }
-  | { call: AbortController; type: 'ABORT' }
+  | { call: AbortController; type: 'CANCEL' }
   | { call: AbortController; type: 'FINISH' }
   | { call: AbortController; type: 'WATCH' };
 
 export const latency = setup({
   actions: {
-    abort: assign(({ context, event }) => ({
-      error: context.lastError,
-      latest: undefined,
-      running: context.running.filter((call) => call !== event.call),
-    })),
+    cancel: assign({ error: ({ context }) => context.lastError }),
     finish: assign({ running: ({ context, event }) => context.running.filter((call) => call !== event.call) }),
     reject: assign({
       error: ({ event }) => (event.type === 'REJECT' ? event.error : undefined),
@@ -60,16 +56,15 @@ export const latency = setup({
     settled: 'idle',
   },
   initial: 'idle',
-  on: { ABORT: { actions: 'finish' }, FINISH: { actions: 'finish' } },
+  on: { FINISH: { actions: 'finish' } },
   states: {
     idle: { on: { WATCH: { actions: 'watch', target: 'pending' } } },
     pending: {
       on: {
-        ABORT: [
-          { actions: 'abort', guard: and(['latest', 'wasIdle']), target: 'idle' },
-          { actions: 'abort', guard: and(['latest', 'wasFulfilled']), target: 'fulfilled' },
-          { actions: 'abort', guard: 'latest', target: 'rejected' },
-          { actions: 'finish' },
+        CANCEL: [
+          { actions: 'cancel', guard: and(['latest', 'wasIdle']), target: 'idle' },
+          { actions: 'cancel', guard: and(['latest', 'wasFulfilled']), target: 'fulfilled' },
+          { actions: 'cancel', guard: 'latest', target: 'rejected' },
         ],
         REJECT: { actions: 'reject', guard: 'latest', target: 'rejected' },
         RESOLVE: { actions: 'resolve', guard: 'latest', target: 'fulfilled' },

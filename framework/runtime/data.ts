@@ -25,7 +25,7 @@
 import { hashKey, type Query, QueryCache, QueryClient } from '@tanstack/react-query';
 
 import { hold } from './activity';
-import { emitData, report } from './pipeline';
+import { emitData, isAbortError, report } from './pipeline';
 import { activeInteraction } from './track';
 
 /** What a service folder's `meta.ts` says about one of its operations. */
@@ -387,7 +387,12 @@ export function createDataLayer(client: QueryClient, entity: { readonly id: stri
               return result;
             },
             (error: unknown) => {
-              emitData({ action: 'write', ms: Math.round(performance.now() - started), outcome: 'failed', path });
+              emitData({
+                action: 'write',
+                ms: Math.round(performance.now() - started),
+                outcome: isAbortError(error) ? 'cancelled' : 'failed',
+                path,
+              });
               // A rebase: the server's answers again, with the writes still on their way over them.
               if (write) {
                 settle();

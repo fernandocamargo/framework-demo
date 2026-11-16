@@ -106,7 +106,7 @@ export type DataEvent = {
   kind: 'data';
   /** How long it took, in milliseconds. */
   ms?: number;
-  outcome?: 'done' | 'failed' | 'pushed' | 'received' | 'sent';
+  outcome?: 'cancelled' | 'done' | 'failed' | 'pushed' | 'received' | 'sent';
   path: string;
   reads?: string[];
   route: string;
@@ -162,9 +162,13 @@ export const pipeline = new Pipeline();
 
 const reported = new WeakSet<object>();
 
+/** Native cancellation is a rejected outcome, not a failure. */
+export const isAbortError = (thrown: unknown): thrown is DOMException | Error =>
+  (thrown instanceof DOMException || thrown instanceof Error) && thrown.name === 'AbortError';
+
 /** A thrown value as an `Error`, whatever was thrown. */
 export const toError = (thrown: unknown) =>
-  thrown instanceof Error ? thrown : new Error(String(thrown), { cause: thrown });
+  thrown instanceof Error || isAbortError(thrown) ? thrown : new Error(String(thrown), { cause: thrown });
 
 /**
  * Reports a failure once: the first layer that catches an error tags it (the innermost, usually
@@ -174,6 +178,8 @@ export function report(
   thrown: unknown,
   tags: { chain?: string[]; during?: string; layer: Layer; path?: string; site?: Site },
 ) {
+  if (isAbortError(thrown)) return thrown;
+
   const error = toError(thrown);
   if (reported.has(error)) return error;
   reported.add(error);

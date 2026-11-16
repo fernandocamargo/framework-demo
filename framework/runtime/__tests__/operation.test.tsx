@@ -67,7 +67,7 @@ test('the pure machine accepts outcomes only while pending and only for the late
   expect(failed.context).toMatchObject({ data: 2, error });
   const [again] = transition(latency, failed, { call: second, type: 'WATCH' });
   expect(again.context).toMatchObject({ data: 2, error: undefined });
-  const [aborted] = transition(latency, again, { call: second, type: 'ABORT' });
+  const [aborted] = transition(latency, again, { call: second, type: 'CANCEL' });
   expect(aborted.matches('rejected')).toBe(true);
   expect(aborted.context.error).toBe(error);
 });
@@ -278,7 +278,7 @@ test('XState stopping a watcher alone does not abort the external call', () => {
 test('an abort-aware call rejects without reporting a failure', async () => {
   const failures: Error[] = [];
   const off = onFailure((failure) => failures.push(failure.error));
-  const error = new Error('aborted');
+  const error = new DOMException('The operation was aborted.', 'AbortError');
 
   const exported = ({ signal }: { signal: AbortSignal }) =>
     new Promise((_, reject) => {
@@ -329,14 +329,14 @@ test('a hidden subtree aborts signals without replaying its externally watched p
     await Promise.resolve();
   });
   view.rerender(tree('visible'));
-  expect(view.container.textContent).toBe('idle');
+  expect(view.container.textContent).toBe('fulfilled');
   expect(calls).toHaveLength(1);
 });
 
 test('hiding an abort-aware call restores the last settled status without a failure', async () => {
   const failures: Error[] = [];
   const off = onFailure((failure) => failures.push(failure.error));
-  const reason = new Error('aborted');
+  const reason = new DOMException('The operation was aborted.', 'AbortError');
   let calls = 0;
 
   const exported = ({ signal }: { signal: AbortSignal }) => {
@@ -460,4 +460,129 @@ test('a frozen source has a prototype and passes sharing and selection without b
   }
 
   expect(render(createElement(Follower)).container.textContent).toBe('true');
+});
+
+test.each(['idle', 'fulfilled', 'rejected'] as const)(
+  'native cancellation restores %s and its values even without an abort request',
+  async (phase) => {
+    const failures: Error[] = [];
+    const off = onFailure((failure) => failures.push(failure.error));
+    const { calls, exported } = controlled();
+    const { result } = renderHook(() => useSave(exported));
+    const [save, actor] = result.current;
+
+    if (phase !== 'idle') {
+      const saved = save();
+      calls.at(-1)!.resolve(7);
+      await saved;
+    }
+
+    if (phase === 'rejected') {
+      const failed = save();
+      const reason = new Error('refused');
+      calls.at(-1)!.reject(reason);
+      await expect(failed).rejects.toBe(reason);
+    }
+
+    await Promise.resolve();
+    failures.length = 0;
+    const before = actor.getSnapshot();
+    const call = save();
+    const reason = new DOMException('The operation was aborted.', 'AbortError');
+    calls.at(-1)!.reject(reason);
+    await expect(call).rejects.toBe(reason);
+    const after = actor.getSnapshot();
+    expect(after.value).toBe(before.value);
+    expect(after.context.data).toBe(before.context.data);
+    expect(after.context.error).toBe(before.context.error);
+    expect(after.context.running).toEqual([]);
+    expect(failures).toEqual([]);
+    off();
+  },
+);
+
+test.each(['older first', 'latest first'])(
+  'overlapping cancellations restore the settled status when %s settles',
+  async (order) => {
+    const { calls, exported } = controlled();
+    const { result } = renderHook(() => useSave(exported));
+    const [save, actor] = result.current;
+    const saved = save();
+    calls[0]!.resolve(7);
+    await saved;
+    const first = save();
+    const second = save();
+    const reason = new DOMException('The operation was aborted.', 'AbortError');
+    const olderFirst = order === 'older first';
+    calls[olderFirst ? 1 : 2]!.reject(reason);
+    const earlier = await (olderFirst ? first : second).catch((error: Error) => error);
+    const between = actor.getSnapshot();
+    const busy = isBusy();
+    calls[olderFirst ? 2 : 1]!.reject(reason);
+    const later = await (olderFirst ? second : first).catch((error: Error) => error);
+    expect(earlier).toBe(reason);
+    expect(later).toBe(reason);
+    expect(between.value).toBe(olderFirst ? 'pending' : 'fulfilled');
+    expect(busy).toBe(true);
+    expect(actor.getSnapshot().value).toBe('fulfilled');
+    expect(actor.getSnapshot().context).toMatchObject({ data: 7, error: undefined, running: [] });
+  },
+);
+
+test('an older success cannot become latest again after the latest call cancels', async () => {
+  const { calls, exported } = controlled();
+  const { result } = renderHook(() => useSave(exported));
+  const [save, actor] = result.current;
+  const first = save();
+  const second = save();
+  const reason = new DOMException('The operation was aborted.', 'AbortError');
+  calls[1]!.reject(reason);
+  const cancelled = await second.catch((error: Error) => error);
+  calls[0]!.resolve(1);
+  await expect(first).resolves.toBe(1);
+  expect(cancelled).toBe(reason);
+  expect(actor.getSnapshot().value).toBe('idle');
+  expect(actor.getSnapshot().context).toMatchObject({ data: undefined, error: undefined, running: [] });
+});
+
+test('an abort request keeps actual work pending, and a later genuine error still reports', async () => {
+  const failures: Error[] = [];
+  const off = onFailure((failure) => failures.push(failure.error));
+  const { calls, exported } = controlled();
+  const { result, unmount } = renderHook(() => useSave(exported));
+  const [save, actor] = result.current;
+  const call = save();
+  unmount();
+  expect(calls[0]!.signal.aborted).toBe(true);
+  const requested = actor.getSnapshot();
+  const busy = isBusy();
+  const reason = new Error('server refused');
+  calls[0]!.reject(reason);
+  await expect(call).rejects.toBe(reason);
+  off();
+  expect(requested.value).toBe('pending');
+  expect(requested.context.running).toHaveLength(1);
+  expect(busy).toBe(true);
+  expect(failures).toEqual([reason]);
+});
+
+test('CSS and HTML hiding keep effects connected and do not abort work', async () => {
+  const { calls, exported } = controlled();
+
+  function Leaf({ hidden }: { hidden: boolean }) {
+    const [save] = useSave(exported);
+
+    return createElement('button', { hidden, onClick: () => void save(), style: { display: hidden ? 'none' : '' } });
+  }
+
+  const view = render(createElement(Leaf, { hidden: false }));
+  fireEvent.click(view.getByRole('button'));
+  view.rerender(createElement(Leaf, { hidden: true }));
+  expect(calls[0]!.signal.aborted).toBe(false);
+  expect(isBusy()).toBe(true);
+  await act(async () => {
+    calls[0]!.resolve(1);
+    await Promise.resolve();
+  });
+  expect(calls).toHaveLength(1);
 });

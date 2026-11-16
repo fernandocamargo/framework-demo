@@ -7,9 +7,42 @@ import {
   pipeline,
   report,
   setLocation,
+  toError,
 } from '../pipeline';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+test.each([
+  new DOMException('The operation was aborted.', 'AbortError'),
+  Object.assign(new Error('The operation was aborted.'), { name: 'AbortError' }),
+])('cancellation stays recognizable through normalization and every reporting layer: %s', async (abort) => {
+  const failures: unknown[] = [];
+  const stop = onFailure((failure) => failures.push(failure));
+  const normalized = toError(abort);
+  const service = report(abort, { layer: 'service' });
+  const operation = report(normalized, { layer: 'async' });
+  const handler = report(toError(normalized), { layer: 'handler' });
+  await flush();
+  stop();
+
+  for (const error of [normalized, service, operation, handler]) expect(error).toBe(abort);
+  expect(failures).toEqual([]);
+});
+
+test('other DOM exceptions and values that merely say AbortError still report once', async () => {
+  const failures: Error[] = [];
+  const stop = onFailure((failure) => failures.push(failure.error));
+
+  for (const thrown of [new DOMException('Denied', 'SecurityError'), { name: 'AbortError' }, 'AbortError']) {
+    const error = report(thrown, { layer: 'service' });
+    expect(report(error, { layer: 'async' })).toBe(error);
+    expect(report(error, { layer: 'handler' })).toBe(error);
+  }
+
+  await flush();
+  stop();
+  expect(failures).toHaveLength(3);
+});
 
 test("failures carry the location Root was told, and the address's hash once it is unset", async () => {
   const routes: string[] = [];
