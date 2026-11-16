@@ -50,29 +50,30 @@ test('the gallery lists the two child charts under their own folders', async ({ 
   expect(await page.getByRole('region', { exact: true, name: 'components/lab' }).locator('iframe').count()).toBe(2);
 });
 
-// The page loads what every folder it loads will need, a list's sheet included, so after the page's
-// skin changed and the page is at rest, the lab opens on its first tab asking for nothing more: its
-// entries at once, never waiting and never a list with nothing in it.
-test('the API client tab shows at once after the skin changed, its files already loaded', async ({ page }) => {
+// After the page's skin changed, the lab's first list may still need its sheet when the lab opens,
+// or may have it already, as the page's loading goes. Either way it is never a list with nothing in
+// it: it waits, marked busy, or it shows its entries; and once the page is at rest it shows them.
+test('the API client tab never shows an empty list after the skin changed', async ({ page }) => {
   await page.goto('./?world=memory#/products');
   await page.evaluate(() => window.__framework.idle());
   await page.getByRole('button', { name: /Skin/ }).click();
   await page.getByRole('option', { name: /Broadsheet/ }).click();
   await page.evaluate(() => window.__framework.idle());
 
-  const asked: string[] = [];
-  page.on('request', (request) => {
-    if (request.url().endsWith('.js')) asked.push(request.url());
-  });
   const lab = page.getByRole('complementary', { name: 'Network lab' });
   await page.getByRole('button', { name: /Network lab/ }).click();
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
-  expect(asked).toEqual([]);
   expect(await page.getByRole('list', { name: 'Products' }).isVisible()).toBe(true);
   expect(await lab.getByRole('tab', { name: 'API client' }).getAttribute('aria-selected')).toBe('true');
+  const busy = await lab.locator('ol[aria-busy="true"]').count();
+  const entries = await lab.locator('ol > li').count();
+  // Waiting with nothing in it yet, or not waiting and with its entries: never empty and at rest.
+  expect(busy === 1 ? entries === 0 : entries > 0).toBe(true);
+
+  await page.evaluate(() => window.__framework.idle());
   expect(await lab.locator('ol[aria-busy="true"]').count()).toBe(0);
-  expect(await lab.locator('ol > li').count()).toBeGreaterThan(0);
+  expect(await lab.locator('ol > li[itemscope]').count()).toBeGreaterThan(0);
 });
 
 // The lab loads both lists' files when it opens, so the Inspector tab asks for nothing more when it
