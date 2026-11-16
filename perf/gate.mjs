@@ -1,5 +1,5 @@
 // Fails when the framework's re-renders grow. Builds the perf build, plays both visits of
-// perf/steps.mjs in Chromium and in WebKit (perf/cycles.mjs), and compares, per engine and visit,
+// perf/steps.mjs in Chromium, Firefox and WebKit (perf/cycles.mjs), and compares, per engine and visit,
 // with perf/baseline.json:
 // - the framework components rendered again, and those of them that changed nothing in the page:
 //   more than the baseline fails;
@@ -17,7 +17,7 @@
 //
 //   npm run perf:gate                 compares with the baseline
 //   npm run perf:baseline             writes the baseline (perf/README.md says when)
-//   [RUNS=10] [PORT=5190] [CHROMIUM=…] [WEBKIT=…]
+//   [RUNS=10] [PORT=5190] [ENGINE=chromium|firefox|webkit] [CHROMIUM=…] [FIREFOX=…] [WEBKIT=…]
 //   node perf/gate.mjs --no-build     compares the last perf build
 
 import { spawnSync } from 'node:child_process';
@@ -30,7 +30,7 @@ import { played as clean } from './totals.mjs';
 const here = (file) => path.join(import.meta.dirname, file);
 const root = path.join(import.meta.dirname, '..');
 const BASELINE = here('baseline.json');
-const ENGINES = ['chromium', 'webkit'];
+const ENGINES = process.env.ENGINE ? [process.env.ENGINE] : ['chromium', 'firefox', 'webkit'];
 const VISITS = ['visit', 'features'];
 // What fails the gate when it grows, and what is only reported.
 const GATED = { frameworkAgain: 'framework rendered again', frameworkUnchanged: 'with no change' };
@@ -70,8 +70,17 @@ const measured = {};
 for (const engine of ENGINES) {
   measured[engine] = {};
   for (const visit of VISITS) {
+    const before = baseline?.[engine]?.[visit];
+    const pending = (key) => engine === 'firefox' && before?.[key] == null;
+
+    if (!write && Object.keys(GATED).some(pending))
+      console.log(
+        `No Firefox figures yet for ${PLATFORM}, ${visit} in perf/baseline.json: counts are reported without a render threshold. ` +
+          '`npm run perf:baseline` writes measured figures; failed checks and page errors still fail.',
+      );
+
     const within = (clean) =>
-      clean.length > 0 && Object.keys(GATED).every((key) => least(clean, key) <= baseline?.[engine]?.[visit]?.[key]);
+      clean.length > 0 && Object.keys(GATED).every((key) => pending(key) || least(clean, key) <= before?.[key]);
     const all = [];
     let output = '';
     // One run at a time: when comparing, the first that brings the figures within the baseline is the last.
@@ -122,17 +131,20 @@ for (const engine of ENGINES) {
 const seconds = Math.round((Date.now() - started) / 1000);
 
 if (write) {
-  baselines[PLATFORM] = Object.fromEntries(
-    ENGINES.map((engine) => [
-      engine,
-      Object.fromEntries(
-        VISITS.map((visit) => [
-          visit,
-          Object.fromEntries(Object.keys(GATED).map((key) => [key, measured[engine][visit].usual[key]])),
-        ]),
-      ),
-    ]),
-  );
+  baselines[PLATFORM] = {
+    ...baseline,
+    ...Object.fromEntries(
+      ENGINES.map((engine) => [
+        engine,
+        Object.fromEntries(
+          VISITS.map((visit) => [
+            visit,
+            Object.fromEntries(Object.keys(GATED).map((key) => [key, measured[engine][visit].usual[key]])),
+          ]),
+        ),
+      ]),
+    ),
+  };
   writeFileSync(BASELINE, `${JSON.stringify(baselines, null, 2)}\n`);
   console.log(
     `Wrote ${PLATFORM}'s figures in perf/baseline.json (${seconds} s). The commit that holds it says why they changed.`,
@@ -147,6 +159,8 @@ for (const engine of ENGINES)
     for (const [key, name] of Object.entries(GATED)) {
       const before = baseline[engine]?.[visit]?.[key];
       const now = measured[engine][visit][key];
+
+      if (engine === 'firefox' && before == null) continue;
       if (before === undefined) grown.push(`${engine}, ${visit}: the baseline has no "${key}"`);
       else if (now > before) grown.push(`${engine}, ${visit}: ${name} ${before} → ${now}`);
       else if (now < before) shrunk.push(`${engine}, ${visit}: ${name} ${before} → ${now}`);

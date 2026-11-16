@@ -1,6 +1,6 @@
 // The end-to-end run: the production build, in the memory world, so it needs no network.
-// Locally, CHROMIUM and WEBKIT may name browser executables already on the machine; without
-// them Playwright uses the browsers it installed (`npx playwright install chromium webkit`).
+// Locally, CHROMIUM, FIREFOX and WEBKIT may name browser executables already on the machine; without
+// them Playwright uses the browsers it installed (`npx playwright install chromium firefox webkit`).
 // E2E_URL points the run at a server that is already up, such as the dev server.
 
 import { defineConfig } from '@playwright/test';
@@ -13,6 +13,9 @@ export default defineConfig({
   fullyParallel: true,
   projects: [
     { name: 'chromium', use: { browserName: 'chromium', ...executable(process.env.CHROMIUM) } },
+    ...(process.env.FIREFOX || process.env.CI
+      ? [{ name: 'firefox', use: { browserName: 'firefox' as const, ...executable(process.env.FIREFOX) } }]
+      : []),
     ...(process.env.WEBKIT || process.env.CI
       ? [{ name: 'webkit', use: { browserName: 'webkit' as const, ...executable(process.env.WEBKIT) } }]
       : []),

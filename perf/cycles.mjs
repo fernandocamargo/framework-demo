@@ -12,16 +12,16 @@
 //
 //   npm run perf                      builds, then runs the flow once in Chromium
 //   node perf/cycles.mjs              runs it again on the last build
-//   [LABEL=name] [RUNS=3] [CPU=4] [ENGINE=chromium|webkit] [DETAIL=1] [TIMELINE=1] [PORT=5190] [VISIT=features]
+//   [LABEL=name] [RUNS=3] [CPU=4] [ENGINE=chromium|firefox|webkit] [DETAIL=1] [TIMELINE=1] [PORT=5190] [VISIT=features]
 //
 // VISIT=features plays the second visit of steps.mjs instead: the report, the orders page with its
 // live map, the command palette and the tour, with totals of their own.
 //
-// CHROMIUM and WEBKIT may name browser executables, as for the end-to-end tests. Writes
+// CHROMIUM, FIREFOX and WEBKIT may name browser executables, as for the end-to-end tests. Writes
 // perf/out/<LABEL>/cycles.json (first run), cycles-<ordinal>.json (later runs), summary.txt,
 // and runs.json: each run's trace path, visit totals and separate further totals, which the gate reads.
 
-import { chromium, webkit } from '@playwright/test';
+import { chromium, firefox, webkit } from '@playwright/test';
 import { createReadStream, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import path from 'node:path';
@@ -73,8 +73,8 @@ await new Promise((resolve) => server.listen(port, resolve));
 const base = `http://localhost:${port}`;
 
 async function run() {
-  const type = engine === 'webkit' ? webkit : chromium;
-  const executablePath = engine === 'webkit' ? env.WEBKIT : env.CHROMIUM;
+  const type = { chromium, firefox, webkit }[engine];
+  const executablePath = env[engine.toUpperCase()];
   const browser = await type.launch(executablePath ? { executablePath } : {});
   const page = await browser.newPage({ viewport: { height: 1000, width: 1400 } });
   page.setDefaultTimeout(10_000);

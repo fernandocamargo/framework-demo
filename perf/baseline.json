@@ -19,6 +19,16 @@
         "frameworkAgain": 71,
         "frameworkUnchanged": 2
       }
+    },
+    "firefox": {
+      "visit": {
+        "frameworkAgain": null,
+        "frameworkUnchanged": null
+      },
+      "features": {
+        "frameworkAgain": null,
+        "frameworkUnchanged": null
+      }
     }
   },
   "linux": {
@@ -40,6 +50,16 @@
       "features": {
         "frameworkAgain": 72,
         "frameworkUnchanged": 2
+      }
+    },
+    "firefox": {
+      "visit": {
+        "frameworkAgain": null,
+        "frameworkUnchanged": null
+      },
+      "features": {
+        "frameworkAgain": null,
+        "frameworkUnchanged": null
       }
     }
   }
