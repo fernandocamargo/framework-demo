@@ -23,7 +23,7 @@ export default css`
     padding: 0.7rem 0;
     border-block-end: 1px solid var(--text);
     font-size: 0.95rem;
-    .react-aria-Link {
+    a[href] {
       font-family: var(--sans);
       font-size: 0.74rem;
       letter-spacing: 0.12em;

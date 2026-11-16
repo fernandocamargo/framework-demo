@@ -35,7 +35,7 @@ export default css`
     h3 {
       font-size: inherit;
     }
-    .react-aria-Link {
+    a[href] {
       color: var(--text);
       font-weight: 600;
     }
@@ -88,7 +88,7 @@ export default css`
     background: var(--danger-soft);
     color: var(--danger);
   }
-  .react-aria-Group {
+  [role='group'] {
     display: inline-flex;
     .react-aria-Button {
       inline-size: 1.6rem;
@@ -132,13 +132,13 @@ export default css`
     > li:empty {
       display: none;
     }
-    .react-aria-Link {
+    a[href] {
       inline-size: 2.4rem;
       padding: 0;
       border-color: transparent;
       background: transparent;
       color: var(--muted);
-      &[data-hovered] {
+      &:hover {
         background: var(--surface-2);
         color: var(--text);
       }

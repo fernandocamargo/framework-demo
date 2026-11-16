@@ -31,7 +31,7 @@ export default css`
   li {
     min-inline-size: 0;
   }
-  .react-aria-Link {
+  a[href] {
     position: relative;
     isolation: isolate;
     display: grid;
@@ -45,10 +45,10 @@ export default css`
     background: var(--surface);
     color: var(--text);
     text-decoration: none;
-    &[data-hovered] {
+    &:hover {
       border-color: var(--border-strong);
     }
-    &[data-focus-visible] {
+    &:focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
@@ -58,7 +58,7 @@ export default css`
     }
   }
   /* The state's own glyph (base.css) is no part of a tile: its abbreviation names it. */
-  .react-aria-Link [itemprop='observationAbout']::before {
+  a[href] [itemprop='observationAbout']::before {
     content: none;
   }
   abbr {

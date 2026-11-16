@@ -22,7 +22,7 @@ export default css`
     border: 1px solid var(--text);
     font-size: 1.15rem;
     font-style: italic;
-    .react-aria-Link {
+    a[href] {
       font-style: normal;
       text-decoration: underline;
     }

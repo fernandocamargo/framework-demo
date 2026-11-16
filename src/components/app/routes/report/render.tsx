@@ -1,5 +1,3 @@
-import { Link } from 'react-aria-components';
-
 // The report, as schema.org names one: its headline and abstract say what it finds, its figures
 // follow, and the table names each category as one of its mentions, an aggregate offer. The ten
 // products closest to running out are mentions too, each with its offer.
@@ -41,9 +39,9 @@ export default ({ asOf, className, dated, deck, figures, headline, i18n, rows, s
         {rows.map((row) => (
           <tr itemProp="mentions" itemScope itemType="https://schema.org/AggregateOffer" key={row.key}>
             <th scope="row">
-              <Link href={row.href}>
+              <a aria-label={row.name} href={row.href} tabIndex={0}>
                 <span itemProp="category">{row.name}</span>
-              </Link>
+              </a>
             </th>
             <td>
               <data itemProp="offerCount" value={row.offers.value}>
@@ -77,9 +75,9 @@ export default ({ asOf, className, dated, deck, figures, headline, i18n, rows, s
       <ul aria-label={i18n.shortest.label}>
         {shortest.map((product) => (
           <li itemProp="mentions" itemScope itemType="https://schema.org/Product" key={product.id}>
-            <Link href={product.href}>
+            <a aria-label={product.title} href={product.href} tabIndex={0}>
               <span itemProp="name">{product.title}</span>
-            </Link>
+            </a>
             <div itemProp="offers" itemScope itemType="https://schema.org/Offer">
               <link href={product.availability} itemProp="availability" />
               <data itemProp="inventoryLevel" value={product.stock}>

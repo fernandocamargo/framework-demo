@@ -24,11 +24,11 @@ export default css`
       gap: 0.5rem;
     }
     /* Creating a product is the catalogue's first step. */
-    .react-aria-Link:has(> [itemtype='https://schema.org/CreateAction']) {
+    a[href]:has(> [itemtype='https://schema.org/CreateAction']) {
       border-color: transparent;
       background: var(--accent);
       color: var(--on-accent);
-      &[data-hovered] {
+      &:hover {
         background: var(--accent-hover);
       }
     }

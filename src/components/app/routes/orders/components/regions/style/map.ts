@@ -27,7 +27,7 @@ export default css`
       flex: none;
       min-inline-size: 3.6rem;
     }
-    .react-aria-Link {
+    a[href] {
       display: flex;
       align-items: center;
       justify-content: center;

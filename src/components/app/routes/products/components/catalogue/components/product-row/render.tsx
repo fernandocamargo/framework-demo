@@ -1,4 +1,4 @@
-import { Button, Group, Link } from 'react-aria-components';
+import { Button } from 'react-aria-components';
 
 import RemoveLink from '@/components/app/routes/products/components/remove-link';
 
@@ -26,9 +26,9 @@ export default ({
     {thumbnail && <img alt="" height="56" itemProp="image" loading="lazy" src={thumbnail} width="56" />}
     <hgroup>
       <h3>
-        <Link href={viewHref}>
+        <a aria-label={title} href={viewHref} tabIndex={0}>
           <span itemProp="name">{title}</span>
-        </Link>
+        </a>
         {change && (
           <span itemProp="additionalProperty" itemScope itemType="https://schema.org/PropertyValue">
             <meta content="local" itemProp="propertyID" />
@@ -55,14 +55,14 @@ export default ({
           {stock.label}
         </data>
         {stepper && (
-          <Group aria-busy={stepper.sending || undefined} aria-label={stepper.label}>
+          <div aria-busy={stepper.sending || undefined} aria-label={stepper.label} role="group">
             <Button aria-label={stepper.less.label} isDisabled={stepper.less.disabled} onPress={stepper.less.press}>
               −
             </Button>
             <Button aria-label={stepper.more.label} onPress={stepper.more.press}>
               +
             </Button>
-          </Group>
+          </div>
         )}
       </div>
       <data itemProp="price" value={price.value}>
@@ -87,11 +87,11 @@ export default ({
     <menu>
       {canEdit && (
         <li>
-          <Link href={editHref}>
+          <a aria-label={editLabel} href={editHref} tabIndex={0}>
             <span itemProp="potentialAction" itemScope itemType="https://schema.org/UpdateAction">
               <span itemProp="name">{editLabel}</span>
             </span>
-          </Link>
+          </a>
         </li>
       )}
       <li>

@@ -1,5 +1,3 @@
-import { Link } from 'react-aria-components';
-
 // The orders, as schema.org names them: each one an order, with its customer, the address it ships
 // to, and its price as the offer it was accepted at.
 export default ({ className, currency, empty, emptyText, i18n, orders, paging, summary }) => (
@@ -13,9 +11,9 @@ export default ({ className, currency, empty, emptyText, i18n, orders, paging, s
       <ul aria-label={i18n.list}>
         {orders.map((order) => (
           <li itemScope itemType="https://schema.org/Order" key={order.id}>
-            <Link href={order.href}>
+            <a aria-label={order.number} href={order.href} tabIndex={0}>
               <span itemProp="orderNumber">{order.number}</span>
-            </Link>
+            </a>
             <span itemProp="customer" itemScope itemType="https://schema.org/Person">
               <span itemProp="name">{order.customer}</span>
             </span>
@@ -41,8 +39,6 @@ export default ({ className, currency, empty, emptyText, i18n, orders, paging, s
         {/* An anchor without a destination keeps focus when paging reaches an end. */}
         <a
           aria-disabled={!paging.previousHref || undefined}
-          className="react-aria-Link"
-          data-disabled={!paging.previousHref || undefined}
           href={paging.previousHref ?? undefined}
           role="link"
           tabIndex={0}
@@ -50,14 +46,7 @@ export default ({ className, currency, empty, emptyText, i18n, orders, paging, s
           {i18n.paging.previous}
         </a>
         <span>{paging.text}</span>
-        <a
-          aria-disabled={!paging.nextHref || undefined}
-          className="react-aria-Link"
-          data-disabled={!paging.nextHref || undefined}
-          href={paging.nextHref ?? undefined}
-          role="link"
-          tabIndex={0}
-        >
+        <a aria-disabled={!paging.nextHref || undefined} href={paging.nextHref ?? undefined} role="link" tabIndex={0}>
           {i18n.paging.next}
         </a>
       </nav>

@@ -36,6 +36,9 @@ test('Blueprint names the catalogue and a product, and changes no element of eit
   expect(await markup(page)).toBe(plain);
 
   const firstRow = page.locator('li[itemtype$="/Product"]').first();
+  const link = firstRow.getByRole('heading').getByRole('link');
+  expect(await link.getAttribute('data-rac')).toBeNull();
+  expect(await link.locator('[itemprop="name"]').count()).toBe(1);
   expect(await pseudo(firstRow, '::before')).toContain('Product');
 });
 

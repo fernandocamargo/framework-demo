@@ -208,7 +208,10 @@ export const STEPS = [
   },
   {
     act: (page) => page.getByRole('link', { name: 'Previous' }).click(),
-    check: async (page) => queryOf(page.url())['page'] === undefined,
+    check: async (page) =>
+      queryOf(page.url())['page'] === undefined &&
+      (await page.getByRole('link', { name: 'Previous' }).getAttribute('aria-disabled')) === 'true' &&
+      (await page.getByRole('link', { name: 'Previous' }).getAttribute('href')) === null,
     name: 'back to page 1',
   },
   {
@@ -498,7 +501,10 @@ export const FEATURES = [
   },
   {
     act: (page) => page.getByRole('link', { name: /^Texas,/ }).click(),
-    check: async (page) => queryOf(page.url())['region'] === 'TX' && (await ledger(page).count()) === 3,
+    check: async (page) =>
+      queryOf(page.url())['region'] === 'TX' &&
+      (await ledger(page).count()) === 3 &&
+      (await page.getByRole('link', { name: /^Texas,/ }).getAttribute('aria-current')) === 'true',
     name: 'choose Texas',
   },
   {

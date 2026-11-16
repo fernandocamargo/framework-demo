@@ -11,5 +11,11 @@ export function markupWithoutLinkSkin(element: Element) {
     else url.searchParams.delete('query');
     link.setAttribute('href', `${url.pathname}${url.search}${url.hash}`);
   }
+  // Attribute insertion order can differ between navigation and a fresh mount.
+  for (const element of [copy, ...Array.from(copy.querySelectorAll('*'))]) {
+    const attributes = Array.from(element.attributes).sort((a, b) => a.name.localeCompare(b.name));
+    for (const attribute of attributes) element.removeAttribute(attribute.name);
+    for (const attribute of attributes) element.setAttribute(attribute.name, attribute.value);
+  }
   return copy.outerHTML;
 }

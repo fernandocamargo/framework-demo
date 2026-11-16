@@ -1,4 +1,4 @@
-import { Button, Dialog, Heading, Link } from 'react-aria-components';
+import { Button, Dialog, Heading } from 'react-aria-components';
 
 // The order, as schema.org names one: its customer, where it ships and its items, each item a
 // product of the catalogue with its quantity.
@@ -36,9 +36,9 @@ export default ({ address, className, currency, customer, i18n, lines, title, to
             </data>
             <span itemProp="orderedItem" itemScope itemType="https://schema.org/Product">
               <img alt="" itemProp="image" loading="lazy" src={line.thumbnail} />
-              <Link href={line.href}>
+              <a aria-label={line.title} href={line.href} tabIndex={0}>
                 <span itemProp="name">{line.title}</span>
-              </Link>
+              </a>
             </span>
             <span>{line.total}</span>
           </li>

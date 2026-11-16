@@ -39,7 +39,7 @@ export default css`
   li {
     min-inline-size: 0;
   }
-  .react-aria-Link {
+  a[href] {
     position: relative;
     isolation: isolate;
     display: grid;
@@ -53,10 +53,10 @@ export default css`
     background: var(--surface);
     color: var(--text);
     text-decoration: none;
-    &[data-hovered] {
+    &:hover {
       background: var(--surface-2);
     }
-    &[data-focus-visible] {
+    &:focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: -4px;
     }
@@ -71,7 +71,7 @@ export default css`
       }
     }
   }
-  .react-aria-Link [itemprop='observationAbout']::before {
+  a[href] [itemprop='observationAbout']::before {
     content: none;
   }
   /* The hatching sits under the words: the abbreviation and the count stand on paper. */
@@ -146,7 +146,7 @@ export default css`
   ${map}
   &:has(> .maplibregl-map:not([hidden])) > ol {
     border: 0;
-    .react-aria-Link {
+    a[href] {
       border: 1px solid var(--text);
     }
   }

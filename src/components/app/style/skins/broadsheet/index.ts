@@ -69,13 +69,13 @@ export default css`
     letter-spacing: 0.24em;
     text-transform: uppercase;
   }
-  > header nav .react-aria-Link {
+  > header nav a[href] {
     min-block-size: 0;
     padding: 0 0.25rem;
     border: 0;
     background: none;
     text-decoration: underline;
-    &[data-hovered] {
+    &:hover {
       background: none;
       color: var(--accent);
     }

@@ -1,4 +1,4 @@
-import { Button, Link } from 'react-aria-components';
+import { Button } from 'react-aria-components';
 
 import Keyboard from '@/components/keyboard';
 import Lab from '@/components/lab';
@@ -37,11 +37,13 @@ export default ({
       <Tour lang={lang} skin={skin} />
       <nav>
         {sections.map((item) => (
-          <Link aria-current={item.current ? 'page' : undefined} href={item.href} key={item.id}>
+          <a aria-current={item.current ? 'page' : undefined} href={item.href} key={item.id} tabIndex={0}>
             {item.label}
-          </Link>
+          </a>
         ))}
-        <Link href="#/states">{states}</Link>
+        <a href="#/states" tabIndex={0}>
+          {states}
+        </a>
       </nav>
       <Lab />
       <Language />

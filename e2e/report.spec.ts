@@ -6,7 +6,7 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
 import { checkMicrodata, type Vocabulary } from '../framework/microdata/check';
-import { arrive, queryOf } from '../perf/address.mjs';
+import { arrive, queryOf, visit } from '../perf/address.mjs';
 import { markupWithoutLinkSkin } from './markup';
 
 const vocabulary = JSON.parse(
@@ -84,10 +84,21 @@ test('the report is the page the address names, with its headline and figures fr
 
 test('a category links to the catalogue filtered by it', async ({ page }) => {
   await open(page);
-  await act(page, () => page.locator('tbody').getByRole('link', { exact: true, name: 'Lighting' }).click());
+  const category = page.locator('tbody').getByRole('link', { exact: true, name: 'Lighting' });
+  expect(await category.getAttribute('href')).toBe(visit('/products', { category: 'lighting' }));
+  expect(await category.getAttribute('data-rac')).toBeNull();
+  await category.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  expect(await category.evaluate((element) => element === document.activeElement)).toBe(true);
+  await act(page, () => page.keyboard.press('Enter'));
+  expect(new URL(page.url()).pathname).toBe('/products');
   expect(queryOf(page.url())['category']).toBe('lighting');
   expect(await summary(page)).toBe('9 products in Lighting');
   expect(await rows(page).count()).toBe(9);
+  await act(page, () => page.goBack());
+  expect(new URL(page.url()).pathname).toBe('/report');
+  expect(await page.getByRole('link', { exact: true, name: 'Report' }).getAttribute('aria-current')).toBe('page');
 });
 
 test('a count taken in another tab reaches the report: its units and value go up with the product', async ({

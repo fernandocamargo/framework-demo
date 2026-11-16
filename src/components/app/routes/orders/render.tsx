@@ -1,5 +1,3 @@
-import { Link } from 'react-aria-components';
-
 import Ledger from './components/ledger';
 import Regions from './components/regions';
 
@@ -32,7 +30,9 @@ export default ({ allowed, className, guest, i18n, page, region, routes, setting
           {guest && (
             <>
               {' '}
-              <Link href={signInHref}>{i18n.guest.signIn}</Link>
+              <a href={signInHref} tabIndex={0}>
+                {i18n.guest.signIn}
+              </a>
             </>
           )}
         </p>

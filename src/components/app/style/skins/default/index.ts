@@ -100,11 +100,11 @@ export default css`
     padding-block: 0.3rem 0.45rem;
     overflow-x: auto;
   }
-  > header nav .react-aria-Link {
+  > header nav a[href] {
     flex: none;
     border-color: transparent;
     background: transparent;
-    &[data-hovered] {
+    &:hover {
       background: var(--surface-2);
     }
     /* The page the address shows. */

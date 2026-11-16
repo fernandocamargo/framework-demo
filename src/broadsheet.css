@@ -57,7 +57,8 @@
   }
 
   /* ---- Commands: square ink frames, their names set as kickers -------------------------------- */
-  & :is(.react-aria-Button, :where(menu, footer, nav) .react-aria-Link) {
+  & .react-aria-Button,
+  & :where(menu, footer, nav) a {
     min-block-size: 2.2rem;
     border: 1.5px solid var(--text);
     border-radius: 0;
@@ -69,24 +70,21 @@
     letter-spacing: 0.09em;
     text-transform: uppercase;
     &[data-hovered],
-    &:not([data-rac]):hover:not([data-disabled]) {
+    &:where(:not([data-rac], [data-disabled], [aria-disabled='true'])):hover {
       background: var(--text);
       color: var(--surface);
     }
     &[data-pressed],
-    &:not([data-rac]):active:not([data-disabled]) {
+    &:where(:not([data-rac], [data-disabled], [aria-disabled='true'])):active {
       transform: translate(2px, 2px);
     }
   }
-  &
-    :where(footer > :last-child, [role] > menu > li:last-child:not(:only-child) > *):is(
-      .react-aria-Button,
-      .react-aria-Link
-    ) {
+  & :where(footer > :last-child, [role] > menu > li:last-child:not(:only-child) > *):is(.react-aria-Button, a) {
     background: var(--text);
     color: var(--surface);
     box-shadow: 3px 3px 0 var(--accent);
-    &[data-hovered] {
+    &[data-hovered],
+    &:is(a):hover {
       background: var(--accent);
       border-color: var(--accent);
     }
@@ -105,12 +103,12 @@
     box-shadow: none;
     font-size: 0;
   }
-  & .react-aria-Link {
+  & a {
     color: var(--text);
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 3px;
-    &[data-hovered] {
+    &:any-link:hover {
       color: var(--accent);
     }
   }

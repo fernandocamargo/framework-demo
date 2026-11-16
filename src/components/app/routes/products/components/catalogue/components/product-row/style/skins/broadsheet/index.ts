@@ -45,10 +45,10 @@ export default css`
       letter-spacing: -0.01em;
       line-height: 1.15;
     }
-    .react-aria-Link {
+    a[href] {
       color: var(--text);
       text-decoration: none;
-      &[data-hovered] {
+      &:hover {
         text-decoration: underline;
       }
     }
@@ -98,7 +98,7 @@ export default css`
     font-weight: 700;
     text-decoration: line-through;
   }
-  .react-aria-Group {
+  [role='group'] {
     display: inline-flex;
     gap: 0.15rem;
     .react-aria-Button {
@@ -135,7 +135,7 @@ export default css`
     > li:empty {
       display: none;
     }
-    .react-aria-Link {
+    a[href] {
       inline-size: 2rem;
       min-block-size: 2rem;
       padding: 0;

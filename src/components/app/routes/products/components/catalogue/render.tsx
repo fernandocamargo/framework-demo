@@ -1,5 +1,3 @@
-import { Link } from 'react-aria-components';
-
 import Filters from './components/filters';
 import ProductRow from './components/product-row';
 
@@ -38,18 +36,18 @@ export default ({
       {canChange && (
         <menu>
           <li>
-            <Link href={bulkHref}>
+            <a aria-label={i18n.actions.bulk} href={bulkHref} tabIndex={0}>
               <span itemProp="potentialAction" itemScope itemType="https://schema.org/ReplaceAction">
                 <span itemProp="name">{i18n.actions.bulk}</span>
               </span>
-            </Link>
+            </a>
           </li>
           <li>
-            <Link href={createHref}>
+            <a aria-label={i18n.actions.create} href={createHref} tabIndex={0}>
               <span itemProp="potentialAction" itemScope itemType="https://schema.org/CreateAction">
                 <span itemProp="name">{i18n.actions.create}</span>
               </span>
-            </Link>
+            </a>
           </li>
         </menu>
       )}
@@ -65,7 +63,11 @@ export default ({
     {empty ? (
       <p>
         {emptyText}
-        {clearHref && <Link href={clearHref}>{i18n.empty.clear}</Link>}
+        {clearHref && (
+          <a href={clearHref} tabIndex={0}>
+            {i18n.empty.clear}
+          </a>
+        )}
       </p>
     ) : (
       <ul aria-label={i18n.list}>
@@ -85,8 +87,6 @@ export default ({
         {/* An anchor without a destination keeps focus when paging reaches an end. */}
         <a
           aria-disabled={!paging.previousHref || undefined}
-          className="react-aria-Link"
-          data-disabled={!paging.previousHref || undefined}
           href={paging.previousHref ?? undefined}
           role="link"
           tabIndex={0}
@@ -94,14 +94,7 @@ export default ({
           {i18n.paging.previous}
         </a>
         <span>{paging.text}</span>
-        <a
-          aria-disabled={!paging.nextHref || undefined}
-          className="react-aria-Link"
-          data-disabled={!paging.nextHref || undefined}
-          href={paging.nextHref ?? undefined}
-          role="link"
-          tabIndex={0}
-        >
+        <a aria-disabled={!paging.nextHref || undefined} href={paging.nextHref ?? undefined} role="link" tabIndex={0}>
           {i18n.paging.next}
         </a>
       </nav>

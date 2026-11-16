@@ -6,7 +6,7 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
 import { checkMicrodata, type Vocabulary } from '../framework/microdata/check';
-import { arrive, queryOf } from '../perf/address.mjs';
+import { arrive, queryOf, visit } from '../perf/address.mjs';
 import { markupWithoutLinkSkin } from './markup';
 
 const vocabulary = JSON.parse(
@@ -55,6 +55,12 @@ test('as a guest, the orders page holds no map and no ledger, and asks to sign i
   expect(await tiles(page).count()).toBe(0);
   expect(await ledger(page).count()).toBe(0);
   expect(await problems(page)).toEqual([]);
+  const signIn = page.getByRole('link', { name: 'Sign in to see them.' });
+  expect(await signIn.getAttribute('href')).toBe(visit('/orders', { signin: true }));
+  expect(await signIn.getAttribute('data-rac')).toBeNull();
+  await act(page, () => signIn.click());
+  expect(fields(page)['signin']).toBe(true);
+  expect(await dialog(page, 'Sign in').count()).toBe(1);
 });
 
 test('as a plain user, orders are told not to be theirs, and an order does not open even by its address', async ({
@@ -78,6 +84,8 @@ test('as a moderator, the map counts the orders and a state filters the ledger a
   expect(await summary(page)).toBe('40 orders');
 
   const texas = page.getByRole('link', { name: 'Texas, 3 orders' });
+  expect(await texas.getAttribute('href')).toBe(visit('/orders', { region: 'TX' }));
+  expect(await texas.getAttribute('data-rac')).toBeNull();
   await act(page, () => texas.click());
   expect(fields(page)['region']).toBe('TX');
   expect(await texas.getAttribute('aria-current')).toBe('true');
@@ -127,10 +135,11 @@ test('ledger paging keeps the focused link when it reaches either end', async ({
   await mark(previous);
   await act(page, () => page.keyboard.press('Enter'));
   expect(fields(page)['page']).toBeUndefined();
+  await act(page, () => previous.click({ force: true }));
+  expect(fields(page)['page']).toBeUndefined();
   expect(await nav.innerText()).toContain('Page 1 of 4');
   expect(await sameAndFocused(previous)).toBe(true);
   expect(await previous.getAttribute('aria-disabled')).toBe('true');
-  expect(await previous.getAttribute('data-disabled')).toBe('true');
   expect(await previous.getAttribute('href')).toBeNull();
   await act(page, () => page.keyboard.press('Enter'));
   expect(fields(page)['page']).toBeUndefined();
@@ -146,14 +155,13 @@ test('ledger paging keeps the focused link when it reaches either end', async ({
   expect(await nav.innerText()).toContain('Page 4 of 4');
   expect(await sameAndFocused(next)).toBe(true);
   expect(await next.getAttribute('aria-disabled')).toBe('true');
-  expect(await next.getAttribute('data-disabled')).toBe('true');
   expect(await next.getAttribute('href')).toBeNull();
   await act(page, () => page.keyboard.press('Enter'));
   expect(fields(page)['page']).toBe(4);
 
   for (const skin of ['default', 'broadsheet', 'blueprint']) {
     await act(page, () => arrive(page, '/orders', { page: 4, skin: skin }));
-    expect(await next.getAttribute('data-disabled')).toBe('true');
+    expect(await next.getAttribute('aria-disabled')).toBe('true');
     expect(await next.evaluate((element) => getComputedStyle(element).opacity)).toBe('0.55');
   }
 });
@@ -163,7 +171,7 @@ test('the orders page is named by schema.org, and the same markup wears every sk
   await open(page, '/orders', { region: 'TX' });
   expect(await problems(page)).toEqual([]);
 
-  // The markup of the page with the pointer out of the way, the ids react-aria generates normalised.
+  // Attribute insertion order and generated ids can differ between navigation and a fresh mount.
   const markup = async () => {
     await page.mouse.move(0, 0);
     const html = await page.locator('main').evaluate(markupWithoutLinkSkin);

@@ -30,7 +30,7 @@ export default css`
       flex-wrap: wrap;
       gap: 0.5rem;
     }
-    .react-aria-Link:has(> [itemtype='https://schema.org/CreateAction']) {
+    a[href]:has(> [itemtype='https://schema.org/CreateAction']) {
       background: var(--text);
       color: var(--surface);
       box-shadow: 3px 3px 0 var(--accent);

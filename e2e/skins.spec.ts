@@ -19,6 +19,7 @@ test.beforeEach(({ page }) => {
 
 test('another skin changes presentation and travels in links, with the same markup', async ({ page }) => {
   await act(page, () => arrive(page, '/products'));
+  expect(await page.locator('main a[data-rac], main .react-aria-Link').count()).toBe(0);
   // With the pointer out of the way: react-aria marks what it is over (data-hovered), and another
   // skin lays out other elements under it. The ids react-aria and React generate are not the
   // markup's: they follow the order components render in, which a reload may change.
@@ -43,6 +44,7 @@ test('another skin changes presentation and travels in links, with the same mark
     .getAttribute('href');
   expect(queryOf(new URL(link!, page.url()).href)['skin']).toBe('broadsheet');
   expect(await look()).not.toBe(before.look);
+  expect(await page.locator('main a[data-rac], main .react-aria-Link').count()).toBe(0);
   expect(await markup()).toBe(before.markup);
 
   // The address keeps it: a reload wears it again.

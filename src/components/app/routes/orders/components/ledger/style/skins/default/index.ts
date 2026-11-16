@@ -29,7 +29,7 @@ export default css`
     &:first-child {
       border-block-start: 0;
     }
-    .react-aria-Link {
+    a[href] {
       font-weight: 700;
     }
     [itemprop='orderNumber'] {

@@ -138,7 +138,7 @@ select {
   --glyph: var(--glyph-chevron);
 }
 /* What a command does, as schema.org's actions name it. */
-:is(.react-aria-Button, .react-aria-Link) > [itemscope] {
+:is(.react-aria-Button, a) > [itemscope] {
   &[itemtype='https://schema.org/CreateAction'] {
     --glyph: var(--glyph-plus);
   }
@@ -159,7 +159,7 @@ select {
 .react-aria-SearchField::before,
 .react-aria-SearchField .react-aria-Button::before,
 .react-aria-Select > .react-aria-Button::after,
-:is(.react-aria-Button, .react-aria-Link) > [itemscope]::before,
+:is(.react-aria-Button, a) > [itemscope]::before,
 [itemprop='aggregateRating']::before {
   content: '';
   display: inline-block;
@@ -172,7 +172,7 @@ select {
   vertical-align: -0.18em;
 }
 /* An action named inside a command: the glyph, then the name. */
-:is(.react-aria-Button, .react-aria-Link) > [itemscope] {
+:is(.react-aria-Button, a) > [itemscope] {
   display: inline-flex;
   align-items: center;
   gap: 0.45em;
@@ -184,17 +184,17 @@ select {
  * navigation, where it is a command like the buttons beside it. The last command of a footer, or
  * of what a notice offers when it offers more than one thing, is the step forward.
  */
-.react-aria-Link {
+a {
   color: var(--accent);
   text-decoration: none;
   border-radius: 3px;
   cursor: pointer;
-  &[data-hovered] {
+  &:where(:not([aria-disabled='true'])):hover {
     text-decoration: underline;
   }
 }
 .react-aria-Button,
-:where(menu, footer, nav) .react-aria-Link {
+:where(menu, footer, nav) a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -214,31 +214,28 @@ select {
     border-color 120ms var(--ease),
     transform 120ms var(--ease);
 
-  /* A paging link is a plain anchor (it keeps the focus when it is disabled): it has no react-aria
-     states, so the pointer's own stand in for them. */
   &[data-hovered],
-  &:not([data-rac]):hover:not([data-disabled]) {
+  &:where(:not([data-rac], [data-disabled], [aria-disabled='true'])):hover {
     background: var(--surface-2);
     text-decoration: none;
   }
   &[data-pressed],
-  &:not([data-rac]):active:not([data-disabled]) {
+  &:where(:not([data-rac], [data-disabled], [aria-disabled='true'])):active {
     transform: scale(0.98);
   }
+  &[aria-disabled='true'],
   &[data-disabled],
   &[data-pending] {
     opacity: 0.55;
     cursor: default;
   }
 }
-:where(footer > :last-child, [role] > menu > li:last-child:not(:only-child) > *):is(
-  .react-aria-Button,
-  .react-aria-Link
-) {
+:where(footer > :last-child, [role] > menu > li:last-child:not(:only-child) > *):is(.react-aria-Button, a) {
   border-color: transparent;
   background: var(--accent);
   color: var(--on-accent);
-  &[data-hovered] {
+  &[data-hovered],
+  &:is(a):hover {
     background: var(--accent-hover);
   }
 }

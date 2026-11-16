@@ -47,7 +47,7 @@ export default css`
       object-fit: contain;
       border: 1px solid var(--text);
     }
-    .react-aria-Link {
+    a[href] {
       font-weight: 700;
     }
   }

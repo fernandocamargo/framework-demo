@@ -33,7 +33,7 @@ export default css`
     font-size: 0.55rem;
     white-space: nowrap;
   }
-  .react-aria-Link {
+  a[href] {
     align-content: start;
     min-block-size: 5.2rem;
     font-size: 0.7rem;
@@ -50,7 +50,7 @@ export default css`
     li[itemtype$='/Observation']::before {
       content: none;
     }
-    .react-aria-Link {
+    a[href] {
       min-block-size: 0;
     }
   }

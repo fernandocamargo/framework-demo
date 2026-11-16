@@ -180,6 +180,78 @@ for (const skin of ['default', 'broadsheet', 'blueprint']) {
   });
 }
 
+for (const skin of ['default', 'broadsheet', 'blueprint']) {
+  const settings = skin === 'default' ? {} : { skin };
+
+  test(`native product links keep browser navigation and guest permissions in ${skin}`, async ({ context, page }) => {
+    await act(page, () => arrive(page, '/products', { q: 'lamp', skin, sort: 'price' }));
+    const link = rows(page).getByRole('link', { exact: true, name: 'Arc Floor Lamp' });
+    const source = page.url();
+    const href = visit('/products/22', { ...settings, q: 'lamp', sort: 'price' });
+    const destination = new URL(href, source).href;
+    expect(await link.getAttribute('href')).toBe(href);
+    expect(await link.getAttribute('data-rac')).toBeNull();
+
+    await act(page, () => link.click({ button: 'right' }));
+    expect(page.url()).toBe(source);
+    await page.keyboard.press('Escape');
+
+    const opened = context.waitForEvent('page');
+    await link.click({ modifiers: ['ControlOrMeta'] });
+    const other = await opened;
+    await other.waitForLoadState('load');
+    await idle(other);
+    expect(other.url()).toBe(destination);
+    expect(await dialog(other, 'Arc Floor Lamp').count()).toBe(1);
+    expect(page.url()).toBe(source);
+    await other.close();
+    await page.bringToFront();
+
+    await link.focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+    expect(await link.evaluate((element) => element === document.activeElement)).toBe(true);
+    await act(page, () => page.keyboard.press('Enter'));
+    expect(page.url()).toBe(destination);
+    await act(page, () => page.goBack());
+    expect(page.url()).toBe(source);
+    await act(page, () => page.goForward());
+    expect(page.url()).toBe(destination);
+    await act(page, () => page.goBack());
+    await act(page, () => page.getByRole('link', { name: 'Edit Arc Floor Lamp' }).click());
+    expect(page.url()).toBe(
+      new URL(visit('/products/22/edit', { ...settings, q: 'lamp', sort: 'price' }), source).href,
+    );
+    expect(await dialog(page, 'Sign in').innerText()).toContain('Sign in to change the catalogue.');
+  });
+
+  test(`the stock group keeps its name and current row actions after sorting in ${skin}`, async ({ page }) => {
+    await act(page, () => arrive(page, '/products', { q: 'lamp', signin: true, skin }));
+    await signIn(page);
+    const lamp = rows(page).filter({ hasText: 'Arc Floor Lamp' });
+    const group = lamp.getByRole('group', { exact: true, name: 'Stock of Arc Floor Lamp' });
+    const node = await group.elementHandle();
+    expect(await group.evaluate((element) => element.tagName)).toBe('DIV');
+    // A flex item computes inline-flex to flex; its buttons still share one row.
+    expect(await group.evaluate((element) => getComputedStyle(element).display)).toBe('flex');
+    expect(await group.getByRole('button', { name: 'One less in stock' }).count()).toBe(1);
+    expect(await group.getByRole('button', { name: 'One more in stock' }).count()).toBe(1);
+
+    await act(page, () => page.getByRole('combobox', { name: 'Sort' }).selectOption('price:asc'));
+    expect(await titles(page)).toEqual(['Task Lamp', 'Clamp Lamp', 'Arc Floor Lamp']);
+    expect(await group.evaluate((element, original) => element === original, node)).toBe(true);
+    await act(page, () => group.getByRole('button', { name: 'One more in stock' }).click());
+    expect(await lamp.locator('[itemprop="inventoryLevel"]').getAttribute('value')).toBe('59');
+    await act(page, () => group.getByRole('button', { name: 'One less in stock' }).click());
+    expect(await lamp.locator('[itemprop="inventoryLevel"]').getAttribute('value')).toBe('58');
+    expect(await group.getAttribute('aria-busy')).toBeNull();
+    expect(await lamp.getByRole('link', { name: 'Edit Arc Floor Lamp' }).getAttribute('href')).toBe(
+      visit('/products/22/edit', { ...settings, q: 'lamp', sort: 'price' }),
+    );
+    await node?.dispose();
+  });
+}
+
 test('paging keeps the focused link when it reaches either end', async ({ page }) => {
   await open(page);
   const nav = page.getByRole('navigation', { name: 'Pages' });
@@ -200,10 +272,11 @@ test('paging keeps the focused link when it reaches either end', async ({ page }
   await mark(previous);
   await act(page, () => page.keyboard.press('Enter'));
   expect(pageNumber()).toBeUndefined();
+  await act(page, () => previous.click({ force: true }));
+  expect(pageNumber()).toBeUndefined();
   expect(await nav.innerText()).toContain('Page 1 of 4');
   expect(await sameAndFocused(previous)).toBe(true);
   expect(await previous.getAttribute('aria-disabled')).toBe('true');
-  expect(await previous.getAttribute('data-disabled')).toBe('true');
   expect(await previous.getAttribute('href')).toBeNull();
   await act(page, () => page.keyboard.press('Enter'));
   expect(pageNumber()).toBeUndefined();
@@ -219,14 +292,13 @@ test('paging keeps the focused link when it reaches either end', async ({ page }
   expect(await nav.innerText()).toContain('Page 4 of 4');
   expect(await sameAndFocused(next)).toBe(true);
   expect(await next.getAttribute('aria-disabled')).toBe('true');
-  expect(await next.getAttribute('data-disabled')).toBe('true');
   expect(await next.getAttribute('href')).toBeNull();
   await act(page, () => page.keyboard.press('Enter'));
   expect(pageNumber()).toBe(4);
 
   for (const skin of ['default', 'broadsheet', 'blueprint']) {
     await act(page, () => arrive(page, '/products', { page: 4, skin: skin }));
-    expect(await next.getAttribute('data-disabled')).toBe('true');
+    expect(await next.getAttribute('aria-disabled')).toBe('true');
     expect(await next.evaluate((element) => getComputedStyle(element).opacity)).toBe('0.55');
   }
 });
@@ -634,7 +706,8 @@ test('a count shows at once, before the server answers; one the server refuses i
   await open(page, '/products', { signin: true });
   await signIn(page);
   const lamp = rows(page).filter({ hasText: 'Arc Floor Lamp' });
-  const more = lamp.getByRole('button', { name: 'One more in stock' });
+  const group = lamp.getByRole('group', { name: 'Stock of Arc Floor Lamp' });
+  const more = group.getByRole('button', { name: 'One more in stock' });
   expect(await lamp.innerText()).toContain('58 in stock');
   await act(page, () => more.click());
   expect(await lamp.innerText()).toContain('59 in stock');
@@ -651,8 +724,10 @@ test('a count shows at once, before the server answers; one the server refuses i
   await more.click();
   // While the write is on its way, the page is not idle: this is the one look before `idle()`.
   await expect(lamp).toContainText('60 in stock', { timeout: 900 });
+  expect(await group.getAttribute('aria-busy')).toBe('true');
   await idle(page);
   expect(await lamp.innerText()).toContain('59 in stock');
+  expect(await group.getAttribute('aria-busy')).toBeNull();
   expect(await page.getByRole('region', { name: /Failures/ }).innerText()).toContain('service · products.setStock');
 });
 

@@ -58,7 +58,7 @@ export default css`
       background: var(--surface-2);
       object-fit: contain;
     }
-    .react-aria-Link {
+    a[href] {
       font-weight: 600;
     }
   }

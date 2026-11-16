@@ -24,7 +24,7 @@ export default css`
   }
   menu {
     margin-inline-start: auto;
-    .react-aria-Link {
+    a[href] {
       inline-size: auto;
       padding-inline: 0.3rem;
     }
