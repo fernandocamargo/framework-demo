@@ -24,6 +24,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { gateLabel } from './evidence.mjs';
 import { played as clean } from './totals.mjs';
 
 const here = (file) => path.join(import.meta.dirname, file);
@@ -69,13 +70,14 @@ const measured = {};
 for (const engine of ENGINES) {
   measured[engine] = {};
   for (const visit of VISITS) {
-    const label = `gate-${engine}-${visit}`;
     const within = (clean) =>
       clean.length > 0 && Object.keys(GATED).every((key) => least(clean, key) <= baseline?.[engine]?.[visit]?.[key]);
     const all = [];
     let output = '';
     // One run at a time: when comparing, the first that brings the figures within the baseline is the last.
     while (all.length < runs && (write || !within(all.filter(clean)))) {
+      const label = gateLabel(engine, visit, all.length + 1);
+
       const played = node([here('cycles.mjs')], {
         DETAIL: '',
         ENGINE: engine,

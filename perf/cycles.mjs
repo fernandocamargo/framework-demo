@@ -16,16 +16,16 @@
 // live map, the command palette and the tour, with totals of their own.
 //
 // CHROMIUM and WEBKIT may name browser executables, as for the end-to-end tests. Writes
-// perf/out/<LABEL>/cycles.json (every commit of the first run), summary.txt, and runs.json: each
-// run's visit totals and separate further totals, which perf/gate.mjs reads.
+// perf/out/<LABEL>/cycles.json (first run), cycles-<ordinal>.json (later runs), summary.txt,
+// and runs.json: each run's trace path, visit totals and separate further totals, which the gate reads.
 
 import { chromium, webkit } from '@playwright/test';
-import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import path from 'node:path';
 
+import { writeEvidence } from './evidence.mjs';
 import { FEATURES, startSelectTimeline, STEPS as VISIT } from './steps.mjs';
-import { totalsOf } from './totals.mjs';
 
 const env = process.env;
 const port = Number(env.PORT ?? 5190);
@@ -141,16 +141,18 @@ const summarize = ({ calls, commits, results }) =>
   });
 
 const all = [];
+const summaries = [];
 try {
-  for (let index = 0; index < runs; index++) all.push(await run());
+  for (let index = 0; index < runs; index++) {
+    const trace = await run();
+    all.push(trace);
+    summaries.push(summarize(trace));
+    writeEvidence(here(`out/${label}`), all, summaries, STEPS);
+  }
 } finally {
   server.close();
 }
-mkdirSync(here(`out/${label}`), { recursive: true });
-writeFileSync(here(`out/${label}/cycles.json`), JSON.stringify(all[0], null, 1));
-
 const median = (values) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
-const summaries = all.map(summarize);
 const lines = [];
 const say = (line) => {
   lines.push(line);
@@ -243,14 +245,7 @@ if (runs > 1) {
     `each run's visit: render calls ${each((step) => step.calls)}; thrown away ${each((step) => step.thrown)}; framework rendered again ${each((step) => step.framework.again)}, with no change ${each((step) => step.framework.unchanged.length)}; other rendered again ${each((step) => step.other.again)}, with no change ${each((step) => step.other.unchanged.length)}`,
   );
 }
-writeFileSync(
-  here(`out/${label}/runs.json`),
-  `${JSON.stringify(
-    summaries.map((summary, index) => totalsOf(summary, STEPS, all[index].errors)),
-    null,
-    1,
-  )}\n`,
-);
+
 if (all.some((run) => run.errors.length))
   say(`page errors: ${[...new Set(all.flatMap((run) => run.errors))].join(' | ')}`);
 writeFileSync(here(`out/${label}/summary.txt`), `${lines.join('\n')}\n`);
