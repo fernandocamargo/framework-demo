@@ -1,6 +1,6 @@
 import { act, render, waitFor } from '@testing-library/react';
 import { useSelector } from '@xstate/react';
-import { Activity, createElement, type ReactNode, startTransition, Suspense, useMemo } from 'react';
+import { Activity, createElement, type ReactNode, startTransition, Suspense, use, useMemo } from 'react';
 
 // @ts-expect-error The plugin is plain JavaScript, with no declarations.
 import { operationsModule } from '../../plugin/index.mjs';
@@ -92,13 +92,84 @@ export function cases(mode: string) {
 
     const Component = component({
       path: `components/operations-${mode}`,
-      reads: { async: ['locale'], view: ['locale'] },
+      reads: { async: ['locale'], view: ['async', 'locale'] },
       skins: {},
       view: () => Promise.resolve(files),
     });
 
     return { Component, executions, files, latest: () => latest, renders };
   };
+
+  test(`${mode}: equal shaped output skips the plain render when the command changes`, async () => {
+    const view = folder(
+      [],
+      ({ locale }: { locale: string }) => Promise.resolve(locale),
+      () => ({ title: 'same' }),
+    );
+
+    const client = createQueryClient();
+
+    const content = (locale: string) =>
+      createElement(Root, { client, entity, locale }, bound(createElement(view.Component)));
+
+    const shown = await act(async () => render(content('en')));
+    await waitFor(() => expect(view.renders).toHaveBeenCalledTimes(1));
+    const command = view.latest().commands.save;
+
+    await act(async () => shown.rerender(content('fr')));
+    expect(view.latest().commands.save).not.toBe(command);
+    expect(view.renders).toHaveBeenCalledTimes(1);
+  });
+
+  test(`${mode}: equal shaped retries reuse discarded output and returning reuses the committed output`, async () => {
+    const loading = deferred();
+
+    const Slow = ({ wait }: { wait: boolean }) => {
+      if (wait) use(loading.promise);
+
+      return null;
+    };
+
+    const view = folder(
+      [],
+      () => Promise.resolve(),
+      ({ locale }) => ({ title: locale === 'en' ? 'first' : 'next' }),
+    );
+
+    view.files.render = view.renders.mockImplementation(({ title }) => createElement('p', null, String(title)));
+    const client = createQueryClient();
+
+    const content = (locale: string) =>
+      createElement(
+        Root,
+        { client, entity, locale },
+        createElement(
+          Suspense,
+          { fallback: 'waiting' },
+          bound(createElement(view.Component)),
+          createElement(Slow, { wait: locale !== 'en' }),
+        ),
+      );
+
+    const shown = await act(async () => render(content('en')));
+    await waitFor(() => expect(shown.container.textContent).toBe('first'));
+
+    await act(async () => startTransition(() => shown.rerender(content('pt-BR'))));
+    expect(view.renders).toHaveBeenCalledTimes(2);
+    expect(shown.container.textContent).toBe('first');
+    await act(async () => startTransition(() => shown.rerender(content('fr'))));
+    expect(view.renders).toHaveBeenCalledTimes(2);
+    expect(shown.container.textContent).toBe('first');
+    await act(async () => shown.rerender(content('en')));
+    expect(view.renders).toHaveBeenCalledTimes(2);
+    expect(shown.container.textContent).toBe('first');
+    await act(async () => {
+      loading.resolve('ready');
+      startTransition(() => shown.rerender(content('fr')));
+    });
+    expect(view.renders).toHaveBeenCalledTimes(2);
+    expect(shown.container.textContent).toBe('next');
+  });
 
   test(`${mode}: a command-only owner never executes for status; commands have no mutable status`, async () => {
     const call = deferred();

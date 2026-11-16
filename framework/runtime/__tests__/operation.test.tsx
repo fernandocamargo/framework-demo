@@ -4,7 +4,7 @@ import { Activity, createElement, startTransition, StrictMode, Suspense } from '
 import { initialTransition, type SnapshotFrom, transition } from 'xstate';
 
 import { isBusy } from '../activity';
-import { useOperation, useOperations } from '../async';
+import { useOperation } from '../async';
 import { shareByIdentity } from '../data';
 import { latency } from '../latency';
 import { onFailure, report } from '../pipeline';
@@ -170,37 +170,26 @@ test('the command stays stable and a new injection changes only future calls', a
   await expect(result.current[0]()).resolves.toBe('second');
 });
 
-test('a command-only folder no longer renders on start or settlement', async () => {
-  const baseline = controlled();
-  const proposed = controlled();
-  const module = { save: baseline.exported };
-  let oldRenders = 0;
-  let newRenders = 0;
+test('a command-only owner renders neither on start nor on settlement', async () => {
+  const { calls, exported } = controlled();
+  let renders = 0;
 
-  const old = renderHook(() => {
-    oldRenders++;
+  const { result } = renderHook(() => {
+    renders++;
 
-    return useOperations('example', module, injection).save!;
+    return useSave(exported)[0];
   });
 
-  const next = renderHook(() => {
-    newRenders++;
-
-    return useSave(proposed.exported)[0];
-  });
-
-  let first: Promise<unknown>;
-  let second: Promise<unknown>;
+  let call!: Promise<unknown>;
   act(() => {
-    first = old.result.current();
-    second = next.result.current();
+    call = result.current();
   });
+  expect(renders).toBe(1);
   await act(async () => {
-    baseline.calls[0]!.resolve(1);
-    proposed.calls[0]!.resolve(1);
-    await Promise.all([first, second]);
+    calls[0]!.resolve(1);
+    await call;
   });
-  expect({ newRenders, oldRenders }).toEqual({ newRenders: 1, oldRenders: 3 });
+  expect(renders).toBe(1);
 });
 
 test('a leaf selects pending without rendering for a second WATCH or FINISH bookkeeping', async () => {

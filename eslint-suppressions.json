@@ -4,11 +4,6 @@
       "count": 3
     }
   },
-  "framework/runtime/async.ts": {
-    "react-hooks/refs": {
-      "count": 2
-    }
-  },
   "framework/runtime/component.tsx": {
     "react-hooks/immutability": {
       "count": 7

@@ -166,12 +166,6 @@ type Shown = {
   keys: Entry[] | undefined;
   /** The view's files it was rendered with. */
   module: unknown;
-  /**
-   * The operations it was given. An operation keeps its identity while its state changes, so what
-   * the render got can compare equal while an operation's state is new: for a folder whose files
-   * read `async`, a new record of operations, which a change of state makes, calls the render again.
-   */
-  operations: unknown;
   props: Props;
   rendered: ReactNode;
   scope: Scope;
@@ -259,9 +253,6 @@ export function component(spec: Spec) {
   const viewReadsRoute = inView.has('route') || inAcl.has('route');
   // The keys on screen, for a component that lists them.
   const readsKeyboard = inView.has('keyboard');
-  // Whether its render, props.ts, handlers or keys read `async`: only then can an operation's
-  // state, which changes on the same function, reach what the render shows.
-  const viewReadsAsync = inView.has('async') || inView.has('*');
   // An acl.ts that reads only `acl` (the snapshot, and what is inherited) and `flags` is a rule of
   // the folder, the same for every instance: it is decided where the snapshot and the flags are
   // read, and an instance renders again only when its decision changes, not every time the snapshot
@@ -585,7 +576,6 @@ export function component(spec: Spec) {
       judged,
       language,
       module,
-      operations,
       rendering,
       scope,
       sources,
@@ -653,19 +643,7 @@ export function component(spec: Spec) {
    * keeps its identity, so react-aria's collections and memoized children inside skip it.
    */
   function useShow(props: Props, layers: ReturnType<typeof useLayers>, state: unknown, decided?: boolean) {
-    const {
-      access,
-      async,
-      decided: committed,
-      form,
-      judged,
-      language,
-      module,
-      operations,
-      rendering,
-      scope,
-      status,
-    } = layers;
+    const { access, async, decided: committed, form, judged, language, module, rendering, scope, status } = layers;
 
     // What React committed last: the render before this one that reached the page. A render React
     // throws away leaves it as it was, so the next one is compared with what the page shows, and
@@ -744,23 +722,13 @@ export function component(spec: Spec) {
       const shaped = untracked(() =>
         shareByIdentity(before?.shaped, handlers ? { ...output, handlers } : output),
       ) as Props;
-      if (
-        before &&
-        shaped === before.shaped &&
-        allowed === before.allowed &&
-        (!viewReadsAsync || operations === before.operations)
-      ) {
+      if (before && shaped === before.shaped && allowed === before.allowed) {
         next = { ...before, inputs, keys, props };
         return before.element;
       }
       // Or what the last render worked out was given, when React has not committed that one (yet).
       const retried = from(tried.current);
-      if (
-        retried &&
-        retried !== before &&
-        allowed === retried.allowed &&
-        (!viewReadsAsync || operations === retried.operations)
-      ) {
+      if (retried && retried !== before && allowed === retried.allowed) {
         const same = untracked(() => shareByIdentity(retried.shaped, shaped));
         if (same === retried.shaped) {
           next = { ...retried, inputs, keys, props };
@@ -775,7 +743,7 @@ export function component(spec: Spec) {
       // The same output with the same decision, in the same scope, is the element React showed, and it
       // renders nothing below.
       if (before && rendered === before.rendered && allowed === before.allowed && scope === before.scope) {
-        next = { ...before, inputs, keys, operations, props, shaped };
+        next = { ...before, inputs, keys, props, shaped };
         return before.element;
       }
       // What this folder's acl.ts decided reaches every component below, until one of them decides otherwise.
@@ -784,7 +752,7 @@ export function component(spec: Spec) {
         { value: scope },
         module.acl ? createElement(AclContext, { value: allowed }, rendered) : rendered,
       );
-      next = { allowed, element, inputs, keys, module, operations, props, rendered, scope, shaped };
+      next = { allowed, element, inputs, keys, module, props, rendered, scope, shaped };
       return element;
     });
     useShortcuts(spec.path, scope, registered);
