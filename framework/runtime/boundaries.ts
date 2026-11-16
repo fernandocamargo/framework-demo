@@ -116,8 +116,10 @@ type Own = { folder: Folder; given: Props };
  * component above the boundary that reads the context and passes `onError` is the wrapper this
  * file exists to avoid, and a new function at every render besides. The one place that has both
  * the catch and the context is the class: `contextType`, and `componentDidCatch`, which then
- * calls the library's. Nothing else of the library is changed, and nothing of it is used but what
- * its types publish: the class, its `fallback` prop and `componentDidCatch`.
+ * calls the library's. The class also renders again only for another folder or other props
+ * (`shouldComponentUpdate`, the comparison `memo` makes for the folder). Nothing else of the library
+ * is changed, and nothing of it is used but what its types publish: the class, its `fallback` prop,
+ * `componentDidCatch` and `useErrorBoundary()`.
  */
 class Reporting extends ErrorBoundary {
   static override contextType = ScopeContext;
