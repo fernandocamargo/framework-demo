@@ -1,0 +1,9 @@
+{
+  "components/lab/components/network/label": "As últimas requisições do cliente da API",
+  "components/lab/components/network/none": "Nenhuma requisição ainda.",
+  "components/lab/components/network/kinds/request": "requisição",
+  "components/lab/components/network/kinds/retry": "nova tentativa",
+  "components/lab/components/network/kinds/refresh": "renovação",
+  "components/lab/components/network/kinds/fault": "falha simulada",
+  "components/lab/components/network/kinds/failed": "falhou"
+}

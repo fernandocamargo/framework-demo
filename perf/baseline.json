@@ -2,7 +2,7 @@
   "darwin": {
     "chromium": {
       "visit": {
-        "frameworkAgain": 254,
+        "frameworkAgain": 255,
         "frameworkUnchanged": 5
       },
       "features": {
@@ -12,7 +12,7 @@
     },
     "webkit": {
       "visit": {
-        "frameworkAgain": 255,
+        "frameworkAgain": 256,
         "frameworkUnchanged": 5
       },
       "features": {
@@ -24,7 +24,7 @@
   "linux": {
     "chromium": {
       "visit": {
-        "frameworkAgain": 256,
+        "frameworkAgain": 257,
         "frameworkUnchanged": 5
       },
       "features": {
@@ -34,7 +34,7 @@
     },
     "webkit": {
       "visit": {
-        "frameworkAgain": 257,
+        "frameworkAgain": 258,
         "frameworkUnchanged": 6
       },
       "features": {

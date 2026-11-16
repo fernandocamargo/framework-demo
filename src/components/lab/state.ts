@@ -1,21 +1,5 @@
-// The network lab's panel: closed, or open and reading the latest activity once a second.
+// The network lab's panel: each visible tab owns its own activity read.
 
-import type { Entry } from '@/clients/dummyjson/http';
-import type { Tracked } from '@/clients/tracker';
+export const description = 'Show the network lab.';
 
-export const description = 'Show the network lab, and keep its activity lists current while it is open.';
-
-export const context = () => ({ network: [] as Entry[], tracked: [] as Tracked[] });
-
-export const remember = ({ event }) => ({ network: event.output.network, tracked: event.output.tracked });
-
-export default ({ services }) => ({
-  closed: {
-    on: { toggle: 'open' },
-  },
-  open: {
-    after: { 1000: { reenter: true, target: 'open' } },
-    invoke: { onDone: { actions: remember }, src: services.lab.activity },
-    on: { toggle: 'closed' },
-  },
-});
+export default () => ({ closed: { on: { toggle: 'open' } }, open: { on: { toggle: 'closed' } } });
