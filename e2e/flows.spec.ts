@@ -687,7 +687,7 @@ test('the inspector shows what a press did: the write, its optimistic change, th
   const inspector = lab.getByRole('list', { name: 'What the app did, latest first' });
   // The lab reads what the pipelines carried once a second while it is open.
   await expect(inspector).toContainText(
-    'products.setStock sent by Button.onPress (components/catalogue/components/product-row/render.tsx:',
+    'products.setStock sent by handlers.more (components/catalogue/components/product-row/components/count/handlers.ts:',
   );
   const text = await inspector.innerText();
   expect(text).toContain('shows its change to products.search and products.get now');

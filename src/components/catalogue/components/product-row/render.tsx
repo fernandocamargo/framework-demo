@@ -1,6 +1,8 @@
-import { Button, Group, Link } from 'react-aria-components';
+import { Link } from 'react-aria-components';
 
 import RemoveLink from '@/components/product/remove-link';
+
+import Count from './components/count';
 
 // A product, as schema.org names one: its offer holds the price and the stock, and the commands
 // on it are its potential actions.
@@ -10,13 +12,13 @@ export default ({
   category,
   change,
   className,
+  count,
   currency,
   editHref,
   editLabel,
   price,
   rating,
   removeHref,
-  stepper,
   stock,
   thumbnail,
   title,
@@ -54,16 +56,7 @@ export default ({
         <data itemProp="inventoryLevel" value={stock.count}>
           {stock.label}
         </data>
-        {stepper && (
-          <Group aria-busy={stepper.sending || undefined} aria-label={stepper.label}>
-            <Button aria-label={stepper.less.label} isDisabled={stepper.less.disabled} onPress={stepper.less.press}>
-              −
-            </Button>
-            <Button aria-label={stepper.more.label} onPress={stepper.more.press}>
-              +
-            </Button>
-          </Group>
-        )}
+        {count && <Count id={count.id} stock={count.stock} title={count.title} />}
       </div>
       <data itemProp="price" value={price.value}>
         {price.text}

@@ -98,20 +98,6 @@ export default css`
     font-weight: 700;
     text-decoration: line-through;
   }
-  .react-aria-Group {
-    display: inline-flex;
-    gap: 0.15rem;
-    .react-aria-Button {
-      inline-size: 1.5rem;
-      min-block-size: 1.5rem;
-      padding: 0;
-      font-size: 0.9rem;
-    }
-    &[aria-busy='true'] .react-aria-Button {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-  }
   [itemprop='price'] {
     grid-area: price;
     justify-self: end;

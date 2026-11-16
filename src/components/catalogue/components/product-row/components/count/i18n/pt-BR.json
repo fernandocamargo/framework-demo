@@ -1,0 +1,5 @@
+{
+  "components/catalogue/components/product-row/components/count/label": "Estoque de {title}",
+  "components/catalogue/components/product-row/components/count/less": "Um a menos no estoque",
+  "components/catalogue/components/product-row/components/count/more": "Um a mais no estoque"
+}

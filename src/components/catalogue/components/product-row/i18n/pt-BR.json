@@ -3,8 +3,5 @@
   "components/catalogue/components/product-row/change/created": "Novo",
   "components/catalogue/components/product-row/change/edited": "Editado",
   "components/catalogue/components/product-row/rated": "Avaliação",
-  "components/catalogue/components/product-row/actions/edit": "Editar {title}",
-  "components/catalogue/components/product-row/count/label": "Estoque de {title}",
-  "components/catalogue/components/product-row/count/less": "Um a menos no estoque",
-  "components/catalogue/components/product-row/count/more": "Um a mais no estoque"
+  "components/catalogue/components/product-row/actions/edit": "Editar {title}"
 }

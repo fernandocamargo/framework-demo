@@ -7,7 +7,7 @@ import type { Listed } from '@/services/products/types';
 
 export type Props = { filters: Filters; product: Listed };
 
-export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product, status }) => {
+export default ({ acl, filters, flags, i18n, intl, product }) => {
   const level = stockLevel(product.stock);
   // Counting stock is being rolled out (the `stockCount` flag), and needs the grant to update
   // products and someone signed in to send it.
@@ -17,6 +17,7 @@ export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product,
     canEdit: acl.allowed,
     category: product.category,
     change: product.local ? { label: i18n.change[product.local], value: product.local } : null,
+    count: counts ? { id: product.id, stock: product.stock, title: product.title } : null,
     currency: CURRENCY,
     editHref: href(filters, { edit: product.id }),
     editLabel: i18n.actions.edit({ title: product.title }),
@@ -29,18 +30,6 @@ export default ({ acl, async: { setStock }, filters, flags, i18n, intl, product,
         }
       : null,
     removeHref: href(filters, { remove: product.id }),
-    stepper: counts
-      ? {
-          label: i18n.count.label({ title: product.title }),
-          less: {
-            disabled: product.stock === 0,
-            label: i18n.count.less,
-            press: () => setStock(product.id, product.stock - 1),
-          },
-          more: { label: i18n.count.more, press: () => setStock(product.id, product.stock + 1) },
-          sending: status.setStock.pending,
-        }
-      : null,
     stock: {
       availability: AVAILABILITY[level],
       count: product.stock,
