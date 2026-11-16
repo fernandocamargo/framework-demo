@@ -262,7 +262,9 @@ function storyFile(options, dir, target) {
     HEADER,
     `// From ${posix(path.relative(options.cwd, dir))}: its files, what the framework knows of them, and a story per example and per state.`,
     "import { createElement } from 'react'",
-    states.length ? "import { Pinned, type Example } from 'framework'" : "import type { Example } from 'framework'",
+    states.length
+      ? "import { bound, Pinned, type Example } from 'framework'"
+      : "import { bound, type Example } from 'framework'",
     `import { FolderDocs } from ${JSON.stringify(module_(target, options.docs))}`,
     `import Component from ${JSON.stringify(relative(target, dir))}`,
     ...(propsFile && propExamples.length
@@ -283,13 +285,14 @@ function storyFile(options, dir, target) {
     '',
     'const shown = (example: Example | undefined) => ({',
     '  parameters: { framework: { route: example?.route } },',
-    '  render: () => createElement(Component, example?.props as never),',
+    // A story is not a folder's render: it composes the folder's boundaries itself.
+    '  render: () => bound(createElement(Component, example?.props as never)),',
     '})',
     ...(states.length
       ? [
           'const pinned = (state: string, example: Example | undefined) => ({',
           '  parameters: { framework: { route: example?.route } },',
-          `  render: () => createElement(Pinned, { path: ${JSON.stringify(id)}, state, example }, createElement(Component, example?.props as never)),`,
+          `  render: () => createElement(Pinned, { path: ${JSON.stringify(id)}, state, example }, bound(createElement(Component, example?.props as never))),`,
           '})',
         ]
       : []),

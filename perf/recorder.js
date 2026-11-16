@@ -126,6 +126,9 @@
     return touched;
   };
 
+  // Every execution of one of the framework's own components, committed or not.
+  const executions = (window.__executions = []);
+  window.__executed = (fn, path) => executions.push({ fn, path, phase: window.__phase });
   const calls = (window.__calls = []);
   window.__renderCall = (path) => {
     const call = { at: performance.now(), kept: false, path, phase: window.__phase };
@@ -136,10 +139,9 @@
     if (call) call.kept = true;
   };
   // The framework component a fiber is inside of: the nearest view above it.
-  const VIEWS = new Set(['StatefulView', 'StatelessView']);
+  const isView = (type) => typeof type === 'function' && type.name === 'View' && Boolean(type.displayName);
   const withinOf = (fiber) => {
-    for (let node = fiber.return; node; node = node.return)
-      if (typeof node.type === 'function' && VIEWS.has(node.type.name)) return node.type.displayName;
+    for (let node = fiber.return; node; node = node.return) if (isView(node.type)) return node.type.displayName;
     return '';
   };
   window.__suspend = (path, on) => calls.push({ at: performance.now(), path, phase: window.__phase, suspend: on });
@@ -175,6 +177,8 @@
               mounted: node.alternate === null,
               name: nameOf(node),
               self: Math.max(0, (node.actualDuration || 0) - children),
+              // The function that rendered it directly: a library's component is told by who composes it.
+              under: typeof node.return?.type === 'function' ? node.return.type.name : '',
               why: node.alternate ? why(node) : undefined,
               within: withinOf(node),
             });

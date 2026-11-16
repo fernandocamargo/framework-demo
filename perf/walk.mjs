@@ -8,9 +8,13 @@ import { readFileSync } from 'node:fs';
 
 import { FEATURES, STEPS } from './steps.mjs';
 
-const VIEWS = new Set(['StatefulView', 'StatelessView']);
-const kindOf = ({ fn, name }) =>
-  VIEWS.has(fn) ? 'framework' : ['Component', 'View'].includes(fn) && name !== fn ? 'plumbing' : 'other';
+const isView = ({ fn, name }) => fn === 'View' && name !== fn;
+const kindOf = (component) =>
+  isView(component)
+    ? 'framework'
+    : ['Failed', 'Reporting', 'Waiting'].includes(component.fn) || component.under === 'Reporting'
+      ? 'plumbing'
+      : 'other';
 const blank = () => ({ again: 0, mounted: 0, unchanged: 0 });
 const add = (counts, component) => {
   if (component.mounted) counts.mounted++;
@@ -26,7 +30,7 @@ function measure(calls, commits) {
   const groups = new Map();
   const owners = new Map();
   for (const commit of commits) {
-    const rendered = new Set(commit.components.filter((c) => VIEWS.has(c.fn)).map((c) => c.name));
+    const rendered = new Set(commit.components.filter(isView).map((c) => c.name));
     for (const component of commit.components) {
       const kind = kindOf(component);
       const owner = component.within || '(shell)';
@@ -129,10 +133,10 @@ function selfCheck() {
     commits: [
       {
         components: [
-          component('StatefulView', 'folder'),
-          { ...component('StatelessView', 'child'), mounted: true },
-          component('Component', 'folder'),
-          component('Component'),
+          component('View', 'folder'),
+          { ...component('View', 'child'), mounted: true },
+          component('Reporting'),
+          component('View'),
           component('Button', 'Button', 'folder'),
           { ...component('Label', 'Label', 'folder'), dom: true },
         ],

@@ -1,10 +1,11 @@
 /**
  * What the plugin's generated module for a component folder calls.
  *
- * The view (the render and its layers: `async.ts`, `state.ts`, `form.ts`) is always lazy.
- * Before the view first renders, it waits for its code, its skin and its `async.ts` default
- * export. A placeholder file adds a `Suspense` around it, and an error file adds an
- * `ErrorBoundary` around both. Without them, the nearest ones above catch the component.
+ * A folder is one component: it waits for its view (the render and its layers: `async.ts`,
+ * `state.ts`, `form.ts`; always lazy), its skin and its `async.ts` default export, calls every
+ * hook, and calls the render. Its boundaries are not in it: whoever renders the folder composes
+ * them around its element (boundaries.ts): a placeholder file adds a `Suspense`, and an error
+ * file adds an error boundary around both. Without them, the nearest ones above catch the component.
  *
  * The render is called as a plain function, inside the component instance's scope, so
  * the handlers it passes are tracked with their placement. It receives the props, the
@@ -30,22 +31,22 @@ import {
   createElement,
   memo,
   type ReactNode,
-  Suspense,
   use,
   useCallback,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from 'react';
-import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
+import { useErrorBoundary } from 'react-error-boundary';
 
-import { hold, Pending } from './activity';
+import { hold, usePending } from './activity';
 import { type AsyncModule, execute, useOperations } from './async';
+import { type Around, type Edits, sameProps, ScopeContext, useBound } from './boundaries';
 import { recording, recordingRoute, shareByIdentity } from './data';
 import { shareElements } from './elements';
 import { type FormModule, useFormLayer } from './form';
+import { HOT } from './hot';
 import { forgetMessages, intlFor, loadMessages, LocaleContext, SOURCE_LOCALE } from './i18n';
 import type { Allowed, Flags, Route } from './index';
 import { type StateModule, useStateLayer } from './machine';
@@ -56,7 +57,7 @@ import { fieldContext, followRoute, renderingRoute, RouteContext, type RouteView
 import { type Entry, type ShortcutSites, shortcutsOf, useKeyboard, useShortcuts } from './shortcuts';
 import { activeSkin, loadSkin, replaceSkin, type SkinModule } from './style';
 import { tracked } from './thenable';
-import { chainOf, commitHandlers, withScope } from './track';
+import { commitHandlers, withScope } from './track';
 
 type Props = Record<string, unknown> & { className?: string };
 
@@ -145,15 +146,13 @@ function allowedOn(snapshot: unknown, allowed: boolean): Allowed {
 /** The keys of the snapshot a component read; `allowed` is the decision's, not the snapshot's. */
 const ofSnapshot = (keys: ReadonlySet<string>) => new Set([...keys].filter((key) => key !== 'allowed'));
 
-const ScopeContext = createContext<null | Scope>(null);
-ScopeContext.displayName = 'Scope';
-
 /** The path first, then any class the parent passes. */
 const classes = (path: string, className: unknown) =>
   typeof className === 'string' && className ? `${path} ${className}` : path;
 
 const NO_LAYER = Object.freeze({});
 const NO_FORM = Object.freeze({ latest: undefined, view: undefined });
+const NO_CHART = Object.freeze({ early: undefined, state: undefined });
 
 /** A render of a component, as React showed it: what it was given, what it returned, and what was decided. */
 type Shown = {
@@ -177,21 +176,6 @@ type Shown = {
 };
 
 /** Only the values a component reads, so spreading them over the props adds nothing else. */
-/**
- * What wraps a folder's error file while it shows: when the address moves on (another page, other
- * filters), the folder tries again, as "Try again" would, and its read runs for the new address.
- * It reads the whole route, but only while it is on screen: a component that did not fail follows
- * only the fields it reads.
- */
-function Retrying({ children, retry }: { children?: ReactNode; retry: () => void }) {
-  const route = use(RouteContext);
-  const [failedAt] = useState(route);
-  useLayoutEffect(() => {
-    if (route !== failedAt) retry();
-  }, [route, failedAt, retry]);
-  return children;
-}
-
 const defined = (values: object) =>
   Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as Record<string, unknown>;
 
@@ -200,14 +184,6 @@ const sameEach = (a: readonly unknown[], b: readonly unknown[]) =>
 const sameRoute = (a: Record<string, unknown>, b: Record<string, unknown>) => {
   const keys = Object.keys(b);
   return Object.keys(a).length === keys.length && keys.every((key) => key in a && Object.is(a[key], b[key]));
-};
-
-/** The props are the same when they have the same keys with the same values, as `memo` compares them. */
-const sameProps = (a: Props, b: Props) => {
-  const keys = Object.keys(a);
-  return (
-    keys.length === Object.keys(b).length && keys.every((key) => Object.hasOwn(b, key) && Object.is(a[key], b[key]))
-  );
 };
 
 type Read = NonNullable<ReturnType<typeof useFramework>['user']>;
@@ -225,29 +201,10 @@ const NO_READ = {
 // between two hooks, made once: every render of a component then calls the same hooks in the same
 // order, with no hook behind a condition, and a lint can check it.
 
-/** Whether a dev server is serving the page: it sends a folder's files again as they are edited. */
-const HOT = Boolean((import.meta as { hot?: unknown }).hot);
-
-/** A folder's files as the dev server last sent them: who listens for the next ones, and how many came. */
-type Edits = { listeners: Set<() => void>; version: number };
-
-/** Renders the component again when its folder's files are sent again. */
-const useEdits = (edits: Edits) => {
-  const subscribe = useCallback(
-    (listener: () => void) => {
-      edits.listeners.add(listener);
-
-      return () => edits.listeners.delete(listener);
-    },
-    [edits],
-  );
-
-  return useSyncExternalStore(subscribe, () => edits.version);
-};
-
 /** For a component that does not read a source: nothing, and no hook. */
 const useNothing = (..._: unknown[]) => undefined;
 const useNoForm = () => NO_FORM;
+const useNoChart = (..._: unknown[]) => NO_CHART;
 const useNoOperations = () => NO_LAYER;
 /** The person signed in, from Root's `user` read: `null` when nobody is, or Root has no such read. */
 const useUserRead = (): unknown => useSuspenseQuery(useFramework().user ?? NO_READ).data;
@@ -310,8 +267,8 @@ export function component(spec: Spec) {
   // A rule that reads the chart's state is decided after the chart; any other, before it, so the
   // chart's declaration and its guards see this render's decision.
   const ruleReadsState = inAcl.has('state') || inAcl.has('*');
-  // The placeholder and the error file show the folder's messages too, so the component's
-  // wrapper reads them when the folder has both.
+  // The placeholder and the error file show the folder's messages too, so each reads them while
+  // it shows, when the folder has both.
   const fallbacksSpeak = Boolean(spec.i18n) && Boolean(spec.placeholder || spec.error);
   // The hooks this type calls, chosen here from what the folder's files read.
   const useUser = readsUser ? useUserRead : useNothing;
@@ -325,6 +282,12 @@ export function component(spec: Spec) {
   let useHandlers: (given: Props, scope: Scope) => Props | undefined = useNothing;
   let useForm: typeof useFormLayer | typeof useNoForm = useNoForm;
   let useAsync: typeof useOperations = useNoOperations;
+  // And whether it has a state.ts: then its chart, and the decision that comes before it.
+  let useChart: typeof useChartLayer | typeof useNoChart = useNoChart;
+  /** The folder's edits under the dev server (below). */
+  const edits: Edits = { hooks: 0, listeners: new Set(), version: 0 };
+  /** Which hooks the view calls, as its files last had them. */
+  let hooks: string | undefined;
   /** What follows from a view's files, taken when it has loaded. */
   const taken = (module: ViewModule) => {
     useAnswer = typeof module.async?.default === 'function' ? useAnswerOf : useNothing;
@@ -333,7 +296,12 @@ export function component(spec: Spec) {
     useAsync = Object.keys(module.async ?? NO_LAYER).some((name) => name !== 'default')
       ? useOperations
       : useNoOperations;
+    useChart = module.state ? useChartLayer : useNoChart;
     for (const child of module.children ?? []) child.preload?.();
+    // Other hooks than the view called before (an edit under the dev server): its instances are mounted again.
+    const now = `${module.state ? 'chart' : 'none'} ${useAnswer === useAnswerOf ? 'read' : 'none'} ${module.form ? 'form' : 'none'} ${useAsync === useOperations ? 'operations' : 'none'} ${module.handlers?.shape ?? ''}`;
+    if (hooks !== undefined && hooks !== now) edits.hooks += 1;
+    hooks = now;
     return module;
   };
   let view: Promise<ViewModule> | undefined;
@@ -347,8 +315,7 @@ export function component(spec: Spec) {
   // chart's state when the new chart has that state, its open dialog. An edit that gives the view a
   // default read, chart, form or first named operation, or takes one away, changes the hooks it
   // calls: those instances are mounted again. Production builds have none of this.
-  const edits: Edits = { listeners: new Set(), version: 0 };
-  const useEdited = HOT ? useEdits : useNothing;
+  const useEdited = HOT ? useBound : useNothing;
   const replace = (module: ViewModule) => {
     view = Object.assign(Promise.resolve(taken(module)), { status: 'fulfilled' as const, value: module });
     edits.version += 1;
@@ -383,13 +350,12 @@ export function component(spec: Spec) {
   }
 
   /** Every layer of the view but the state layer, called in the same order on every render. */
-  function useLayers(props: Props) {
+  function useLayers(props: Props, module: ViewModule) {
     const { acl: aclRead, data, fields, flags: flagsRead, injection, skin, sources } = useFramework();
     const language = useLanguage();
     // The person signed in, from Root's `user` read: a sign-in or a sign-out makes it stale, and
     // only the components that read it render again.
     const user = useUser();
-    const module = use(loadView());
     const inherited = readsAcl || module.acl ? use(AclContext) : true;
     // The parts of the backend's snapshot and of the flags this component's files read, recorded as
     // they read them (reads.ts). The component follows those parts, and its folder rule's decision:
@@ -807,10 +773,11 @@ export function component(spec: Spec) {
     }
   }
 
-  // A folder with a state.ts and one without render through different components, so neither
-  // calls a hook behind a condition. The view's module, once loaded, decides which.
-  function StatefulView(props: Props) {
-    const layers = useLayers(props);
+  /**
+   * The chart of a folder with a state.ts, and this render's decision when it comes before the
+   * chart: chosen for the folder when its view has loaded, as the form's hook is.
+   */
+  function useChartLayer(props: Props, layers: ReturnType<typeof useLayers>) {
     const { access, judged, language, module, rendering } = layers;
     // The decision comes before the chart, so its declaration and its guards see this render's.
     // A rule that reads the chart's state is decided after it, in useShow.
@@ -838,7 +805,7 @@ export function component(spec: Spec) {
       locale: inState.has('locale') ? language.locale : undefined,
       user: inState.has('user') ? access.user : undefined,
     });
-    const state = useStateLayer(
+    const state: unknown = useStateLayer(
       spec.path,
       module.state as StateModule,
       layers.injection,
@@ -848,31 +815,22 @@ export function component(spec: Spec) {
       told,
       layers.rendering,
     );
-    return useShow(props, layers, state, early);
+    return { early, state };
   }
-  function StatelessView(props: Props) {
-    return useShow(props, useLayers(props), undefined);
-  }
-  StatefulView.displayName = spec.path;
-  StatelessView.displayName = spec.path;
 
+  /**
+   * The folder's one component: it waits for the view, calls every hook, and calls the render.
+   * Its boundaries are composed around its element by whoever renders it (boundaries.ts).
+   */
   function View(props: Props) {
-    useEdited(edits);
+    useEdited(edits, spec.path);
     const module = use(loadView());
     const locale = module.children?.length ? use(LocaleContext) : SOURCE_LOCALE;
 
     for (const child of module.children ?? []) child.preload?.(locale);
-    const Chosen = module.state ? StatefulView : StatelessView;
-    // The key says which hooks the view calls, so an edit that changes them mounts it again.
-    return createElement(
-      Chosen,
-      HOT
-        ? {
-            ...props,
-            key: `${useAnswer === useAnswerOf ? 'read' : 'none'} ${module.form ? 'form' : 'none'} ${useAsync === useOperations ? 'operations' : 'none'} ${module.handlers?.shape ?? ''}`,
-          }
-        : props,
-    );
+    const layers = useLayers(props, module);
+    const { early, state } = useChart(props, layers);
+    return useShow(props, layers, state, early);
   }
   View.displayName = spec.path;
 
@@ -880,47 +838,68 @@ export function component(spec: Spec) {
 
   const useFallbackLanguage = fallbacksSpeak ? useLanguage : useNothing;
 
-  function Component(props: Props) {
-    const className = classes(spec.path, props.className);
-    const { reset } = useQueryErrorResetBoundary();
-    const parent = use(ScopeContext);
+  /**
+   * The folder's placeholder while it shows, with what the folder was given and its messages. The
+   * page counts as pending for as long as it is on screen (activity.ts).
+   */
+  function Waiting(props: Props) {
+    usePending();
     const spoken = useFallbackLanguage();
-    const language = spoken ? defined(spoken) : null;
-    let tree: ReactNode = createElement(View, props);
-    if (Placeholder)
-      tree = createElement(
-        Suspense,
-        { fallback: createElement(Pending, null, createElement(Placeholder, { ...props, className, ...language })) },
-        tree,
-      );
-    if (ErrorFallback) {
-      tree = createElement(ErrorBoundary, {
-        children: tree,
-        // The fallback gets an `Error` whatever was thrown, and a reset that takes no arguments.
-        // While it shows, a new address tries again (Retrying).
-        fallbackRender: (fallback: FallbackProps) =>
-          createElement(
-            Retrying,
-            { retry: fallback.resetErrorBoundary },
-            createElement(ErrorFallback, {
-              ...props,
-              className,
-              ...language,
-              error: toError(fallback.error),
-              resetErrorBoundary: () => fallback.resetErrorBoundary(),
-            }),
-          ),
-        onError: (error: unknown) =>
-          report(error, { chain: [...chainOf(parent), spec.path], layer: 'render', path: spec.path }),
-        onReset: reset,
-      });
-    }
-    return tree;
+    return (
+      Placeholder &&
+      createElement(Placeholder, {
+        ...props,
+        className: classes(spec.path, props.className),
+        ...(spoken ? defined(spoken) : null),
+      })
+    );
   }
-  Component.displayName = `${spec.path} (wrapper)`;
+  Waiting.displayName = `${spec.path} (placeholder)`;
+
+  /**
+   * The folder's error file while it shows, inside the folder's boundary (react-error-boundary's,
+   * boundaries.ts), which gives it what was caught and the reset through `useErrorBoundary()`. The
+   * file gets an `Error` whatever was thrown, and a "Try again" that takes no arguments: the reads
+   * that failed may run again, and the folder renders again. When the address moves on (another page, other filters), the folder tries
+   * again by itself, and its read runs for the new address. It reads the whole route, but only
+   * while it is on screen: a component that did not fail follows only the fields it reads.
+   */
+  function Failed(props: Props) {
+    const { error, resetBoundary } = useErrorBoundary();
+    const { reset } = useQueryErrorResetBoundary();
+    const again = useCallback(() => {
+      reset();
+      resetBoundary();
+    }, [reset, resetBoundary]);
+    const route = use(RouteContext);
+    const [failedAt] = useState(route);
+    useLayoutEffect(() => {
+      if (route !== failedAt) again();
+    }, [route, failedAt, again]);
+    const spoken = useFallbackLanguage();
+    return (
+      ErrorFallback &&
+      createElement(ErrorFallback, {
+        ...props,
+        className: classes(spec.path, props.className),
+        ...(spoken ? defined(spoken) : null),
+        error: toError(error),
+        resetErrorBoundary: again,
+      })
+    );
+  }
+  Failed.displayName = `${spec.path} (error)`;
+
+  /** What whoever renders the folder composes around its element (boundaries.ts). */
+  const around: Around = {
+    path: spec.path,
+    ...(HOT ? { edits } : {}),
+    ...(ErrorFallback ? { Failed } : {}),
+    ...(Placeholder ? { Waiting } : {}),
+  };
 
   // A render is a pure function of what props.ts works out from the props and the layers, so a
   // parent's re-render that passes the same props (shallowly) changes nothing here. The layers'
   // own changes (state, operations, data, the framework's context) still re-render it.
-  return Object.assign(memo(Component), { preload, ...(HOT ? { replace, restyle } : {}) });
+  return Object.assign(memo(View), { around, preload, ...(HOT ? { replace, restyle } : {}) });
 }

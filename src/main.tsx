@@ -14,7 +14,7 @@ import {
 } from 'react-aria-components';
 import { createRoot } from 'react-dom/client';
 
-import { chartAt, createQueryClient, type Env, type Navigation, onFailure, Pinned, Root } from 'framework';
+import { bound, chartAt, createQueryClient, type Env, type Navigation, onFailure, Pinned, Root } from 'framework';
 
 import { go, parse } from './address';
 import App from './components/app';
@@ -110,9 +110,10 @@ function Frame({ path, state }: { path: string; state: string }) {
   if (!found) return <p>No chart at {path}.</p>;
   const example = found.examples[state];
   const Component = found.component;
+  // The frame is not a folder's render, and the component is not Root's own child: its boundaries are composed here.
   return (
     <Pinned example={example} path={path} state={state}>
-      <Component {...example?.props} />
+      {bound(<Component {...example?.props} />)}
     </Pinned>
   );
 }

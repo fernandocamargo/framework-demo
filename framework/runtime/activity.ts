@@ -49,9 +49,12 @@ export function holdUntilReleased(): () => void {
   };
 }
 
+/** Pending from the moment the component that calls it is on screen until React takes it away. */
+export const usePending = () => useLayoutEffect(() => holdUntilReleased(), []);
+
 /** A placeholder: pending from the moment it is on screen until React replaces it with the content. */
 export function Pending({ children }: { children?: ReactNode }) {
-  useLayoutEffect(() => holdUntilReleased(), []);
+  usePending();
   return children ?? null;
 }
 

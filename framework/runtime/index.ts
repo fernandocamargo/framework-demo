@@ -35,6 +35,7 @@ export type Allowed = Acl & { readonly allowed: boolean };
 export interface Navigation {}
 
 export { whenIdle } from './activity';
+export { bound } from './boundaries';
 export { component, type Spec } from './component';
 export { createQueryClient, update } from './data';
 export type { ServiceRule } from './data';

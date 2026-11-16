@@ -18,7 +18,7 @@ const rendered = vi.hoisted(() => {
     if (parent.alternate && parent.child === parent.alternate.child) return;
     for (let node = parent.child; node; node = node.sibling) {
       const type = typeof node.type === 'function' ? (node.type as { displayName?: string; name: string }) : null;
-      const view = type !== null && (type.name === 'StatefulView' || type.name === 'StatelessView');
+      const view = type !== null && type.name === 'View';
       if (view && node.alternate && (node.flags & PERFORMED_WORK) === PERFORMED_WORK)
         counts.set(type.displayName!, (counts.get(type.displayName!) ?? 0) + 1);
       walk(node);

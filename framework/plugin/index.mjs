@@ -13,6 +13,10 @@
 //   in the JSX that uses nothing of the render (a list's `{(item) => <Item … />}`) out of it, so
 //   it is the same function at every render; and keeps one that reads the render
 //   (`keep(fn, [values], site, key)`) for as long as the values it reads are the same;
+// - in the same files, and in every other file that holds JSX (the app's shell, where `Root` is
+//   given its folders), composes a component folder's boundaries around its element where it is
+//   written: `<Row … />` becomes `bound(<Row … />)` (runtime/boundaries.ts), so a folder is one
+//   component and its `Suspense` and error boundary sit above it;
 // - writes, for a component folder with a `handlers.ts`, the hook that wires it: one `useCallback`
 //   per export, whose dependencies are what the export reads, found in its source
 //   (`handlersModule`); in that folder's render, an attribute given `handlers.<name>` stays as
@@ -126,6 +130,7 @@ export function writeTypes(options) {
 }
 
 const HANDLER = /^on[A-Z]/;
+const JSX = /\.[jt]sx$/;
 const TRACKED_LAYERS = new Set(['render', 'placeholder', 'error']);
 
 const elementName = (name) => {
@@ -323,6 +328,66 @@ const isWiredHandler = (expression) =>
   expression.object.name === 'handlers';
 
 /**
+ * Where a file writes a component folder's element, as edits that compose the folder's boundaries
+ * around it (`bound`, runtime/boundaries.ts): `<Row … />` becomes `__bound(<Row … />)`, in braces
+ * among an element's children and as an attribute's value. A folder is one component, with no
+ * boundary of its own, so its `Suspense` and error boundary sit where its element is written. Only
+ * a default import used as a JSX tag is seen: the convention checks name any other use
+ * (shared/folders.cjs), and the dev runtime says when a folder was rendered without them.
+ */
+function boundaries(ast, isFolder) {
+  const folders = new Set();
+  for (const node of ast.body) {
+    if (node.type !== 'ImportDeclaration' || !isFolder(String(node.source.value))) continue;
+    for (const specifier of node.specifiers)
+      if (specifier.type === 'ImportDefaultSpecifier') folders.add(specifier.local.name);
+  }
+  const bounds = [];
+  const compose = (node, parent) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return node.forEach((child) => compose(child, parent));
+    if (
+      node.type === 'JSXElement' &&
+      node.openingElement.name.type === 'JSXIdentifier' &&
+      folders.has(node.openingElement.name.name)
+    ) {
+      // JSX takes an expression there only in braces: among children, and as an attribute's value.
+      const braces = ['JSXAttribute', 'JSXElement', 'JSXFragment'].includes(parent?.type);
+      bounds.push(
+        { at: node.start, closes: false, text: braces ? '{__bound(' : '__bound(' },
+        { at: node.end, closes: true, text: braces ? ')}' : ')' },
+      );
+    }
+    children(node, (child) => compose(child, typeof node.type === 'string' ? node : parent));
+  };
+  if (folders.size) compose(ast, null);
+  // In the order they are written: where one element ends and the next starts, the end first.
+  return bounds.sort((a, b) => a.at - b.at || Number(b.closes) - Number(a.closes));
+}
+
+/** Applies them: each on the element's side of its place, so what is written around the element stays around it. */
+function composeBoundaries(edits, bounds) {
+  for (const { at, closes, text } of bounds) {
+    if (closes) edits.appendLeft(at, text);
+    else edits.prependRight(at, text);
+  }
+}
+
+/**
+ * A file that is not a folder's own (the app's shell, where `Root` is given its folders): only the
+ * boundaries are composed, wherever a folder's element is written in it.
+ */
+export function transformShell(code, id, runtime, isFolder) {
+  if (!code.includes('import')) return null;
+  const bounds = boundaries(parseAst(code, { lang: id.endsWith('.jsx') ? 'jsx' : 'tsx' }, id), isFolder);
+  if (!bounds.length) return null;
+  const edits = new MagicString(code);
+  composeBoundaries(edits, bounds);
+  edits.prepend(`import { bound as __bound } from ${runtime};\n`);
+  return { code: edits.toString(), map: edits.generateMap({ hires: true, source: id }) };
+}
+
+/**
  * Wraps every JSX `on…` attribute: `onClick={save}` becomes `onClick={__track(save, __site_0)}`,
  * with the site's placement hoisted as a frozen constant. `data-track="off"`
  * on an element leaves it alone, and the plugin removes the marker. It also moves the functions
@@ -331,8 +396,8 @@ const isWiredHandler = (expression) =>
  * given `handlers.<name>` stays as written: that function is a callback of the folder's generated
  * hook, which emits the interaction and reports the failure itself (handlersModule).
  */
-export function transformRender(code, id, componentPathValue, file, runtime, wired = false) {
-  if (!/\son[A-Z]/.test(code) && !code.includes('=>')) return null;
+export function transformRender(code, id, componentPathValue, file, runtime, wired = false, isFolder = () => false) {
+  if (!/\son[A-Z]/.test(code) && !code.includes('=>') && !code.includes('import')) return null;
   const ast = parseAst(code, { lang: 'tsx' }, id);
   const edits = new MagicString(code);
   const lineStarts = [0];
@@ -347,13 +412,26 @@ export function transformRender(code, id, componentPathValue, file, runtime, wir
     }
     return { column: offset - lineStarts[low] + 1, line: low + 1 };
   };
+  const bounds = boundaries(ast, isFolder);
+  composeBoundaries(edits, bounds);
+  /** The source between two places, with the boundaries composed inside it: what a function moved out of the render takes along. */
+  const composed = (start, end) => {
+    let out = '';
+    let from = start;
+    for (const { at, text } of bounds) {
+      if (at < start || at > end) continue;
+      out += code.slice(from, at) + text;
+      from = at;
+    }
+    return out + code.slice(from, end);
+  };
   const moved = [];
   let kept = 0;
   for (const { deps, fn, key } of jsxFunctions(ast, code)) {
     if (!deps.length) {
       const name = `__constant_${moved.length}`;
       edits.overwrite(fn.start, fn.end, name);
-      moved.push(`const ${name} = ${code.slice(fn.start, fn.end)};`);
+      moved.push(`const ${name} = ${composed(fn.start, fn.end)};`);
       continue;
     }
     const { column, line } = locate(fn.start);
@@ -411,8 +489,12 @@ export function transformRender(code, id, componentPathValue, file, runtime, wir
       edits.appendRight(expression.end, `, ${constant}${key ? `, ${key}` : ''})`);
     }
   });
-  if (!sites.length && !moved.length && !kept) return null;
-  const imported = [...(sites.length ? ['track as __track'] : []), ...(kept ? ['keep as __keep'] : [])];
+  if (!sites.length && !moved.length && !kept && !bounds.length) return null;
+  const imported = [
+    ...(bounds.length ? ['bound as __bound'] : []),
+    ...(sites.length ? ['track as __track'] : []),
+    ...(kept ? ['keep as __keep'] : []),
+  ];
   edits.prepend(
     `${imported.length ? `import { ${imported.join(', ')} } from ${runtime};\n` : ''}${sites.length ? `${sites.join('\n')}\n` : ''}${moved.length ? `${moved.join('\n')}\n` : ''}`,
   );
@@ -780,6 +862,13 @@ export default function framework(userOptions) {
     if (source.startsWith('.')) return path.resolve(path.dirname(importer), source);
     return null;
   };
+  /** Whether a file's import names a component folder. */
+  const isFolderFrom = (file) => (source) => {
+    // Outside the root, `@/…` is the app's own alias, not the framework's.
+    if (!isInside(file) && source.startsWith('@/')) return false;
+    const resolved = target(source, file);
+    return Boolean(resolved) && isComponentFolder(options, resolved);
+  };
   let isBuild = false;
   /** The sources each component folder's files read, as last written into its module. */
   const readsSeen = new Map();
@@ -1090,7 +1179,12 @@ export default function framework(userOptions) {
 
     transform(code, id) {
       const file = id.split('?')[0];
-      if (!isInside(file) || !CODE.test(file)) return null;
+      // Outside the root (a page of the app's own, a story): only the boundaries of the folders it writes.
+      if (!isInside(file))
+        return JSX.test(file) && !file.includes('/node_modules/') && !file.startsWith('\0')
+          ? transformShell(code, id, runtime, isFolderFrom(file))
+          : null;
+      if (!CODE.test(file)) return null;
       const relative = posix(path.relative(options.root, file));
 
       // In a component's render, placeholder and error files, every `on…` handler is tracked, and
@@ -1104,8 +1198,14 @@ export default function framework(userOptions) {
           relative,
           runtime,
           layer === 'render' && Boolean(findLayer(path.dirname(file), 'handlers')),
+          isFolderFrom(file),
         );
       }
+
+      // Any other file that holds JSX and is not a skin's: where it writes a folder's element, the
+      // folder's boundaries are composed around it, as in a folder's own files.
+      if (JSX.test(file) && !/(^|\/)style\//.test(relative))
+        return transformShell(code, id, runtime, isFolderFrom(file));
 
       // In a component's `style/` files, an imported component becomes its selector.
       // Read with the same parser as the renders: one way of reading source.
