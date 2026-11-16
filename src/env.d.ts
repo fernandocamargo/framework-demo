@@ -1,4 +1,5 @@
-// What this app injects, as the framework's interfaces. main.tsx gives the values to `Root`.
+// What this app injects, as the framework's interfaces. env/index.ts defines the environment;
+// main.tsx gives the entity and reads to `Root`.
 
 import 'framework';
 

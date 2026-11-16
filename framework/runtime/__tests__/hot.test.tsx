@@ -11,7 +11,7 @@ import { Root } from '../root';
 import type { Operation } from '../types';
 import { wiredOperations } from './operations.cases';
 
-vi.mock('virtual:framework/clients', () => ({ default: [] }));
+vi.mock('virtual:framework/clients', () => ({ default: {}, env: {} }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
 type Props = Record<string, unknown>;

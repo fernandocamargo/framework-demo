@@ -12,7 +12,7 @@ import { createQueryClient } from '../data';
 import { useFormLayer } from '../form';
 import { Root } from '../root';
 
-vi.mock('virtual:framework/clients', () => ({ default: [] }));
+vi.mock('virtual:framework/clients', () => ({ default: {}, env: {} }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 vi.mock('../async', { spy: true });
 vi.mock('../form', { spy: true });

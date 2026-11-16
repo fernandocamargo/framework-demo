@@ -8,7 +8,7 @@ import type { Site } from '../pipeline';
 import { Root } from '../root';
 import { track } from '../track';
 
-vi.mock('virtual:framework/clients', () => ({ default: [] }));
+vi.mock('virtual:framework/clients', () => ({ default: {}, env: {} }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
 type Props = Record<string, unknown>;

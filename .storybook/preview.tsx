@@ -8,11 +8,11 @@ import type { Decorator, Preview } from '@storybook/react-vite';
 import type { ComponentType } from 'react';
 import { I18nProvider, RouterProvider } from 'react-aria-components';
 import { MemoryRouter, useNavigate } from 'react-router';
+import clients from 'virtual:framework/clients';
 
-import { createQueryClient, type Env, Root, type Route } from 'framework';
+import { createQueryClient, Root, type Route } from 'framework';
 
 import { codec } from '../src/address';
-import memory from '../src/clients/memory';
 import { DEMOS } from '../src/components/session/form';
 import { LOCALES } from '../src/locales';
 import { featureFlags, permissions, whoIsSignedIn } from '../src/reads';
@@ -21,16 +21,15 @@ import '../src/base.css';
 import '../src/broadsheet.css';
 import '../src/blueprint.css';
 
-const env: Env = { apiUrl: 'https://dummyjson.com', world: 'memory' };
 const entity = { id: 'memory' };
 // Each person's reads, cached for as long as the stories are open: Root is given a query client, as
 // the app gives it one, and each person has their own.
-const clients = Object.fromEntries(
+const queries = Object.fromEntries(
   ['guest', ...DEMOS.map(({ role }) => role)].map((role) => [role, createQueryClient()]),
 );
 
 // The memory world's API client: the session it keeps is the one every story's `Root` reads.
-const api = memory({ env } as never);
+const api = clients.api;
 async function signInAs(role: string) {
   const demo = DEMOS.find((account) => account.role === role);
   const current = api.session.current();
@@ -49,9 +48,8 @@ function Stage({ locale, role, skin, Story }: Shown) {
     >
       <Root
         acl={permissions}
-        client={clients[role]!}
+        client={queries[role]!}
         entity={entity}
-        env={env}
         flags={featureFlags}
         key={role}
         locale={locale}

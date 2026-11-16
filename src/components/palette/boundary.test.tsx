@@ -20,7 +20,7 @@ const Waiting = () => {
 };
 
 // Keep the real folder graph while counting the modal shell and controlling its search reply.
-vi.mock('virtual:framework/clients', () => ({ default: [] }));
+vi.mock('virtual:framework/clients', () => ({ default: {}, env: {} }));
 
 vi.mock('virtual:framework/services', () => ({
   default: [
@@ -60,7 +60,7 @@ import { preloadSkin } from '../../../framework/runtime/style';
 const page = (
   <MemoryRouter>
     <I18nProvider locale="en-US">
-      <Root client={createQueryClient()} entity={{ id: 'memory' }} env={{ apiUrl: '', world: 'memory' }}>
+      <Root client={createQueryClient()} entity={{ id: 'memory' }}>
         <Suspense fallback={<Waiting />}>
           <Palette />
         </Suspense>

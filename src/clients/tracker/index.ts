@@ -6,7 +6,15 @@
 // It listens from the moment the app loads, as such a destination must, so what happened before
 // the lab first opened is there too. It leaves out the lab's own reading of it.
 
-import { connect, consent, type DataEvent, type Failure, type Interaction, onData, onFailure } from 'framework';
+import {
+  connect,
+  consent,
+  type DataEvent,
+  type Failure,
+  type Interaction,
+  onData,
+  onFailure,
+} from '../../../framework/runtime/pipeline';
 
 /** One thing the app did, as the pipelines carried it, with the time it was seen. */
 export type Tracked = { at: number; event: DataEvent | Failure | Interaction };

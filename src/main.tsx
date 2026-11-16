@@ -17,13 +17,14 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, UNSAFE_NavigationContext as NavigationContext, useLocation } from 'react-router';
 import { useNavigation } from 'virtual:framework/address';
 
-import { bound, chartAt, createQueryClient, type Env, onFailure, Pending, Pinned, Root } from 'framework';
+import { bound, chartAt, createQueryClient, onFailure, Pending, Pinned, Root } from 'framework';
 
 import { useCommitted } from '../framework/runtime/activity';
 import { setLocation } from '../framework/runtime/pipeline';
 import { codec, EditingProductContext, type Settings, settingsOf, STATES } from './address';
 import App from './components/app';
 import States from './components/states';
+import env from './env/index';
 import { fromLegacy } from './legacy';
 import { currentLocale, preloadLocale } from './locales';
 import { featureFlags, permissions, whoIsSignedIn } from './reads';
@@ -36,17 +37,7 @@ import './blueprint.css';
 const moved = fromLegacy(window.location);
 if (moved !== null) window.history.replaceState(window.history.state, '', moved);
 
-const initial = codec.read(window.location.pathname.slice(codec.base.length - 1), window.location.search);
-const world: Env['world'] =
-  initial.query['world'] === 'memory' || import.meta.env['VITE_WORLD'] === 'memory' ? 'memory' : 'dummyjson';
-// GrowthBook serves the real world's flags when its client key is in the build (.env.local).
-const env: Env = {
-  apiUrl: 'https://dummyjson.com',
-  flagsKey: import.meta.env['VITE_GROWTHBOOK_CLIENT_KEY'],
-  mapsKey: import.meta.env['VITE_MAPTILER_KEY'],
-  world,
-};
-const entity = { id: world };
+const entity = { id: env.world };
 // One cache for the app's life, so a page's reads survive a dialog opening over it.
 const client = createQueryClient();
 
@@ -207,12 +198,11 @@ function Shell() {
             acl={permissions}
             client={client}
             entity={entity}
-            env={env}
             flags={featureFlags}
             locale={locale}
             navigation={navigation}
             skin={skin}
-            sync={`stockroom:${world}`}
+            sync={`stockroom:${env.world}`}
             user={whoIsSignedIn}
           >
             <Content settings={settings} />

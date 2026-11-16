@@ -2,8 +2,6 @@ import { act, fireEvent, render } from '@testing-library/react';
 import { createElement } from 'react';
 import { MemoryRouter, useLocation } from 'react-router';
 
-// Load the real event destination first to break its circular framework import in this fixture.
-import '@/clients/tracker';
 import { createQueryClient, Root, whenIdle } from 'framework';
 import { messagesOf } from 'framework/testing';
 

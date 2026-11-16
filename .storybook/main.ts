@@ -15,5 +15,9 @@ export default {
   addons: ['@storybook/addon-docs'],
   framework: '@storybook/react-vite',
   stories: ['../framework-stories/**/*.stories.tsx'],
-  viteFinal: (config) => ({ ...config, plugins: [...(config.plugins ?? []), storiesPlugin(stories)] }),
+  viteFinal: (config) => ({
+    ...config,
+    define: { ...config.define, 'import.meta.env.VITE_WORLD': JSON.stringify('memory') },
+    plugins: [...(config.plugins ?? []), storiesPlugin(stories)],
+  }),
 } satisfies StorybookConfig;

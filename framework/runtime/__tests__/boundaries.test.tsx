@@ -3,7 +3,7 @@
 import { cases } from './boundaries.cases';
 import { cases as operationCases } from './operations.cases';
 
-vi.mock('virtual:framework/clients', () => ({ default: [] }));
+vi.mock('virtual:framework/clients', () => ({ default: {}, env: {} }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
 cases('dev');

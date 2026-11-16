@@ -6,7 +6,7 @@ import { createQueryClient } from '../data';
 import { Root } from '../root';
 import { wiredOperations } from './operations.cases';
 
-vi.mock('virtual:framework/clients', () => ({ default: [] }));
+vi.mock('virtual:framework/clients', () => ({ default: {}, env: {} }));
 // One service, which answers with the entity it is run for.
 vi.mock('virtual:framework/services', () => ({
   default: [

@@ -10,7 +10,7 @@ import { useFormLayer } from '../form';
 import { Root } from '../root';
 import { routed, useTestRoute } from './routed';
 
-vi.mock('virtual:framework/clients', () => ({ default: [] }));
+vi.mock('virtual:framework/clients', () => ({ default: {}, env: {} }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
 type Props = Record<string, unknown>;

@@ -44,7 +44,7 @@ import { component } from '../component';
 import { createQueryClient } from '../data';
 import { Root } from '../root';
 
-vi.mock('virtual:framework/clients', () => ({ default: [] }));
+vi.mock('virtual:framework/clients', () => ({ default: {}, env: {} }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
 type Props = Record<string, unknown>;

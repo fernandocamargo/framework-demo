@@ -1,10 +1,9 @@
 /**
  * What the framework injects: the environment, the selected entity, the clients, the services
- * and a URL helper. Built once by `Root`, from the modules the plugin found.
+ * and a URL helper. Root wires the services around the clients the plugin composed.
  * Every service operation runs through the data layer (data.ts).
  */
 
-import clientModules from 'virtual:framework/clients';
 import serviceModules from 'virtual:framework/services';
 
 import { type DataLayer, name, type ServiceRule } from './data';
@@ -37,17 +36,6 @@ const lazy = <T>(create: () => T) => {
     return value;
   };
 };
-
-/** `clients.<name>`: each folder's factory, called with the environment on first use. */
-export function createClients(env: Env): Tree {
-  const clients: Record<string, unknown> = {};
-  for (const { folder, meta, module } of clientModules) {
-    const name = meta?.default?.().exportAs ?? camelCase(folder);
-    const get = lazy(() => module.default({ env }));
-    Object.defineProperty(clients, name, { enumerable: true, get });
-  }
-  return clients;
-}
 
 /**
  * `services.a.b.c.d.e(…)` for a folder's default export, `services.singleFile.fetchSomething(…)`
@@ -135,8 +123,7 @@ export const createUrl = (): Url => ({
   },
 });
 
-export function createInjection(env: Env, entity: Entity, data: DataLayer): Injection {
-  const clients = createClients(env);
+export function createInjection(clients: Tree, env: Env, entity: Entity, data: DataLayer): Injection {
   const url = createUrl();
   const services = createServices({ clients, entity, env, url }, data);
   return { clients, entity, env, services, url };

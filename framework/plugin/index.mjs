@@ -1,9 +1,9 @@
 // The framework's Vite plugin.
 //
-// It reads one root folder that holds `clients/`, `services/` and `components/`, and:
+// It reads one root folder that holds `env/`, `clients/`, `services/` and `components/`, and:
 // - serves `virtual:framework/clients`, `virtual:framework/services` and
-//   `virtual:framework/messages`: the modules it finds
-//   there, which the runtime turns into the injected trees;
+//   `virtual:framework/messages`: clients composed with `env/` at module evaluation,
+//   service definitions the runtime wires, and messages;
 // - resolves an import of a component folder (a folder with a `render` file and no `index`)
 //   to a module it writes from the folder's files;
 // - in a component's `style/` files, replaces the import of another component with that
@@ -37,6 +37,7 @@ import folders from '../shared/folders.cjs';
 import { addressModule, routesModule, routeTypes, scanRoutes, staticPages } from './routes.mjs';
 
 const {
+  camelCase,
   CODE,
   componentPath,
   declaredProps,
@@ -1039,16 +1040,19 @@ export default function framework(userOptions) {
       if (id === `\0${CLIENTS}`) {
         const clients = listClients(options.root);
         return [
+          `import env from ${JSON.stringify(path.join(options.root, 'env'))};`,
           ...clients.flatMap((client, index) => [
-            `import * as client${index} from ${JSON.stringify(client.index)};`,
-            ...(client.meta ? [`import * as meta${index} from ${JSON.stringify(client.meta)};`] : []),
+            `import client${index} from ${JSON.stringify(client.index)};`,
+            ...(client.meta ? [`import meta${index} from ${JSON.stringify(client.meta)};`] : []),
           ]),
-          `export default [${clients
-            .map(
-              (client, index) =>
-                `{ folder: ${JSON.stringify(client.folder)}, module: client${index}${client.meta ? `, meta: meta${index}` : ''} }`,
-            )
-            .join(', ')}];`,
+          'export { env };',
+          'export default {',
+          ...clients.map((client, index) => {
+            const name = JSON.stringify(camelCase(client.folder));
+
+            return `  [${client.meta ? `meta${index}().exportAs ?? ${name}` : name}]: client${index}({ env }),`;
+          }),
+          '};',
         ].join('\n');
       }
 

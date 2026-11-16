@@ -1,13 +1,8 @@
 // The modules the framework's plugin writes (framework/plugin/index.mjs).
 
 declare module 'virtual:framework/clients' {
-  const clients: Array<{
-    /** The client's folder under `clients/`, such as `socket.io`. */
-    folder: string;
-    /** `meta.ts` beside the client, which may rename it (`exportAs`). */
-    meta?: { default?: () => { exportAs?: string } };
-    module: { default: (injection: { env: unknown }) => unknown };
-  }>;
+  export const env: import('./index').Env;
+  const clients: import('./types').Injection['clients'];
   export default clients;
 }
 

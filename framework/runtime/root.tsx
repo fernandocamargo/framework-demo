@@ -20,12 +20,13 @@ import {
   useRef,
   useState,
 } from 'react';
+import clients, { env } from 'virtual:framework/clients';
 
 import { Pending, useCommitted, watch } from './activity';
 import { boundEach } from './boundaries';
 import { createDataLayer, type DataLayer, recording } from './data';
 import { LocaleContext, SOURCE_LOCALE } from './i18n';
-import type { Acl, Entity, Env, Flags, Navigation, User } from './index';
+import type { Acl, Entity, Flags, Navigation, User } from './index';
 import { createInjection, type Injection } from './injection';
 import { report, setLocation } from './pipeline';
 import { listenToKeys } from './shortcuts';
@@ -73,8 +74,6 @@ export type RootProps = {
   client: QueryClient;
   /** The selected entity. Services read `entity.id` when they run. */
   entity?: Entity;
-  /** What clients receive as `env`. Keep the object stable: a new one rebuilds every client. */
-  env?: Env;
   /**
    * The feature flags for the person signed in: a read of the services, given that person as the
    * `user` read names them (`({ services, user }) => services.flags.evaluate(…)`). Every component
@@ -121,7 +120,6 @@ export function Root({
   children,
   client,
   entity = NONE,
-  env = NONE,
   flags,
   locale = SOURCE_LOCALE,
   location,
@@ -150,7 +148,7 @@ export function Root({
   // Its reads and writes count as pending for `whenIdle()` while this Root uses it.
   useEffect(() => watch(client), [client]);
   const data = useMemo(() => createDataLayer(client, live as { readonly id: string }), [client, live]);
-  const injection = useMemo(() => createInjection(env, live, data), [env, live, data]);
+  const injection = useMemo(() => createInjection(clients, env, live, data), [live, data]);
   // The other tabs of the app, through one channel per client.
   useEffect(() => (sync ? data.share(sync) : undefined), [data, sync]);
   // After the commit and before the paint, so a render React throws away changes nothing. The

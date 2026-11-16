@@ -11,11 +11,11 @@ It is built on React 19, TanStack Query 5 (the data layer), XState 5 (the state 
 
 ## What it does
 
-The plugin reads one root folder (here `src`), which holds `clients/`, `services/` and `components/`.
+The plugin reads one root folder (here `src`), which holds `env/`, `clients/`, `services/` and `components/`.
 
 ### Clients
 
-`clients/<folder>/index.ts` default-exports `({ env }) => client`. Services see it as `clients.<folder in camel case>`, unless a `meta.ts` beside it returns `{ exportAs }`. Each client is created on first use.
+`clients/<folder>/index.ts` default-exports `({ env }) => client`. Services see it as `clients.<folder in camel case>`, unless a `meta.ts` beside it returns `{ exportAs }`. `env/index.ts` default-exports the app's `Env`: the first address and build-time settings belong there. The plugin's `virtual:framework/clients` imports that definition and calls each client factory once when the module evaluates, exporting the composed clients tree and the same `env`. React renders never create clients; suspended attempts and every `Root` share them. `Root` takes no `env` prop. Services and component files still receive `env` through the injection.
 
 ### Services
 

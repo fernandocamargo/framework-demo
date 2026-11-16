@@ -16,7 +16,7 @@ import { wiredOperations } from './operations.cases';
 import { routed, useTestRoute } from './routed';
 
 // No app here: the plugin's modules of clients and services are empty.
-vi.mock('virtual:framework/clients', () => ({ default: [] }));
+vi.mock('virtual:framework/clients', () => ({ default: {}, env: {} }));
 vi.mock('virtual:framework/services', () => ({ default: [] }));
 
 type Props = Record<string, unknown>;

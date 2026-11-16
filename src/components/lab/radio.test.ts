@@ -1,8 +1,6 @@
 import { act, fireEvent, render } from '@testing-library/react';
 import { createElement } from 'react';
 
-// Load the event destination before the framework's clients.
-import '@/clients/tracker';
 import { createQueryClient, Root, whenIdle } from 'framework';
 import { messagesOf, startFlow } from 'framework/testing';
 
@@ -17,13 +15,7 @@ test('pointer activation focuses every lab radio, including an already selected 
   const client = createQueryClient();
   let shown!: ReturnType<typeof render>;
   await act(async () => {
-    shown = render(
-      createElement(
-        Root,
-        { client, entity: { id: 'memory' }, env: { apiUrl: '', world: 'memory' } },
-        createElement(Lab),
-      ),
-    );
+    shown = render(createElement(Root, { client, entity: { id: 'memory' } }, createElement(Lab)));
   });
 
   try {
