@@ -33,3 +33,15 @@ declare module 'virtual:framework/charts' {
   }>;
   export default charts;
 }
+
+declare module 'virtual:framework/address' {
+  export const createAddress: typeof import('./address').createAddress;
+  export const codec: import('./address').AddressCodec;
+  export default codec;
+}
+declare module 'virtual:framework/routes' {
+  /** The app's home address, as `routes/meta.ts` names it. */
+  export const home: string;
+  const routes: import('react-router').RouteObject[];
+  export default routes;
+}

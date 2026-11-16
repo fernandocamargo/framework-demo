@@ -1,0 +1,11 @@
+{
+  "components/app/routes/products/routes/:id/routes/remove/title/named": "Excluir {title}?",
+  "components/app/routes/products/routes/:id/routes/remove/title/unnamed": "Excluir este produto?",
+  "components/app/routes/products/routes/:id/routes/remove/text": "Ele sai do catálogo. A exclusão fica só neste navegador, já que o DummyJSON não guarda alterações.",
+  "components/app/routes/products/routes/:id/routes/remove/failed": "Não foi excluído: {message}",
+  "components/app/routes/products/routes/:id/routes/remove/cancel": "Cancelar",
+  "components/app/routes/products/routes/:id/routes/remove/confirm/remove": "Excluir",
+  "components/app/routes/products/routes/:id/routes/remove/confirm/retry": "Tentar de novo",
+  "components/app/routes/products/routes/:id/routes/remove/refused": "Excluir um produto pede uma permissão que você não tem.",
+  "components/app/routes/products/routes/:id/routes/remove/paused": "A exclusão de produtos está pausada por enquanto."
+}

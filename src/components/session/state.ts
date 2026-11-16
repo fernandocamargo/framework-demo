@@ -6,7 +6,6 @@
 // The access token is short-lived on purpose (one minute by default, set in the network lab),
 // so a refresh can be watched. While signed in, the chart looks at the clock once a second.
 
-import { CLOSED } from '@/address';
 import type { Session } from '@/clients/dummyjson/http';
 
 import { DEMOS } from './form';
@@ -60,9 +59,12 @@ export const fillDemo = ({ event, form }) => {
   form.set('password', account.password);
 };
 export const clearForm = ({ form }) => form.seed(undefined);
-export const closeSignIn = ({ navigation }) => navigation.go({ signin: false });
+export const closeSignIn = ({ navigation }) => navigation.query({ signin: false });
 /** Giving up on signing in closes what asked for it, too. */
-export const closeEverything = ({ navigation }) => navigation.go(CLOSED);
+export const closeEverything = ({ navigation, route }) =>
+  route.pattern.startsWith('/products/')
+    ? navigation.go('/products', {}, { signin: false })
+    : navigation.query({ signin: false });
 
 export const credentials = ({ form }) => form.payload();
 

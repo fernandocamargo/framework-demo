@@ -107,6 +107,7 @@ export type Spec = {
     state?: readonly string[];
     view?: readonly string[];
   };
+  routes?: ReactNode;
   skins: Record<string, () => Promise<SkinModule>>;
   /** Each translation of the messages, `i18n/<locale>.json`, loaded on demand. */
   translations?: Record<string, () => Promise<{ default: Record<string, string> }>>;
@@ -625,6 +626,7 @@ export function component(spec: Spec) {
     const { access, async, form, language, module } = layers;
     return {
       ...props,
+      ...(spec.routes ? { routes: spec.routes } : {}),
       className,
       ...(async ? { async } : {}),
       ...(state ? { state } : {}),

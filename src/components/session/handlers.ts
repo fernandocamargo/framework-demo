@@ -6,7 +6,7 @@ export const signOut =
 export const openSignIn =
   ({ navigation }) =>
   () =>
-    navigation.go({ signin: true });
+    navigation.query({ signin: true });
 export const dismiss =
   ({ state }) =>
   (open: boolean) => {

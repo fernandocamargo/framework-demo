@@ -128,6 +128,7 @@ function createTransformer(ts, { root, runtime = 'framework' }) {
         if (found.name === 'render' && shaping)
           return `${types}.ShapedProps<${moduleType(shaping)}${handlers ? `, ${moduleType(handlers)}` : ''}>`;
         const layers = [];
+        if (folders.isDirectory(path.join(found.dir, 'routes'))) layers.push('routes: true');
         const async = folders.findLayer(found.dir, 'async');
         const state = folders.findLayer(found.dir, 'state');
         const form = folders.findLayer(found.dir, 'form');

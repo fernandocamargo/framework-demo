@@ -6,6 +6,8 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
 import { checkMicrodata, type Vocabulary } from '../framework/microdata/check';
+import { arrive, queryOf } from '../perf/address.mjs';
+import { markupWithoutLinkSkin } from './markup';
 
 const vocabulary = JSON.parse(
   readFileSync(new URL('../framework/microdata/vocabulary.json', import.meta.url), 'utf8'),
@@ -24,7 +26,7 @@ async function act(page: Page, action: () => Promise<unknown>) {
   await idle(page);
 }
 
-const open = (page: Page, hash = '#/report') => act(page, () => page.goto(`./?world=memory${hash}`));
+const open = (page: Page, path = '/report', query = {}) => act(page, () => arrive(page, path, query));
 const problems = (page: Page) => page.evaluate(checkMicrodata, vocabulary);
 const headline = (page: Page) => page.getByRole('article').getByRole('heading', { level: 2 }).innerText();
 /** A figure of the report: the value in the definition beside its label. */
@@ -53,7 +55,7 @@ test.beforeEach(({ page }) => {
 for (const skin of ['default', 'broadsheet', 'blueprint']) {
   test(`the report fits a 390 px page in the ${skin} skin`, async ({ page }) => {
     await page.setViewportSize({ height: 900, width: 390 });
-    await act(page, () => page.goto(`./?world=memory&skin=${skin}#/report`));
+    await act(page, () => arrive(page, '/report', { skin: skin }));
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
   });
 }
@@ -83,7 +85,7 @@ test('the report is the page the address names, with its headline and figures fr
 test('a category links to the catalogue filtered by it', async ({ page }) => {
   await open(page);
   await act(page, () => page.locator('tbody').getByRole('link', { exact: true, name: 'Lighting' }).click());
-  expect(page.url()).toContain('#/products?category=lighting');
+  expect(queryOf(page.url())['category']).toBe('lighting');
   expect(await summary(page)).toBe('9 products in Lighting');
   expect(await rows(page).count()).toBe(9);
 });
@@ -98,7 +100,7 @@ test('a count taken in another tab reaches the report: its units and value go up
       throw error;
     });
   await open(report);
-  await open(other, '#/products');
+  await open(other, '/products');
   // What another tab does arrives twice: its message on the channel, and the storage they share.
   const listen = (page: Page) =>
     page.evaluate(() => {
@@ -131,7 +133,7 @@ test('the report reads the same in the Broadsheet skin: another skin, and not on
   // The time the report was read is the clock's, so each load shows its own: it is left out.
   const markup = async () => {
     await page.mouse.move(0, 0);
-    const html = await page.locator('main').evaluate((main) => main.outerHTML);
+    const html = await page.locator('main').evaluate(markupWithoutLinkSkin);
     return html
       .replace(/<time[\s\S]*?<\/time>/, '')
       .replace(/react-aria\d+-/g, 'react-aria-')
@@ -139,7 +141,7 @@ test('the report reads the same in the Broadsheet skin: another skin, and not on
   };
   await open(page);
   const plain = await markup();
-  await act(page, () => page.goto('./?world=memory&skin=broadsheet#/report'));
+  await act(page, () => arrive(page, '/report', { skin: 'broadsheet' }));
   expect(await page.evaluate(() => document.documentElement.dataset['skin'])).toBe('broadsheet');
   expect(await markup()).toBe(plain);
   expect(await problems(page)).toEqual([]);

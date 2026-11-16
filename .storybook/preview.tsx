@@ -5,12 +5,13 @@
 // starts at the address its example names, and then follows its links, as the app does.
 
 import type { Decorator, Preview } from '@storybook/react-vite';
-import { type ReactNode, useEffect, useMemo, useState, useTransition } from 'react';
-import { I18nProvider } from 'react-aria-components';
+import { type ReactNode, useEffect } from 'react';
+import { I18nProvider, RouterProvider } from 'react-aria-components';
+import routeComponents from 'virtual:framework/routes';
 
-import { createQueryClient, type Env, type Navigation, Root, type Route } from 'framework';
+import { createQueryClient, type Env, Root, type Route, Routing, useAddress } from 'framework';
 
-import { format, go, HOME, parse } from '../src/address';
+import { address, codec, follow, navigation } from '../src/address';
 import memory from '../src/clients/memory';
 import { DEMOS } from '../src/components/session/form';
 import { LOCALES } from '../src/locales';
@@ -22,7 +23,6 @@ import '../src/blueprint.css';
 
 const env: Env = { apiUrl: 'https://dummyjson.com', world: 'memory' };
 const entity = { id: 'memory' };
-const navigation: Navigation = { go };
 // Each person's reads, cached for as long as the stories are open: Root is given a query client, as
 // the app gives it one, and each person has their own.
 const clients = Object.fromEntries(
@@ -40,26 +40,21 @@ async function signInAs(role: string) {
 }
 
 /** The address: the story's example first, then wherever its links and `navigation.go` take it. */
-function Stage({ children, start }: { children: (route: Route) => ReactNode; start: Partial<Route> | undefined }) {
-  const [hash, setHash] = useState(() => format({ ...HOME, ...start }));
-  const [, navigate] = useTransition();
-  useEffect(() => {
-    window.location.hash = hash;
-    const follow = () => navigate(() => setHash(window.location.hash));
-    window.addEventListener('hashchange', follow);
-    return () => window.removeEventListener('hashchange', follow);
-    // The story's own address, once, when it mounts.
-  }, []);
-  const route = useMemo(() => parse(hash), [hash]);
-  return children(route);
+function Stage({ children }: { children: (route: Route) => ReactNode }) {
+  const snapshot = useAddress(address);
+  useEffect(() => address.listen(), []);
+  return (
+    <Routing address={address} components={routeComponents}>
+      <RouterProvider navigate={follow}>{children(snapshot.route as unknown as Route)}</RouterProvider>
+    </Routing>
+  );
 }
 
 const inRoot: Decorator = (Story, context) => {
   const { locale, role, skin } = context.globals as { locale: (typeof LOCALES)[number]; role: string; skin: string };
-  const start = (context.parameters['framework'] as undefined | { route?: Partial<Route> })?.route;
   return (
     <I18nProvider locale={locale}>
-      <Stage start={start}>
+      <Stage>
         {(route) => (
           // A new Root for each person, so its reads start over for them.
           <Root
@@ -118,7 +113,15 @@ export default {
     },
   },
   initialGlobals: { locale: 'en', role: 'guest', skin: 'default' },
-  loaders: [({ globals }) => signInAs(globals['role'] as string)],
+  loaders: [
+    ({ globals, parameters }) => {
+      const start = (parameters['framework'] as undefined | { route?: Partial<Route> })?.route;
+      address.replace(
+        codec.format(start?.pattern ?? '/products', (start?.params as never) ?? {}, { ...start, world: 'memory' }),
+      );
+      return signInAs(globals['role'] as string);
+    },
+  ],
   parameters: {
     // Each story of a docs page in a frame of its own: a story's address, its dialogs and its keys
     // stay its own.

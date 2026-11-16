@@ -2,7 +2,7 @@
 // What is on screen follows what can be done now: a key the chart or the permissions refuse is
 // listed as not now. A command closes the palette first: the page under a modal is inert until then.
 
-import { go, sectionHref, SECTIONS } from '@/address';
+import { go, openSection, query, SECTIONS } from '@/address';
 import { endonym, LOCALES, speak } from '@/locales';
 import type { Listed } from '@/services/products/types';
 import { SKINS, wear } from '@/skins';
@@ -53,11 +53,7 @@ export default ({ i18n, keyboard, onClose, results, searching, text, user }) => 
       heading: i18n.sections.goTo,
       id: 'go',
       items: [
-        ...SECTIONS.map((section) =>
-          command(`section:${section}`, i18n.go[section], () => {
-            window.location.hash = sectionHref(section);
-          }),
-        ),
+        ...SECTIONS.map((section) => command(`section:${section}`, i18n.go[section], () => openSection(section))),
         command('states', i18n.go.states, () => {
           window.location.hash = '#/states';
         }),
@@ -74,7 +70,7 @@ export default ({ i18n, keyboard, onClose, results, searching, text, user }) => 
     {
       heading: i18n.sections.session,
       id: 'session',
-      items: user ? [] : [command('signin', i18n.signIn, () => go({ signin: true }))],
+      items: user ? [] : [command('signin', i18n.signIn, () => query({ signin: true }))],
     },
     {
       heading: i18n.sections.products,
@@ -85,7 +81,7 @@ export default ({ i18n, keyboard, onClose, results, searching, text, user }) => 
         keys: [],
         kind: 'product' as const,
         label: product.title,
-        perform: perform(() => go({ view: product.id })),
+        perform: perform(() => go('/products/:id', { id: product.id })),
       })),
     },
   ];

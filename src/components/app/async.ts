@@ -1,16 +1,6 @@
-// What the page needs before it shows: who is signed in, and which dialogs the address opens.
-// The framework records what this read: `auth.session` and these route fields. So a sign-in
-// or a sign-out reads it again, and a change of filter does not.
+// A session and the route's pattern decide whether a mutation asks for sign-in.
 export default async ({ env, route, services }) => ({
-  dialogs: {
-    bulk: route.bulk,
-    cart: route.cart,
-    create: route.create,
-    edit: route.edit,
-    remove: route.remove,
-    view: route.view,
-  },
-  section: route.section,
+  pattern: route.pattern,
   session: await services.auth.session(),
   signin: route.signin,
   world: env.world,

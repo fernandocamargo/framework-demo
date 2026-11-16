@@ -2,8 +2,7 @@
 
 import 'framework';
 
-import type { Section } from './address';
-import type { SortKey } from './services/products/types';
+import '../.framework-types/src/routes';
 
 declare module 'framework' {
   interface Env {
@@ -19,36 +18,6 @@ declare module 'framework' {
   /** Reads are cached under the entity's `id`. Here it is the world, so two worlds never share an answer. */
   interface Entity {
     id: string;
-  }
-  /**
-   * The address, parsed (src/address.ts). The catalogue's filters and every open dialog live in
-   * it, so a reload, a shared link and the back button keep them. A component's read is keyed
-   * by the fields it reads, and only those.
-   */
-  interface Route {
-    /** Whether the bulk price change is open. */
-    bulk: boolean;
-    /** The order whose details show. */
-    cart: null | number;
-    category: string;
-    /** Whether a new product is being written. */
-    create: boolean;
-    /** The product being edited. */
-    edit: null | number;
-    order: 'asc' | 'desc';
-    page: number;
-    q: string;
-    /** The US state whose orders show, as its code (`TX`); '' for all of them. */
-    region: string;
-    /** The product whose deletion is being confirmed. */
-    remove: null | number;
-    /** Which page of the app shows. */
-    section: Section;
-    /** Whether the sign-in dialog was asked for. */
-    signin: boolean;
-    sort: SortKey;
-    /** The product whose details show. */
-    view: null | number;
   }
   /** Who is signed in, from the profile the session names (`/auth/me`): DummyJSON's own user, with its role. */
   interface User {
@@ -86,9 +55,5 @@ declare module 'framework' {
     liveMap: boolean;
     /** Counting stock from the catalogue's rows, with − and +. */
     stockCount: boolean;
-  }
-  interface Navigation {
-    /** Changes these fields of the address and keeps the others. */
-    go(changes: Partial<Route>): void;
   }
 }
