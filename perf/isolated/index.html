@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Isolated catalogue filters</title>
+    <style>
+      body {
+        font:
+          16px system-ui,
+          sans-serif;
+        margin: 3rem;
+        color: #17212b;
+        background: #fafafa;
+      }
+      main {
+        max-width: 70rem;
+        margin: auto;
+      }
+      search,
+      nav {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-block: 1.5rem;
+      }
+      input,
+      select,
+      button {
+        font: inherit;
+        padding: 0.5rem;
+      }
+      [data-rac] {
+        box-sizing: border-box;
+      }
+      .react-aria-SearchField {
+        display: flex;
+      }
+      .react-aria-SearchField button::after {
+        content: '×';
+      }
+      .react-aria-Popover {
+        background: white;
+        border: 1px solid #687888;
+        max-height: 24rem;
+        overflow: auto;
+      }
+      .react-aria-ListBox {
+        padding: 0.25rem;
+        outline: none;
+      }
+      .react-aria-ListBoxItem {
+        padding: 0.5rem 1rem;
+        cursor: default;
+      }
+      .react-aria-ListBoxItem[data-focused] {
+        background: #dfebf6;
+      }
+      .react-aria-ListBoxItem[data-selected] {
+        font-weight: 700;
+      }
+      li {
+        padding-block: 0.35rem;
+      }
+      :focus-visible {
+        outline: 2px solid #1764ad;
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/main.tsx"></script>
+  </body>
+</html>
