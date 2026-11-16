@@ -3,8 +3,8 @@
 // - `mounted`, or why it re-rendered: its own state or a context (`own`), its parent with the
 //   same props (`parent`), or the props that changed, each marked `sameValue` when only the
 //   reference is new (a function with the same code, an object or element with equal contents);
-// - `dom`: whether the commit changed the page anywhere inside it (an attribute or a text that
-//   holds another value than before, a node added or removed, including all it rendered). A
+// - `dom`: whether the commit changed the page anywhere inside it (an attribute, text or live
+//   form value that holds another value than before, or a node added or removed). A
 //   re-render with `dom: false` changed nothing anyone can see.
 //   Each also says which framework component it is `within`, so what react-aria renders can be
 //   told apart by the component of ours that holds it.
@@ -78,6 +78,8 @@
 
   // What changed in the page since the last commit, as the fibers it touched and their ancestors.
   const observer = new MutationObserver(() => {});
+  // A user changes a control's property before React commits, without a mutation record.
+  const controls = new WeakMap();
   // The document itself: as an init script, this runs before the page has an <html> element.
   observer.observe(document, {
     attributeOldValue: true,
@@ -122,6 +124,18 @@
         const now = key === '#text' ? node.data : node.getAttribute(key.slice(1));
         if (now !== value) mark(node);
       }
+    }
+
+    for (const control of document.querySelectorAll('input, textarea, select, option')) {
+      const values = [control.localName === 'option' ? control.selected : control.value];
+
+      if (control.localName === 'input') values.push(control.checked);
+
+      if (control.localName === 'select') values.push(control.selectedIndex);
+      const previous = controls.get(control);
+
+      if (previous && values.some((value, index) => value !== previous[index])) mark(control);
+      controls.set(control, values);
     }
     return touched;
   };

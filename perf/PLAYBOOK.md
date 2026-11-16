@@ -122,6 +122,7 @@ Round two, Q-391, reads `f3e23a9` through `perf/out/walk2-*`. There are four det
 - **Cause:** the recorder confused writes with changed values, removal with no child, and equal function names with equal owners.
 - **Correction:** compare original and final values, attribute deletions, distinguish folder-named wrappers. Keep the same definition before and after a product fix. A recorder repair is a separate measurement change with its own comparison.
 - **Guard / applied:** `recorder.js`, `cycles.mjs`, `walk.mjs --self-check`; “After the third round” and the flags round in README. No counter definition changes in Q-382.
+- **Native control property correction, `exec-recorder` (uncommitted):** sample live input, textarea, select and option state at each existing commit, using weak keys and the same fiber attribution as mutations. The Sort pilot's two or three filters updates per visit that carry `sort`/`order` should move from no-change to changed; their render and call counts do not move. No existing `render-loop` bucket should move: its React Aria choices change visible text or attributes, and its input updates already have DOM credit while unchanged siblings are outside the control's ancestor chain. The curator checks both visits in both engines on `render-loop` and the Sort pilot; this executor's sandbox cannot launch browsers.
 
 ### 2. A subscription is wider than the read
 
