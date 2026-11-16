@@ -161,8 +161,8 @@ test('in a folder with a handlers.ts, an attribute given handlers.<name> is not 
   expect(transform(false)).toContain('onPress={__track(handlers.startTour, __site_1)}');
 });
 
-test('the palette input uses a callback with its parent dependency and handler site', () => {
-  const folder = 'src/components/palette/components/commands';
+test('the palette input uses the chart sender and its handler site', () => {
+  const folder = 'src/components/palette/components/search';
   const source = readFileSync(`${folder}/handlers.ts`, 'utf8');
   const rendered = readFileSync(`${folder}/render.tsx`, 'utf8');
   const handler = wiring(source, 'type');
@@ -170,17 +170,18 @@ test('the palette input uses a callback with its parent dependency and handler s
   const transformed = transformRender(
     rendered,
     `/${folder}/render.tsx`,
-    'components/palette/components/commands',
-    'components/palette/components/commands/render.tsx',
+    'components/palette/components/search',
+    'components/palette/components/search/render.tsx',
     '"framework"',
     true,
   );
 
-  expect(handler.argument).toBe('{ onType }');
-  expect(handler.dependencies).toBe('scope, onType');
+  expect(handler.argument).toBe('{ state: { send: state_send } }');
+  expect(handler.dependencies).toBe('scope, state_send');
   expect(handler.code).toContain('interact(sites.type, scope, event, () => {');
   expect(transformed?.code).toContain('onInputChange={handlers.type}');
   expect(transformed?.code).not.toContain('__track(handlers.type');
+  expect(transformed?.code).toContain('onAction={__track(item.perform');
 });
 
 test('generated handler hooks obey the hooks rules for fixtures and every app folder', async () => {

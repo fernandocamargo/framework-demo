@@ -2,9 +2,8 @@ import { Button } from 'react-aria-components';
 
 import Commands from './components/commands';
 
-// The button shows the key it answers. While the palette is open, the commands are a component of
-// their own, so the button does not render again each time the results change.
-export default ({ className, handlers, label, open, results, searching, shortcut, text }) => (
+// The button shows the key it answers. The dialog and its search change below it.
+export default ({ className, handlers, label, open, shortcut }) => (
   <>
     <Button
       aria-describedby="palette-shortcut"
@@ -15,14 +14,6 @@ export default ({ className, handlers, label, open, results, searching, shortcut
     >
       <kbd id="palette-shortcut">{shortcut}</kbd>
     </Button>
-    {open && (
-      <Commands
-        onClose={handlers.closePalette}
-        onType={handlers.search}
-        results={results}
-        searching={searching}
-        text={text}
-      />
-    )}
+    {open && <Commands onClose={handlers.closePalette} />}
   </>
 );

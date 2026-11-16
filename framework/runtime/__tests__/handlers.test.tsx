@@ -234,45 +234,38 @@ export const keep = ({ record, value }) => () => record(value);`,
   expect(recorded).toEqual(['first', 'second']);
 });
 
-test('the palette input forwards each text once through the committed parent callback', async () => {
+test('the palette search sends each text once through its chart handler', async () => {
   const interactions: Interaction[] = [];
+  const texts: string[] = [];
 
   const listen = (event: Event) => {
     if (event instanceof CustomEvent) interactions.push(event.detail);
   };
 
-  const first = vi.fn();
-
-  const second = vi.fn();
-
   const { Component, seen } = folder(
-    'components/palette/components/commands',
-    'export const type = ({ onType }) => (text) => onType(text);',
+    'components/palette/components/search',
+    'export const type = ({ state }) => (text) => state.send({ text, type: "typed" });',
+    {
+      state: {
+        default: () => ({
+          idle: { on: { typed: { actions: ({ event }: { event: { text: string } }) => texts.push(event.text) } } },
+        }),
+      },
+    },
   );
 
   const client = createQueryClient();
-
-  const page = (onType: (text: string) => void) =>
-    createElement(Root, { client, entity }, createElement(Component, { onType }));
-
   pipeline.addEventListener('interaction', listen);
 
   try {
-    const { rerender } = await show(page(first));
-
-    const old = seen.at(-1)!.type!;
-
-    old('lamp');
-    await rerender(page(second));
-    expect(seen.at(-1)!.type).not.toBe(old);
+    await show(createElement(Root, { client, entity }, createElement(Component)));
+    seen.at(-1)!.type!('lamp');
     seen.at(-1)!.type!('desk');
     await settle();
-
-    expect(first.mock.calls).toEqual([['lamp']]);
-    expect(second.mock.calls).toEqual([['desk']]);
+    expect(texts).toEqual(['lamp', 'desk']);
     expect(interactions.map(({ name }) => name)).toEqual([
-      'components/palette/components/commands#handlers.type',
-      'components/palette/components/commands#handlers.type',
+      'components/palette/components/search#handlers.type',
+      'components/palette/components/search#handlers.type',
     ]);
   } finally {
     pipeline.removeEventListener('interaction', listen);

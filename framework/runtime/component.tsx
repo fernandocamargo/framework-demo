@@ -66,7 +66,7 @@ type ViewModule = {
   acl?: undefined | { default?: unknown };
   async: AsyncModule | undefined;
   /** The components the render shows, from the plugin: their loads start when this view has loaded. */
-  children?: readonly { preload?: (locale?: string) => void }[];
+  children?: readonly { preload?: (locale?: string, visited?: Set<string>) => void }[];
   form: FormModule | undefined;
   /**
    * `handlers.ts`, as the plugin wrote it into a hook: one `useCallback` per export, each given
@@ -323,9 +323,23 @@ export function component(spec: Spec) {
   };
   /** The same for a skin: its sheet takes the CSS as the file has it now. */
   const restyle = (skin: string, module: SkinModule) => replaceSkin(spec.path, skin, module.default);
+
   /** Starts loading the view, the page's skin and the messages, ahead of the first render. */
-  const preload = (locale?: string) => {
-    void loadView();
+  const preload = (locale?: string, visited = new Set<string>()) => {
+    if (visited.has(spec.path)) return;
+    visited.add(spec.path);
+
+    const loading = loadView();
+
+    // A closed dialog's descendants need their messages before the dialog first renders.
+    if (locale)
+      void loading.then(
+        (module) => {
+          for (const child of module.children ?? []) child.preload?.(locale, visited);
+        },
+        // The component reads the same rejected promise when shown, through its error boundary.
+        () => undefined,
+      );
     if (spec.i18n && locale) void loadMessages(spec, locale);
     const skin = activeSkin();
     const loadThisSkin = spec.skins[skin];
