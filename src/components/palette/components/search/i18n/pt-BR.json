@@ -1,0 +1,19 @@
+{
+  "components/palette/components/search/field": "Comando ou produto",
+  "components/palette/components/search/go/products": "Produtos",
+  "components/palette/components/search/go/orders": "Pedidos",
+  "components/palette/components/search/go/report": "Relatório",
+  "components/palette/components/search/go/states": "Galeria de estados",
+  "components/palette/components/search/none": "Nada corresponde. Digite dois caracteres ou mais para buscar os produtos.",
+  "components/palette/components/search/placeholder": "Digite um comando ou um produto",
+  "components/palette/components/search/sections/appearance": "Aparência",
+  "components/palette/components/search/sections/goTo": "Ir para",
+  "components/palette/components/search/sections/onThisPage": "Nesta página",
+  "components/palette/components/search/sections/products": "Produtos",
+  "components/palette/components/search/sections/session": "Sessão",
+  "components/palette/components/search/signIn": "Entrar",
+  "components/palette/components/search/skins/blueprint": "Tema planta",
+  "components/palette/components/search/skins/broadsheet": "Tema jornal",
+  "components/palette/components/search/skins/default": "Tema padrão",
+  "components/palette/components/search/unavailable": "Agora não"
+}

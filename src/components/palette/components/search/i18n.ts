@@ -13,6 +13,5 @@ export default {
   },
   signIn: 'Sign in',
   skins: { blueprint: 'Blueprint skin', broadsheet: 'Broadsheet skin', default: 'Default skin' },
-  title: 'Commands',
   unavailable: 'Not now',
 };

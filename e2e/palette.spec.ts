@@ -14,6 +14,8 @@ const vocabulary = JSON.parse(
 declare global {
   interface Window {
     __framework: { fromTab(): Promise<void>; idle(): Promise<void> };
+    /** The busy elements a test saw added to the page, by class. */
+    placeholdersSeen?: string[];
   }
 }
 
@@ -87,4 +89,71 @@ test('over the editor, Save is listed; the palette names its pieces as schema.or
   await act(page, () => page.keyboard.press('ControlOrMeta+k'));
   expect(await items(palette(page)).filter({ hasText: 'Save the product' }).count()).toBe(1);
   expect(await page.evaluate(checkMicrodata, vocabulary)).toEqual([]);
+});
+
+test('the gallery holds the search states in their own styled folder', async ({ page }) => {
+  await act(page, () => page.goto('./?world=memory#/states'));
+  const search = page.getByRole('region', { name: 'components/palette/components/search' });
+  expect(await search.locator('iframe').count()).toBe(3);
+  expect(await search.innerText()).toContain('The products are searched for the last text');
+
+  for (const skin of ['default', 'broadsheet', 'blueprint']) {
+    for (const state of ['idle', 'waiting', 'searching']) {
+      await act(page, () =>
+        page.goto(`./?world=memory&skin=${skin}#/states/components%2Fpalette%2Fcomponents%2Fsearch/${state}`),
+      );
+      const field = page.getByRole('searchbox', { name: 'Command or product' });
+      expect(await field.inputValue()).toBe('lamp');
+
+      const style = await page.locator('search').evaluate((element) => ({
+        busy: element.getAttribute('aria-busy'),
+        className: element.className,
+        padding: getComputedStyle(element).paddingLeft,
+      }));
+
+      expect(style.busy).toBe(state === 'searching' ? 'true' : null);
+      expect(style.className).not.toBe('');
+      expect(style.padding).not.toBe('0px');
+    }
+  }
+});
+
+test('Escape empties the field first, then closes the palette; reopening starts empty', async ({ page }) => {
+  await page.clock.install();
+  await open(page);
+  await act(page, () => page.keyboard.press('ControlOrMeta+k'));
+  const field = palette(page).getByRole('searchbox');
+  await act(page, () => field.fill('lamp'));
+
+  // A search field with text takes the first Escape for itself, as the platform's does.
+  await act(page, () => page.keyboard.press('Escape'));
+  await expect(field).toHaveValue('');
+  await expect(palette(page)).toHaveCount(1);
+
+  // The second finds it empty and closes the dialog, during the pause after the text changed.
+  await act(page, () => page.keyboard.press('Escape'));
+  await expect(palette(page)).toHaveCount(0);
+
+  await page.clock.runFor(300);
+  await act(page, () => page.keyboard.press('ControlOrMeta+k'));
+  await expect(palette(page).getByRole('searchbox')).toHaveValue('');
+  expect(await products(palette(page))).toEqual([]);
+});
+
+test('opening the palette leaves the page under it in place', async ({ page }) => {
+  await open(page);
+  // The app's placeholder is the one busy element the page could show instead of itself.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    window.placeholdersSeen = seen;
+    new MutationObserver((records) => {
+      for (const record of records)
+        record.addedNodes.forEach((node) => {
+          if (node instanceof Element && node.matches('[aria-busy="true"]')) seen.push(node.className);
+        });
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+  await act(page, () => page.keyboard.press('ControlOrMeta+k'));
+  await expect(palette(page).getByRole('searchbox')).toBeVisible();
+  expect(await page.evaluate(() => window.placeholdersSeen)).toEqual([]);
 });
