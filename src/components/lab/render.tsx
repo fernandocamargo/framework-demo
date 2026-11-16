@@ -1,8 +1,6 @@
 import {
   Button,
   Label,
-  Radio,
-  RadioGroup,
   Slider,
   SliderOutput,
   SliderThumb,
@@ -35,6 +33,7 @@ export default ({
   minutes,
   offline,
   open,
+  radioName,
   toggleLabel,
   tokenMinutes,
 }) => (
@@ -84,20 +83,58 @@ export default ({
                 <SliderThumb />
               </SliderTrack>
             </Slider>
-            <RadioGroup onChange={handlers.forceStatus} value={force}>
-              <Label>{i18n.force.label}</Label>
-              <Radio value="0">{i18n.force.ok}</Radio>
-              <Radio value="500">500</Radio>
-              <Radio value="429">429</Radio>
-            </RadioGroup>
-            <RadioGroup onChange={handlers.setTokenMinutes} value={tokenMinutes}>
-              <Label>{i18n.token.label}</Label>
+            <fieldset>
+              <legend>{i18n.force.label}</legend>
+              <label>
+                <input
+                  checked={force === '0'}
+                  name={`${radioName}-force`}
+                  onChange={handlers.forceStatus}
+                  onClick={handlers.focusRadio}
+                  type="radio"
+                  value="0"
+                />
+                {i18n.force.ok}
+              </label>
+              <label>
+                <input
+                  checked={force === '500'}
+                  name={`${radioName}-force`}
+                  onChange={handlers.forceStatus}
+                  onClick={handlers.focusRadio}
+                  type="radio"
+                  value="500"
+                />
+                500
+              </label>
+              <label>
+                <input
+                  checked={force === '429'}
+                  name={`${radioName}-force`}
+                  onChange={handlers.forceStatus}
+                  onClick={handlers.focusRadio}
+                  type="radio"
+                  value="429"
+                />
+                429
+              </label>
+            </fieldset>
+            <fieldset>
+              <legend>{i18n.token.label}</legend>
               {minutes.map((choice) => (
-                <Radio key={choice.value} value={choice.value}>
+                <label key={choice.value}>
+                  <input
+                    checked={tokenMinutes === choice.value}
+                    name={`${radioName}-token`}
+                    onChange={handlers.setTokenMinutes}
+                    onClick={handlers.focusRadio}
+                    type="radio"
+                    value={choice.value}
+                  />
                   {choice.label}
-                </Radio>
+                </label>
               ))}
-            </RadioGroup>
+            </fieldset>
             <Switch isSelected={offline} onChange={handlers.setOffline}>
               {i18n.offline}
             </Switch>

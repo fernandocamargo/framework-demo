@@ -62,7 +62,7 @@ export default css`
     font-size: 0.92rem;
     font-style: italic;
   }
-  fieldset {
+  &:is(aside) > fieldset {
     display: grid;
     gap: 1rem;
   }

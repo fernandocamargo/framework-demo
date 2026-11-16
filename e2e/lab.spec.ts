@@ -102,3 +102,86 @@ test('the Inspector tab shows at once, its files loaded with the lab', async ({ 
   expect(await lab.locator('ol[aria-busy="true"]').count()).toBe(0);
   expect(await lab.locator('ol > li').count()).toBeGreaterThan(0);
 });
+
+for (const skin of ['default', 'broadsheet', 'blueprint']) {
+  for (const locale of ['en', 'pt-BR']) {
+    test(`native lab choices keep values, names and focus in ${skin}, ${locale}`, async ({ page }) => {
+      await page.goto(`./?world=memory&skin=${skin}&lang=${locale}#/products`);
+      await page.evaluate(() => window.__framework.idle());
+      const title = locale === 'en' ? 'Network lab' : 'Laboratório de rede';
+      await page.getByRole('button', { name: title }).click();
+      await page.evaluate(() => window.__framework.idle());
+      const lab = page.getByRole('complementary', { name: title });
+
+      const force = lab.getByRole('group', {
+        name: locale === 'en' ? 'Every request answers' : 'Toda requisição responde',
+      });
+
+      const lifetime = lab.getByRole('group', {
+        name: locale === 'en' ? /Access token lifetime/ : /Validade do token de acesso/,
+      });
+
+      const forceNode = await force.elementHandle();
+      const lifetimeNode = await lifetime.elementHandle();
+      const ok = locale === 'en' ? 'As it should' : 'Como deveria';
+      const initialAddress = page.url();
+      expect(await force.evaluate((element) => element.tagName)).toBe('FIELDSET');
+      expect(await lifetime.evaluate((element) => element.tagName)).toBe('FIELDSET');
+      expect(await force.getByRole('radio', { checked: true }).inputValue()).toBe('0');
+      expect(await lifetime.getByRole('radio', { checked: true }).inputValue()).toBe('1');
+      expect(await force.getByRole('radio').first().getAttribute('name')).not.toBe(
+        await lifetime.getByRole('radio').first().getAttribute('name'),
+      );
+
+      for (const [group, choices] of [
+        [force, ['500', '429', ok]],
+        [lifetime, ['30 min', '1 min', '5 min']],
+      ] as const) {
+        for (const name of choices) {
+          const radio = group.getByRole('radio', { exact: true, name });
+          const node = await radio.elementHandle();
+          await radio.focus();
+          await radio.check();
+          await page.evaluate(() => window.__framework.idle());
+          expect(await radio.isChecked()).toBe(true);
+          expect(await group.getByRole('radio', { checked: true }).count()).toBe(1);
+          expect(await radio.evaluate((element) => element === document.activeElement)).toBe(true);
+          expect(await radio.evaluate((element, original) => element === original, node)).toBe(true);
+          expect(page.url()).toBe(initialAddress);
+        }
+      }
+
+      await page
+        .getByRole('combobox', { name: locale === 'en' ? 'Language' : 'Idioma' })
+        .selectOption(locale === 'en' ? 'pt-BR' : 'en');
+      await page.evaluate(() => window.__framework.idle());
+
+      const translated = page.getByRole('complementary', {
+        name: locale === 'en' ? 'Laboratório de rede' : 'Network lab',
+      });
+
+      const translatedForce = translated.getByRole('group', {
+        name: locale === 'en' ? 'Toda requisição responde' : 'Every request answers',
+      });
+
+      const translatedLifetime = translated.getByRole('group', {
+        name: locale === 'en' ? /Validade do token de acesso/ : /Access token lifetime/,
+      });
+
+      expect(await translatedForce.evaluate((element, original) => element === original, forceNode)).toBe(true);
+      expect(await translatedLifetime.evaluate((element, original) => element === original, lifetimeNode)).toBe(true);
+      expect(await translatedForce.getByRole('radio', { checked: true }).inputValue()).toBe('0');
+      expect(await translatedLifetime.getByRole('radio', { checked: true }).inputValue()).toBe('5');
+
+      await translated
+        .getByRole('button', {
+          name: locale === 'en' ? 'Fechar o laboratório de rede' : 'Close the network lab',
+        })
+        .click();
+      await page.evaluate(() => window.__framework.idle());
+      await page.getByRole('button', { name: locale === 'en' ? 'Laboratório de rede' : 'Network lab' }).click();
+      await page.evaluate(() => window.__framework.idle());
+      expect(await translated.getByRole('radio', { name: '5 min' }).isChecked()).toBe(true);
+    });
+  }
+}

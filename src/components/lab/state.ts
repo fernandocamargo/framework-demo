@@ -2,4 +2,6 @@
 
 export const description = 'Show the network lab.';
 
+export const context = () => ({ radioName: crypto.randomUUID() });
+
 export default () => ({ closed: { on: { toggle: 'open' } }, open: { on: { toggle: 'closed' } } });

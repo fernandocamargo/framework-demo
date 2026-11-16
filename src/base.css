@@ -290,7 +290,8 @@ select {
   gap: 0.3rem;
   min-inline-size: 0;
 }
-.react-aria-Label {
+.react-aria-Label,
+fieldset:has(> label > input[type='radio']) > legend {
   font-size: 0.87rem;
   font-weight: 600;
   color: var(--muted);
@@ -429,7 +430,8 @@ select {
 /* ---- Choices -------------------------------------------------------------------------------- */
 .react-aria-Switch,
 .react-aria-Checkbox,
-.react-aria-Radio {
+.react-aria-Radio,
+fieldset > label:has(> input[type='radio']) {
   /* Their real input is hidden and absolutely placed: it stays inside its label. */
   position: relative;
   display: flex;
@@ -509,21 +511,54 @@ select {
     flex-basis: 100%;
   }
 }
-.react-aria-Radio {
+fieldset:has(> label > input[type='radio']) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  > legend {
+    padding: 0;
+    margin-block-end: 0.35rem;
+  }
+}
+fieldset > label > input[type='radio'] {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  opacity: 0;
+}
+.react-aria-Radio,
+fieldset > label:has(> input[type='radio']) {
   min-block-size: 2rem;
   padding: 0 0.7rem;
   border: 1px solid var(--border-strong);
   border-radius: 1rem;
   background: var(--surface);
   font-size: 0.9rem;
-  &[data-selected] {
+  &[data-selected],
+  &:has(> input:checked) {
     border-color: var(--accent);
     background: var(--accent-soft);
     color: var(--accent);
     font-weight: 600;
   }
-  &[data-focus-visible] {
+  &[data-focus-visible],
+  &:has(> input:focus-visible) {
     box-shadow: var(--ring);
+  }
+}
+@media (forced-colors: active) {
+  fieldset > label:has(> input[type='radio']) {
+    &:has(> input:checked) {
+      border-color: Highlight;
+      color: Highlight;
+      text-decoration: underline;
+    }
+    &:has(> input:focus-visible) {
+      outline: 2px solid Highlight;
+      outline-offset: 2px;
+    }
   }
 }
 .react-aria-Slider {

@@ -429,11 +429,11 @@ test('the bulk price change applies a rule, lists what failed, and sends the fai
   expect(await wizard.getByRole('row').count()).toBe(9);
 
   // Every request fails while the rule is applied: each product is tried, and each failure kept.
-  await act(page, () => choose(lab.getByRole('radio', { name: '500' })));
+  await act(page, () => lab.getByRole('radio', { name: '500' }).check());
   await act(page, () => wizard.getByRole('button', { name: 'Apply to 8' }).click());
   expect(await wizard.innerText()).toContain('0 prices changed, 8 failed.');
 
-  await act(page, () => choose(lab.getByRole('radio', { name: 'As it should' })));
+  await act(page, () => lab.getByRole('radio', { name: 'As it should' }).check());
   await act(page, () => wizard.getByRole('button', { name: 'Try the 8 failed again' }).click());
   expect(await wizard.innerText()).toContain('8 prices changed.');
   await act(page, () => wizard.getByRole('button', { name: 'Done' }).click());
@@ -445,12 +445,12 @@ test('a failed read shows the error file and reaches the failure pipeline; tryin
   await open(page);
   await act(page, () => page.getByRole('button', { name: /Network lab/ }).click());
   const lab = page.getByRole('complementary', { name: 'Network lab' });
-  await act(page, () => choose(lab.getByRole('radio', { name: '500' })));
+  await act(page, () => lab.getByRole('radio', { name: '500' }).check());
   await act(page, () => page.goto('./?world=memory#/products?category=audio'));
   expect(await page.getByRole('alert').first().innerText()).toContain('The catalogue could not be read');
   expect(await page.getByRole('region', { name: /Failures/ }).innerText()).toContain('service · products.search');
 
-  await act(page, () => choose(lab.getByRole('radio', { name: 'As it should' })));
+  await act(page, () => lab.getByRole('radio', { name: 'As it should' }).check());
   await act(page, () => page.getByRole('button', { name: 'Try again' }).click());
   expect(await summary(page)).toBe('9 products in Audio');
 });
@@ -649,7 +649,7 @@ test('a count shows at once, before the server answers; one the server refuses i
     await lab.getByRole('slider', { name: 'Latency' }).focus();
     for (let step = 0; step < 4; step++) await page.keyboard.press('ArrowRight');
   });
-  await act(page, () => choose(lab.getByRole('radio', { name: '500' })));
+  await act(page, () => lab.getByRole('radio', { name: '500' }).check());
   await more.click();
   // While the write is on its way, the page is not idle: this is the one look before `idle()`.
   await expect(lamp).toContainText('60 in stock', { timeout: 900 });

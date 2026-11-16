@@ -70,7 +70,7 @@ export default css`
     color: var(--muted);
     font-size: 0.9rem;
   }
-  fieldset {
+  &:is(aside) > fieldset {
     display: grid;
     gap: 0.9rem;
   }

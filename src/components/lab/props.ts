@@ -18,6 +18,7 @@ export default ({ async: { default: answer }, i18n, state }) => {
     minutes: [1, 5, 30].map((minutes) => ({ label: i18n.token.minutes({ minutes }), value: String(minutes) })),
     offline: settings.offline,
     open: state.open,
+    radioName: state.context.radioName,
     toggleLabel: i18n.toggle({ faults }),
     tokenMinutes: String(settings.tokenMinutes),
   };
