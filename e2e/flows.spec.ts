@@ -62,16 +62,17 @@ test('the catalogue follows the address: search, category, sort and page', async
   expect(await summary(page)).toBe('3 products matching “lamp”');
   expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp']);
 
-  await act(page, async () => {
-    await page.getByRole('combobox', { name: 'Sort' }).selectOption('price:desc');
-  });
+  const sort = page.getByRole('combobox', { name: 'Sort' });
+  await act(page, () => sort.selectOption('price:desc'));
   expect(page.url()).toContain('sort=price&order=desc');
   expect(await titles(page)).toEqual(['Arc Floor Lamp', 'Clamp Lamp', 'Task Lamp']);
 
-  await act(page, async () => {
-    await page.getByRole('combobox', { name: 'Sort' }).focus();
-    await page.keyboard.press('ArrowUp');
-  });
+  await page.getByRole('button', { name: /Category/ }).focus();
+  await page.keyboard.press('Tab');
+  expect(await sort.evaluate((element) => element === document.activeElement)).toBe(true);
+  // Native select keyboard selection follows the platform, so choose the option directly.
+  await act(page, () => sort.selectOption('price:asc'));
+  expect(await sort.inputValue()).toBe('price:asc');
   expect(page.url()).toContain('sort=price');
   expect(page.url()).not.toContain('order=desc');
   expect(await titles(page)).toEqual(['Task Lamp', 'Clamp Lamp', 'Arc Floor Lamp']);
