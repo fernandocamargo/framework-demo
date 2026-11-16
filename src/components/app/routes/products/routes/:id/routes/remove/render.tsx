@@ -1,12 +1,13 @@
-import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components';
+import { Button, Dialog, Modal, ModalOverlay } from 'react-aria-components';
 
 export default ({ acl, className, flags, handlers, i18n, state }) => (
   <ModalOverlay isOpen onOpenChange={handlers.dismiss}>
     <Modal className={`react-aria-Modal ${className}`}>
-      <Dialog role="alertdialog">
-        <Heading slot="title">
-          {state.context.title ? i18n.title.named({ title: state.context.title }) : i18n.title.unnamed}
-        </Heading>
+      <Dialog
+        aria-label={state.context.title ? i18n.title.named({ title: state.context.title }) : i18n.title.unnamed}
+        role="alertdialog"
+      >
+        <h2>{state.context.title ? i18n.title.named({ title: state.context.title }) : i18n.title.unnamed}</h2>
         <p>{i18n.text}</p>
         {!acl.allowed && <p role="note">{flags.deletions ? i18n.refused : i18n.paused}</p>}
         {state.failed && (

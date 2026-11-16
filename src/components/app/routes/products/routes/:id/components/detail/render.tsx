@@ -1,4 +1,4 @@
-import { Button, Dialog, Heading } from 'react-aria-components';
+import { Button, Dialog } from 'react-aria-components';
 
 import RemoveLink from '@/components/app/routes/products/components/remove-link';
 
@@ -22,13 +22,13 @@ export default ({
   stock,
   title,
 }) => (
-  <Dialog className={`react-aria-Dialog ${className}`}>
+  <Dialog aria-label={title} className={`react-aria-Dialog ${className}`}>
     <article itemScope itemType="https://schema.org/Product">
       <header>
         <hgroup>
-          <Heading slot="title">
+          <h2>
             <span itemProp="name">{title}</span>
-          </Heading>
+          </h2>
           <p>
             {brand && (
               <span itemProp="brand" itemScope itemType="https://schema.org/Brand">

@@ -1,15 +1,15 @@
-import { Button, Dialog, Heading } from 'react-aria-components';
+import { Button, Dialog } from 'react-aria-components';
 
 // The order, as schema.org names one: its customer, where it ships and its items, each item a
 // product of the catalogue with its quantity.
 export default ({ address, className, currency, customer, i18n, lines, title, total }) => (
-  <Dialog className={`react-aria-Dialog ${className}`}>
+  <Dialog aria-label={title} className={`react-aria-Dialog ${className}`}>
     <article itemScope itemType="https://schema.org/Order">
       <header>
         <hgroup>
-          <Heading slot="title">
+          <h2>
             <span itemProp="orderNumber">{title}</span>
-          </Heading>
+          </h2>
           <p itemProp="customer" itemScope itemType="https://schema.org/Person">
             <span itemProp="name">{customer}</span>
           </p>

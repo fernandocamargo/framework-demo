@@ -4,7 +4,6 @@ import {
   CheckboxGroup,
   Dialog,
   Group,
-  Heading,
   Input,
   Label,
   ListBox,
@@ -63,14 +62,14 @@ export default ({
       UNSTABLE_deferUntilEntered={state.confirmingLargeChange}
     >
       <Modal className={`react-aria-Modal ${className}`}>
-        <Dialog>
+        <Dialog aria-label={i18n.title}>
           {/* The whole change, as schema.org names it: prices replaced, step by step. */}
           <div itemScope itemType="https://schema.org/ReplaceAction">
             <header>
               <hgroup>
-                <Heading slot="title">
+                <h2>
                   <span itemProp="name">{i18n.title}</span>
-                </Heading>
+                </h2>
                 <p>{stepText}</p>
               </hgroup>
               <Button isDisabled={state.applying} slot="close">
@@ -280,8 +279,8 @@ export default ({
         one in front, and when an address opens both at once a child mounts before its parent. */}
     <ModalOverlay isOpen={state.confirmingLargeChange} onOpenChange={handlers.dismissLargeChange}>
       <Modal>
-        <Dialog role="alertdialog">
-          <Heading slot="title">{largeTitle}</Heading>
+        <Dialog aria-label={largeTitle} role="alertdialog">
+          <h2>{largeTitle}</h2>
           <p>
             {largeText((chunks) => (
               <strong>{chunks}</strong>

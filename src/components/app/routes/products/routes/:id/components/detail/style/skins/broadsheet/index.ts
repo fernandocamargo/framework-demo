@@ -7,7 +7,7 @@ export default css`
     display: flex;
     flex-direction: column-reverse;
     gap: 0.3rem;
-    .react-aria-Heading {
+    h2 {
       font-size: 2.3rem;
     }
     p {

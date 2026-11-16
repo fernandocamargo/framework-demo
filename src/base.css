@@ -689,7 +689,7 @@ progress {
   display: grid;
   gap: 1rem;
   padding: 1.25rem;
-  .react-aria-Heading {
+  h2 {
     font-size: 1.15rem;
     line-height: 1.3;
   }

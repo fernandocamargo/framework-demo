@@ -1,4 +1,4 @@
-import { Button, Dialog, Form, Heading, Input, Label, Modal, ModalOverlay, TextField } from 'react-aria-components';
+import { Button, Dialog, Form, Input, Label, Modal, ModalOverlay, TextField } from 'react-aria-components';
 
 import DemoAccount from './components/demo-account';
 
@@ -49,8 +49,8 @@ export default ({
       onOpenChange={handlers.dismiss}
     >
       <Modal className={`react-aria-Modal ${className}`}>
-        <Dialog>
-          <Heading slot="title">{i18n.dialog.title}</Heading>
+        <Dialog aria-label={i18n.dialog.title}>
+          <h2>{i18n.dialog.title}</h2>
           {notice && <p role="alert">{notice}</p>}
           <Form id="sign-in" onSubmit={handlers.signIn}>
             <TextField

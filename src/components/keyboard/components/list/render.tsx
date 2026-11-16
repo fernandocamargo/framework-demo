@@ -1,12 +1,12 @@
-import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components';
+import { Button, Dialog, Modal, ModalOverlay } from 'react-aria-components';
 
 // Each key is an action, as schema.org names one: potential while it does something now.
 export default ({ className, groups, handlers, i18n }) => (
   <ModalOverlay isDismissable isOpen onOpenChange={handlers.dismiss}>
     <Modal className={`react-aria-Modal ${className}`}>
-      <Dialog>
+      <Dialog aria-label={i18n.title}>
         <header>
-          <Heading slot="title">{i18n.title}</Heading>
+          <h2>{i18n.title}</h2>
           <Button slot="close">{i18n.close}</Button>
         </header>
         <p>{i18n.intro}</p>

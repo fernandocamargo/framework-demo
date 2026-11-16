@@ -3,7 +3,7 @@
 // content and its error all show in it.
 
 import { createElement, type ReactNode } from 'react';
-import { Dialog, Heading } from 'react-aria-components';
+import { Dialog } from 'react-aria-components';
 
 export type Props = {
   /** The dialog, which renders its own `Dialog`. */
@@ -22,11 +22,11 @@ export const examples = {
     props: {
       children: createElement(
         Dialog,
-        null,
+        { 'aria-label': 'Arc Floor Lamp' },
         createElement(
           'article',
           { itemScope: true, itemType: 'https://schema.org/Product' },
-          createElement(Heading, { slot: 'title' }, createElement('span', { itemProp: 'name' }, 'Arc Floor Lamp')),
+          createElement('h2', null, createElement('span', { itemProp: 'name' }, 'Arc Floor Lamp')),
           createElement('p', { itemProp: 'description' }, 'A modal holding a product is wide: pictures and reviews.'),
         ),
       ),
@@ -37,8 +37,8 @@ export const examples = {
     props: {
       children: createElement(
         Dialog,
-        { role: 'alertdialog' },
-        createElement(Heading, { slot: 'title' }, 'Delete this product?'),
+        { 'aria-label': 'Delete this product?', role: 'alertdialog' },
+        createElement('h2', null, 'Delete this product?'),
         createElement('p', null, 'A modal holding a question or a failure is small.'),
       ),
       onClose: () => undefined,

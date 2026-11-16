@@ -199,7 +199,8 @@ for (const skin of ['default', 'broadsheet', 'blueprint']) {
     const opened = context.waitForEvent('page');
     await link.click({ modifiers: ['ControlOrMeta'] });
     const other = await opened;
-    await other.waitForLoadState('load');
+    // The new tab's initial blank document may have already fired load.
+    await other.waitForURL(destination, { waitUntil: 'load' });
     await idle(other);
     expect(other.url()).toBe(destination);
     expect(await dialog(other, 'Arc Floor Lamp').count()).toBe(1);

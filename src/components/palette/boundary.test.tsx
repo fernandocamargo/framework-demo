@@ -75,8 +75,8 @@ test('opening the palette makes nothing wait: its search has loaded with the pag
     await preloadSkin('default');
     shown = render(page);
   });
-  const button = await shown.findByRole('button', { name: 'Command palette' });
   await act(whenIdle);
+  const button = shown.getByRole('button', { name: 'Command palette' });
   const beforeOpen = observed.waiting;
   await act(async () => {
     fireEvent.click(button);
@@ -92,7 +92,8 @@ test('the palette shell stays still while six search outputs change', async () =
     await preloadSkin('default');
     shown = render(page);
   });
-  const button = await shown.findByRole('button', { name: 'Command palette' });
+  await act(whenIdle);
+  const button = shown.getByRole('button', { name: 'Command palette' });
   await act(async () => {
     fireEvent.click(button);
   });

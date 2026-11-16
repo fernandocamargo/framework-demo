@@ -4,7 +4,6 @@ import {
   FieldError,
   Form,
   Group,
-  Heading,
   Input,
   Label,
   ListBox,
@@ -43,9 +42,9 @@ export default ({
 }) => (
   <ModalOverlay isDismissable={!busy} isKeyboardDismissDisabled={busy} isOpen onOpenChange={handlers.dismiss}>
     <Modal className={`react-aria-Modal ${className}`}>
-      <Dialog>
+      <Dialog aria-label={heading}>
         <header>
-          <Heading slot="title">{heading}</Heading>
+          <h2>{heading}</h2>
           <Button isDisabled={busy} slot="close">
             {i18n.close}
           </Button>
@@ -202,8 +201,8 @@ export default ({
 
       <ModalOverlay isOpen={confirmingDiscard} onOpenChange={handlers.dismissQuestion}>
         <Modal>
-          <Dialog role="alertdialog">
-            <Heading slot="title">{i18n.discard.title}</Heading>
+          <Dialog aria-label={i18n.discard.title} role="alertdialog">
+            <h2>{i18n.discard.title}</h2>
             <p>{i18n.discard.text}</p>
             <footer>
               <Button autoFocus onPress={handlers.keepEditing}>

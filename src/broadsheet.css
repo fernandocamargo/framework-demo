@@ -278,7 +278,7 @@
     box-shadow: 10px 10px 0 var(--text);
   }
   & .react-aria-Dialog {
-    .react-aria-Heading {
+    h2 {
       font-family: var(--serif);
       font-size: 1.7rem;
       font-weight: 700;
