@@ -4,6 +4,8 @@ A small back office over [DummyJSON](https://dummyjson.com) (a product catalogue
 
 It runs at https://fernandocamargo.github.io/framework-demo/. An explainer of the idea, written for a team, is at [explainer/](https://fernandocamargo.github.io/framework-demo/explainer/) (its source is [`public/explainer/index.html`](public/explainer/index.html)). Every component folder is in its [Storybook](https://fernandocamargo.github.io/framework-demo/storybook/), where nobody wrote a story.
 
+The model behind it is not a private one: cloud tools, Next.js, React Router and React's own compiler each apply a version of it (see [The same model, elsewhere](#the-same-model-elsewhere)).
+
 It is meant to be read in an evening or two. The framework is about 7,100 lines in [`framework/`](framework/README.md); the app is about 13,000 in [`src/`](src), half of it CSS, fixtures and translations (tests left out of both).
 
 ## The idea
@@ -411,6 +413,50 @@ Several ecosystems have all three:
 | Python    | `ast`, import hooks              | A type-checker plugin (mypy), or stubs generated beside the sources |
 
 The mechanism differs. The idea carries: give each kind of decision one place, type the seams between the places, and let the build do the wiring.
+
+## The same model, elsewhere
+
+**Declare what the code needs. Let the tools supply it, type it and check it.**
+
+This framework is one version of a model that tools in very different fields share: the code declares what it needs, and a tool derives from it what used to be written by hand beside it, whether a boundary, a type, a permission, a memo or the wiring.
+
+| Field           | Project                                                                                                   | The code declares                                                                                                 | What the tool derives                                                                                                                                                                                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloud services  | [Alchemy](https://alchemy.run/what-is-alchemy)                                                            | A Worker asks for a bucket, in TypeScript                                                                         | Provisions the bucket, binds it to the Worker and hands back a typed client; on AWS, the same line also writes the function's statement in the IAM policy ([compare](https://alchemy.run/compare)). In its words, "a missing piece is a compile error, not a failed deploy" |
+| Cloud services  | [SST](https://sst.dev/docs/linking)                                                                       | A function is linked to a resource                                                                                | The function's permission to access it, and the types to reach it                                                                                                                                                                                                           |
+| Edge runtime    | [Cloudflare Workers](https://developers.cloudflare.com/workers/languages/typescript/)                     | Bindings, in the Wrangler configuration                                                                           | The `Env` type (`wrangler types`)                                                                                                                                                                                                                                           |
+| Typed effects   | [Effect](https://effect.website/docs/requirements-management/services/) (4.0 on npm since 1 October 2026) | The services a function uses                                                                                      | Its requirements, in its type: "the compiler ensures all dependencies are correctly managed"                                                                                                                                                                                |
+| React framework | [Next.js](https://nextjs.org/docs/app/api-reference/file-conventions/loading) (since 13.0)                | A `loading.js` or an [`error.js`](https://nextjs.org/docs/app/api-reference/file-conventions/error) beside a page | A `<Suspense>` boundary, or an error boundary, around the page                                                                                                                                                                                                              |
+| Routing         | [React Router](https://reactrouter.com/explanation/type-safety)                                           | A route module                                                                                                    | Types for it, imported as `./+types/<route>`, so its loader and its component are typed                                                                                                                                                                                     |
+| Routing         | [TanStack Router](https://tanstack.com/router/latest/docs/framework/react/routing/file-based-routing)     | Route files and folders                                                                                           | The route configuration and the type linkages between routes, in the bundler                                                                                                                                                                                                |
+| Rendering       | [React Compiler](https://react.dev/blog/2025/10/07/react-compiler-1) (1.0 since 7 October 2025)           | Plain components                                                                                                  | Their memoization, at build time. On the Meta Quest Store, "certain interactions are more than 2.5× faster"                                                                                                                                                                 |
+| Components      | This framework                                                                                            | What a layer file's functions receive: `services`, `route`, `locale`, `form`                                      | The folder's wiring, the types of what it injects (in the editor too), and which sources each component follows: those its files read                                                                                                                                       |
+
+### Traction
+
+These are npm's weekly downloads for the week of 9 to 15 November, in 2025 and in 2026, from [npm's API](https://github.com/npm/registry/blob/main/docs/download-counts.md). The registry grew that year: all packages together 3.2 times, and React 5.2 times, from 50 million downloads a week to 261 million. The last column compares each package with React in the same week.
+
+| Package                                                                                    |       2025 |       2026 | Share of React's |
+| ------------------------------------------------------------------------------------------ | ---------: | ---------: | ---------------- |
+| [`alchemy`](https://www.npmjs.com/package/alchemy)                                         |     10,821 |  1,827,594 | 0.02% → 0.70%    |
+| [`effect`](https://www.npmjs.com/package/effect)                                           |  5,912,462 | 72,220,010 | 11.8% → 27.7%    |
+| [`@tanstack/react-router`](https://www.npmjs.com/package/@tanstack/react-router)           |  1,182,604 | 25,875,691 | 2.4% → 9.9%      |
+| [`babel-plugin-react-compiler`](https://www.npmjs.com/package/babel-plugin-react-compiler) |  2,870,542 | 28,939,210 | 5.7% → 11.1%     |
+| [`next`](https://www.npmjs.com/package/next)                                               | 14,877,892 | 94,442,807 | 29.6% → 36.2%    |
+| [`sst`](https://www.npmjs.com/package/sst)                                                 |    222,236 |  1,629,672 | 0.44% → 0.62%    |
+| [`react-router`](https://www.npmjs.com/package/react-router)                               | 21,758,306 | 76,914,486 | 43.3% → 29.5%    |
+
+All seven grew faster than the registry, and six of them faster than React; React Router did not. npm counts the package files it serves, to build servers, mirrors and robots as well as to people, and an install from a cache is not counted ([how npm counts](https://blog.npmjs.org/post/92574016600/numeric-precision-matters-how-npm-download-counts-work.html)). So these figures show a direction, not a number of users.
+
+### Why it makes sense
+
+- **One copy of each decision.** Derived from the code, a policy, a type or a memo changes when the code does. Kept by hand beside it, it is a second copy of a decision, and copies can go stale. Alchemy, on a Worker that asks for its bucket: "there is no name to keep in sync, no policy to write, and no client to set up."
+- **One place per decision.** A Next.js page's loading and error states sit beside it. Alchemy builds "shareable services that carry their own infrastructure and permissions" ([Layers](https://alchemy.run/infrastructure-as-effects/layers)). Here, a component's flow, props, reads, words, permissions, keys and skin each have a file in its folder.
+- **Work that can be handed over.** When "where does this go?" has one answer, and checks name the mechanical mistakes before a review does, less has to be said when work changes hands, between people or to an agent. Alchemy publishes an index of its documentation for language models ([`llms.txt`](https://alchemy.run/llms.txt)) and has written about [a test runner for agents](https://alchemy.run/blog/2026-07-22-a-test-runner-for-agents/). On this framework, models built five features from briefs, under supervision, and Haiku 5.5 wrote 84.7% of their lines ([Who wrote them](#who-wrote-them)).
+
+### What this framework adds
+
+Next.js, React Router and TanStack Router apply the model to routes, and React Compiler to memoization. Here it is applied to every layer of a component: each kind of decision has a file, the files meet at typed seams, and the editor knows what each file is given. Alchemy applies a related principle to cloud services; a server-side counterpart of these folders is a possible next step.
 
 ## What is not here
 
