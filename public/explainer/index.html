@@ -152,6 +152,16 @@
   .kin dt span { font: 500 0.74rem/1 var(--mono); color: var(--muted); margin-left: 6px; }
   .kin dd { margin: 0; color: var(--muted); font-size: 0.92rem; }
 
+  /* The same model, elsewhere */
+  .kin.wave { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .compare.wave pre { font-size: 0.8rem; }
+  .code header a { color: inherit; text-decoration: none; min-width: 0; }
+  .code header a:hover { color: var(--accent); text-decoration: underline; }
+  .kin.wave > .here { background: var(--accent-soft); }
+  .kin.wave > .here dt span { color: var(--accent); }
+  .facts.wave .n { color: var(--accent); font-size: clamp(2rem, 4vw, 2.6rem); }
+  .facts.wave .fact p { font-size: 0.93rem; }
+
   /* Code browser */
   .browser { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 16px; align-items: start; }
   .files { list-style: none; margin: 0; padding: 12px; display: grid; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
@@ -179,6 +189,7 @@
     .files { position: static; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); }
     .files .folder { grid-column: 1 / -1; }
     .facts, .principles, .kin { grid-template-columns: minmax(0, 1fr); }
+    .kin.wave { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .flow, .machine { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .timeline { grid-template-columns: minmax(0, 1fr); gap: 22px; border-top: 0; border-left: 2px solid var(--line); margin-left: 6px; }
     .timeline li { padding: 0 0 0 22px; }
@@ -189,7 +200,7 @@
     .files { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px; }
     .files button { padding: 7px 6px 7px 8px; gap: 6px; }
     .files button .role { font-size: 0.7rem; }
-    .flow, .machine { grid-template-columns: minmax(0, 1fr); }
+    .flow, .machine, .kin.wave { grid-template-columns: minmax(0, 1fr); }
     .tree li { grid-template-columns: minmax(0, 1fr); gap: 0; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -1434,6 +1445,51 @@ i18n.paging.page({ page, pages })</pre>
       <div class="principle"><h3>Platform first</h3><p>Native events, native CSS, the browser’s own APIs before libraries that imitate them.</p></div>
       <div class="principle"><h3>Simplicity</h3><p>Each file has one job a newcomer can name. Small enough to review in one sitting.</p></div>
     </div>
+  </section>
+
+  <section aria-labelledby="elsewhere">
+    <div class="head">
+      <span class="eyebrow">The same model, elsewhere</span>
+      <h2 id="elsewhere">Declare what the code needs. The tools supply it.</h2>
+      <p class="lede">This framework is one version of a model that tools in very different fields share: the code declares what it needs, and a tool derives from it what would otherwise be written by hand beside it. <a href="https://alchemy.run/what-is-alchemy">Alchemy</a> applies a related principle to cloud services.</p>
+    </div>
+    <div class="compare rewrite wave">
+      <div class="code">
+        <header><span>Alchemy · a Worker asks for its bucket</span><span class="tag good">cloud</span></header>
+        <pre>Effect.gen(function* () {
+  // ask for what you need
+  const bucket = yield* Cloudflare.R2.ReadWriteBucket(Uploads);
+  …
+});</pre>
+        <div class="note">From <a href="https://alchemy.run/what-is-alchemy">Alchemy’s overview</a>. When the Worker deploys, this line gives it access to the bucket; when it runs, the line returns a typed client. In Alchemy’s words, “a missing piece is a compile error, not a failed deploy.”</div>
+      </div>
+      <div class="code">
+        <header><a href="https://github.com/fernandocamargo/framework-demo/blob/54cf9bc/src/components/catalogue/async.ts">components/catalogue/async.ts</a><span class="tag good">screen</span></header>
+        <pre>export default async ({ route, services }) =&gt; {
+  const filters = { category: route.category, order: route.order, page: route.page, q: route.q, sort: route.sort };
+  const [page, categories] = await Promise.all([services.products.search(filters), services.products.categories()]);
+  return { categories, filters, page };
+};</pre>
+        <div class="note">The catalogue’s read, in the demo. It asks for <code>route</code> and <code>services</code> by name: the framework supplies them, and its TypeScript plugin types them in the editor. The framework records what the read used: two operations of the products service and five fields of the address. A new filter in the address is another read, answered from the cache when a fresh answer is there; opening a dialog is not.</div>
+      </div>
+    </div>
+    <dl class="kin wave">
+      <div><dt><a href="https://sst.dev/docs/linking">SST</a><span>cloud</span></dt><dd>A function linked to a resource gets the permission to access it, and the types to reach it.</dd></div>
+      <div><dt><a href="https://developers.cloudflare.com/workers/languages/typescript/">Cloudflare Workers</a><span>edge</span></dt><dd>The bindings in the Wrangler configuration give the <code>Env</code> type (<code>wrangler types</code>).</dd></div>
+      <div><dt><a href="https://effect.website/docs/requirements-management/services/">Effect</a><span>4.0 · 2026</span></dt><dd>The services a function uses are its requirements, in its type: “the compiler ensures all dependencies are correctly managed”.</dd></div>
+      <div><dt><a href="https://nextjs.org/docs/app/api-reference/file-conventions/loading">Next.js</a><span>since 13.0</span></dt><dd>A <code>loading.js</code> or an <a href="https://nextjs.org/docs/app/api-reference/file-conventions/error"><code>error.js</code></a> beside a page gives a <code>&lt;Suspense&gt;</code> boundary, or an error boundary, around it.</dd></div>
+      <div><dt><a href="https://reactrouter.com/explanation/type-safety">React Router</a><span>routes</span></dt><dd>A route module gets types for it, imported as <code>./+types/&lt;route&gt;</code>, so its loader and its component are typed.</dd></div>
+      <div><dt><a href="https://tanstack.com/router/latest/docs/framework/react/routing/file-based-routing">TanStack Router</a><span>routes</span></dt><dd>Route files and folders give the route configuration and the type linkages between routes, in the bundler.</dd></div>
+      <div><dt><a href="https://react.dev/blog/2025/10/07/react-compiler-1">React Compiler</a><span>1.0 · 2025</span></dt><dd>Plain components get their memoization at build time.</dd></div>
+      <div class="here"><dt>This framework<span>components</span></dt><dd>What a layer file’s functions receive gives the folder’s wiring, the types of what is injected, and which sources each component follows, worked out from what its files read.</dd></div>
+    </dl>
+    <div class="facts wave">
+      <div class="fact"><span class="n">7 of 7</span><p>packages in the README’s table grew faster than npm’s registry, which grew 3.2 times, from the week of 9 to 15 November 2025 to the same week of 2026. Six grew faster than React, which grew 5.2 times.</p></div>
+      <div class="fact"><span class="n">0.02% → 0.70%</span><p>Alchemy’s weekly downloads, as a share of React’s, in those two weeks.</p></div>
+      <div class="fact"><span class="n">11.8% → 27.7%</span><p>Effect’s weekly downloads, as a share of React’s, in those two weeks.</p></div>
+    </div>
+    <p class="caption">The seven are <code>alchemy</code>, <code>effect</code>, <code>@tanstack/react-router</code>, <code>babel-plugin-react-compiler</code>, <code>next</code>, <code>sst</code> and <code>react-router</code>, from <a href="https://github.com/npm/registry/blob/main/docs/download-counts.md">npm’s API</a>. React Router’s share of React’s fell, from 43.3% to 29.5%. npm counts the package files it serves, to build servers, mirrors and robots as well as to people, so these figures show a direction, not a number of users. The table: <a href="https://github.com/fernandocamargo/framework-demo#traction">the README</a>.</p>
+    <p class="quote">Next.js, React Router and TanStack Router apply the model to routes, and React Compiler to memoization. Here it is applied to the layers of a component: its flow, reads, props, words, permissions, keys and skin each have a file, the files meet at typed seams, and the editor knows what each file is given. A server-side counterpart of these folders is a possible next step.</p>
   </section>
 
   <section aria-labelledby="proof">
